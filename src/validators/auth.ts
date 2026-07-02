@@ -96,13 +96,13 @@ export const candidateRegisterSchema = z.object({
   contractYears: z.number().int().nonnegative().default(0),
   contractMonths: z.number().int().nonnegative().default(0),
   contractDays: z.number().int().nonnegative().default(0),
-  mobile: mobileSchema,
+  mobileNumber: mobileSchema,
   email: emailSchema,
   dateOfBirth: z
     .string()
     .regex(
-      /^\d{4}-\d{2}-\d{2}$/,
-      'Date of birth must be in yyyy-mm-dd format'
+      /^(0[1-9]|[12]\d|3[01])-(0[1-9]|1[0-2])-\d{4}$/,
+      'Date of birth must be in dd-mm-yyyy format'
     ),
 });
 

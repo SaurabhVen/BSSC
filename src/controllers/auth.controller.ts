@@ -201,12 +201,7 @@ export class AuthController {
         email: result.user.email,
         fullName: result.user.fullName,
       },
-      candidate: result.candidate
-        ? {
-          candidateId: result.candidate.id,
-          registrationNumber: result.candidate.registrationNumber,
-        }
-        : null,
+      candidate: result.candidate,
       tokens: result.tokens,
     });
   }

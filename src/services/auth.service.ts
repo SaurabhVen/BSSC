@@ -5,7 +5,11 @@ import {
   generateHash,
   generateRegistrationNumber,
   generateRandomToken,
+
 } from '../utils/crypto';
+import { calculateBSSCAge } from '../utils/age';
+
+
 import { verifyCaptchaText } from '../utils/captcha';
 import {
   generateTokens,
@@ -120,7 +124,7 @@ export class AuthService {
 
     const userWithRole = await userRepository.findUserWithRole(user.id);
     const roleName = userWithRole?.roleName ?? 'candidate';
-    
+
     const tokens = generateTokens(user.id, user.email, [roleName]);
 
     await userRepository.updateLastLogin(user.id);
@@ -155,7 +159,7 @@ export class AuthService {
     const { v4: uuidv4 } = await import('uuid');
     const userId = uuidv4();
 
-    
+
     // Create user locally
     const generatedPassword = generateRandomPassword();
     console.log(`[Generated Password for ${input.email}]: ${generatedPassword}`);
@@ -219,8 +223,29 @@ export class AuthService {
     const candidate = await userRepository.createCandidate({
       userId: user.id,
       registrationNumber,
+      applicantName: input.fullName,
+      gender: input.gender,
       dateOfBirth: new Date(input.dateOfBirth.split('-').reverse().join('-')),
       mobileNumber: input.mobileNumber,
+      email: input.email,
+      domicileBihar: input.domicileBihar,
+      category: input.category,
+      caste: input.caste,
+      nonCreamyLayer: input.nonCreamyLayer,
+      isPwd: input.isPwd,
+      pwd40Percent: input.pwd40Percent,
+      isExServiceman: input.exServiceman,
+      defenceServiceYears: input.defenceServiceYears,
+      isNccFullTime: input.nccFullTime,
+      nccCertificateNo: input.nccCertificateNo,
+      isBiharGovtEmployee: input.govtEmployee,
+      bsscAttempts: input.bsscAttempts,
+      isContractualEmployee: input.contractualEmployee,
+      contractualPost: input.contractualPost,
+      agreementAvailable: input.agreementAvailable,
+      contractYears: input.contractYears,
+      contractMonths: input.contractMonths,
+      contractDays: input.contractDays,
       mobileVerified: true,
       emailVerified: true,
     });
@@ -239,7 +264,7 @@ export class AuthService {
     const user = await userRepository.findByEmail(input.email);
     if (!user)
       throw new UnauthorizedError('Your session has expired. Please log in again to continue.');
-    
+
     const jwt = await import('jsonwebtoken');
     try {
       jwt.default.verify(input.refreshToken, config.JWT_SECRET);
@@ -259,7 +284,7 @@ export class AuthService {
     await this.validateCaptcha(input.captchaId, input.captchaText);
     const user = await userRepository.findByEmail(input.email);
     if (!user) return; // Security: don't reveal whether email exists
-    
+
     const jwt = await import('jsonwebtoken');
     const resetToken = jwt.default.sign(
       { userId: user.id, purpose: 'reset-password' },
