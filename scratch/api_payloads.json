@@ -1,0 +1,140 @@
+{
+  "step1_payload": {
+    "personalInfo": {
+      "age": 22,
+      "gender": "male",
+      "fullName": "Shivam Singh",
+      "fathersName": "sdfwer",
+      "motherName": "rtytrewer",
+      "dob": "04-02-2003",
+      "nationality": "Indian",
+      "aadharNumber": "098765432134",
+      "mobileNumber": "8382044418",
+      "alternateNumber": "",
+      "maritalStatus": "unmarried",
+      "emailId": "shivam+7@vensysco.in",
+      "identificationMark1": "sdds",
+      "identificationMark2": "wdrdd",
+      "permanentAddress": {
+        "cityOrVillage": "weer",
+        "post": "weer",
+        "state": "70",
+        "street": "sss",
+        "pincode": "223347",
+        "district": "796"
+      },
+      "sameAsPermanent": true,
+      "correspondenceAddress": {
+        "cityOrVillage": "weer",
+        "post": "weer",
+        "state": "70",
+        "street": "sss",
+        "pincode": "223347",
+        "district": "796"
+      }
+    }
+  },
+  "step2_payload": {
+    "reservationCategory": {
+      "isPwd": true,
+      "pwdType": 35,
+      "declaration": true,
+      "sportsLevel": "international",
+      "subCategory": 53,
+      "mainCategory": 47,
+      "isSportsQuota": true,
+      "pwdPercentage": 45,
+      "isExServiceman": true,
+      "localDistrictId": 974,
+      "subSubCategoryId": null,
+      "exServicemanYears": 23,
+      "isLocallyResident": true,
+      "sportsAchievement": "wertgtfrdeswaqsd",
+      "isJharkhandDomicile": true,
+      "pwdCertificateNumber": "sdfd",
+      "pwdCertificateAuthority": "sss",
+      "pwdCertificateIssueDate": "04-06-2026",
+      "sportsCertificateNumber": "asdfgfdsa",
+      "categoryCertificateNumber": "fgt4323456",
+      "domicileCertificateNumber": "werfr3443",
+      "sportsCertificateAuthority": "wedrfrewwwer4rtg",
+      "sportsCertificateIssueDate": "10-06-2026",
+      "categoryCertificateAuthority": "wfgr",
+      "categoryCertificateIssueDate": "11-06-2026",
+      "domicileCertificateAuthority": "wefrew",
+      "domicileCertificateIssueDate": "03-06-2026"
+    }
+  },
+  "step3_payload": {
+    "tenth": {
+      "board": "CBSE",
+      "percentage": "34",
+      "totalMarks": "",
+      "marksObtained": "",
+      "passingCertificateNo": "asdfgf"
+    },
+    "twelfth": {
+      "board": "CBSE",
+      "percentage": "34",
+      "totalMarks": "1234",
+      "marksObtained": "34",
+      "passingCertificateNo": ""
+    },
+    "graduation": {
+      "degreeId": 127,
+      "percentage": "34",
+      "totalMarks": "344",
+      "university": "sdsd",
+      "marksObtained": "45",
+      "passingCertificateNo": "234es"
+    },
+    "postGraduation": {
+      "degreeId": 0,
+      "percentage": "34",
+      "totalMarks": "34434",
+      "university": "ss",
+      "marksObtained": "34",
+      "hasPostGraduation": false,
+      "passingCertificateNo": ""
+    }
+  },
+  "step4_payload": {
+    "subjects": {
+      "paperOne": "Hindi, English",
+      "paperTwo": "English Language & Literature",
+      "isPostId4And7": true,
+      "paperThreeForPost4": "Statistics"
+    }
+  },
+  "step5_payload": {
+    "photo": "beb28aef-a3fc-421c-8208-ca469b9ee32e",
+    "signature": "08f6d78f-9193-4fad-896d-842c09806ee7",
+    "aadharCard": "fc05f384-ab4d-4f8f-83b6-5f008a9e4086",
+    "ewsCertificate": null,
+    "pwdCertificate": "92ffc9af-1ff6-4dce-835a-9b8fef102293",
+    "tenthMarksheet": "ba1b80f6-31e4-4aad-8948-aa395b9ad37f",
+    "castCertificate": null,
+    "twelfthMarksheet": "cbd6f54d-e55c-4b2e-87c9-0059bcadb0b1",
+    "sportsCertificate": "fc7edabb-6f1c-4a34-a831-5615226d8bd4",
+    "diplomaCertificate": null,
+    "declarationAccepted": true,
+    "domicileCertificate": "8b3d8686-664c-4478-8f9e-9af819b51d0f",
+    "graduationMarksheet": "50e7022d-f4cb-48b0-b4ed-8b090000f3cd",
+    "experienceCertificate": null,
+    "postGraduationCertificate": "d738b0b0-9f60-4205-8585-e8ce28373291",
+    "contractualServiceCertificate": null
+  },
+  "step6_payload": {
+    "postPreferences": {
+      "isBacklog": true,
+      "isRegular": true,
+      "postRankings": [
+        {
+          "postCode": "4",
+          "priority": 1
+        }
+      ],
+      "vacancyStream": "both"
+    }
+  }
+}

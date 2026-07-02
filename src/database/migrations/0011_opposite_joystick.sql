@@ -1,0 +1,1 @@
+ALTER TABLE "degrees" DROP CONSTRAINT "degrees_degree_type_unique";

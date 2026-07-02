@@ -1,0 +1,676 @@
+service: bssc-backend
+
+frameworkVersion: '3'
+useDotenv: true
+
+plugins:
+  - serverless-plugin-typescript
+  - serverless-offline
+
+package:
+  individually: false
+  excludeDevDependencies: true
+  patterns:
+    - '!node_modules/typescript/**'
+    - '!node_modules/jest/**'
+    - '!node_modules/drizzle-kit/**'
+    - '!node_modules/eslint/**'
+    - '!node_modules/prettier/**'
+    - '!node_modules/ts-node/**'
+    - '!node_modules/@types/**'
+    - '!tests/**'
+    - '!coverage/**'
+    - '!.git/**'
+    - '!.serverless/**'
+    - '!.build/**'
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  region: ${opt:region, 'ap-south-1'}
+  stage: ${opt:stage, 'dev'}
+  memorySize: 512
+  timeout: 29
+  logRetentionInDays: 14
+  versionFunctions: false
+  httpApi:
+    cors:
+      allowedOrigins:
+        - http://localhost:5173
+        - https://jtglcce-2026.panjikaran.in
+        - https://jtglcce-2026-demo.cyberica.in
+      allowedHeaders:
+        - Content-Type
+        - Authorization
+        - X-Api-Key
+        - X-Requested-With
+      allowedMethods:
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      allowCredentials: true
+
+  environment:
+    NODE_ENV: ${self:provider.stage}
+    DATABASE_URL: ${env:DATABASE_URL, ssm:/candidate-portal/${self:provider.stage}/database-url}
+    JWT_SECRET: ${env:JWT_SECRET, ssm:/candidate-portal/${self:provider.stage}/jwt-secret}
+    S3_BUCKET: ${env:S3_BUCKET, '${self:provider.stage}-candidate-portal-documents'}
+    MOCK_S3: ${env:MOCK_S3, 'false'}
+    MOCK_PAYMENT: ${env:MOCK_PAYMENT, 'false'}
+    MOCK_SMS_EMAIL: ${env:MOCK_SMS_EMAIL, 'false'}
+    RAZORPAY_KEY_ID: ${env:RAZORPAY_KEY_ID, 'rzp_test_mock_key'}
+    RAZORPAY_SECRET: ${env:RAZORPAY_SECRET, 'rzp_test_mock_secret'}
+    GETEPAY_RETURN_URL: ${env:GETEPAY_RETURN_URL, 'http://localhost:3000/api/v1/payment/gateway/return'}
+    FRONTEND_URL: ${env:FRONTEND_URL, 'http://localhost:5173'}
+
+  iam:
+    role:
+      statements:
+        - Effect: Allow
+          Action:
+            - s3:GetObject
+            - s3:PutObject
+            - s3:DeleteObject
+          Resource:
+            - arn:aws:s3:::${env:S3_BUCKET, '${self:provider.stage}-candidate-portal-documents'}/*
+        - Effect: Allow
+          Action:
+            - secretsmanager:GetSecretValue
+          Resource: '*'
+        - Effect: Allow
+          Action:
+            - kms:Decrypt
+          Resource: '*'
+
+
+custom:
+  serverless-offline:
+    httpPort: 3000
+    lambdaPort: 3002
+    noPrependStageInUrl: false
+    payloadLimit: '10mb'
+    useChildProcesses: false
+
+functions:
+  # ── Auth ────────────────────────────────────────────────────
+  getCaptcha:
+    handler: src/handlers/auth/getCaptcha.handler
+    events:
+      - httpApi:
+          path: /api/v1/auth/captcha
+          method: GET
+
+  validateCaptcha:
+    handler: src/handlers/auth/validateCaptcha.handler
+    events:
+      - httpApi:
+          path: /api/v1/auth/captcha/validate
+          method: POST
+
+  login:
+    handler: src/handlers/auth/login.handler
+    events:
+      - httpApi:
+          path: /api/v1/auth/login
+          method: POST
+
+  register:
+    handler: src/handlers/auth/register.handler
+    events:
+      - httpApi:
+          path: /api/v1/auth/register
+          method: POST
+
+  candidateRegister:
+    handler: src/handlers/auth/candidateRegister.handler
+    events:
+      - httpApi:
+          path: /api/v1/auth/candidate/register
+          method: POST
+      - httpApi:
+          path: /api/v1/auth/candidate/registration
+          method: POST
+
+  candidateStep1:
+    handler: src/handlers/auth/candidateStep1.handler
+    events:
+      - httpApi:
+          path: /api/v1/auth/candidate/step-1
+          method: PATCH
+
+  candidateStep2:
+    handler: src/handlers/auth/candidateStep2.handler
+    events:
+      - httpApi:
+          path: /api/v1/auth/candidate/step-2
+          method: PATCH
+
+  candidateStep3:
+    handler: src/handlers/auth/candidateStep3.handler
+    events:
+      - httpApi:
+          path: /api/v1/auth/candidate/step-3
+          method: PATCH
+
+  candidateStep4:
+    handler: src/handlers/auth/candidateStep4.handler
+    events:
+      - httpApi:
+          path: /api/v1/auth/candidate/step-4
+          method: PATCH
+
+  candidateStep5:
+    handler: src/handlers/auth/candidateStep5.handler
+    memorySize: 1024
+    timeout: 60
+    events:
+      - httpApi:
+          path: /api/v1/auth/candidate/step-5
+          method: POST
+
+
+  candidateStep6:
+    handler: src/handlers/auth/candidateStep6.handler
+    events:
+      - httpApi:
+          path: /api/v1/auth/candidate/step-6
+          method: PATCH
+
+  candidateGetStep:
+    handler: src/handlers/auth/getCandidateStep.handler
+    events:
+      - httpApi:
+          path: /api/v1/auth/candidate/{stepNumber}
+          method: GET
+
+  refreshToken:
+    handler: src/handlers/auth/refreshToken.handler
+    events:
+      - httpApi:
+          path: /api/v1/auth/refresh-token
+          method: POST
+
+  forgotPassword:
+    handler: src/handlers/auth/forgotPassword.handler
+    events:
+      - httpApi:
+          path: /api/v1/auth/forgot-password
+          method: POST
+
+  resetPassword:
+    handler: src/handlers/auth/resetPassword.handler
+    events:
+      - httpApi:
+          path: /api/v1/auth/reset-password
+          method: POST
+
+  changePassword:
+    handler: src/handlers/auth/changePassword.handler
+    events:
+      - httpApi:
+          path: /api/v1/auth/change-password
+          method: POST
+
+  logout:
+    handler: src/handlers/auth/logout.handler
+    events:
+      - httpApi:
+          path: /api/v1/auth/logout
+          method: POST
+
+  getProfile:
+    handler: src/handlers/auth/getProfile.handler
+    events:
+      - httpApi:
+          path: /api/v1/auth/profile
+          method: GET
+
+  getCandidateRegistration:
+    handler: src/handlers/auth/getCandidateRegistration.handler
+    events:
+      - httpApi:
+          path: /api/v1/auth/candidate/registration
+          method: GET
+
+  getAllCandidates:
+    handler: src/handlers/auth/getAllCandidates.handler
+    events:
+      - httpApi:
+          path: /api/v1/auth/candidates
+          method: GET
+
+  seedDummy:
+    handler: src/handlers/auth/seedDummy.handler
+    events:
+      - httpApi:
+          path: /api/v1/auth/seed-dummy
+          method: POST
+
+
+  # ── OTP ─────────────────────────────────────────────────────
+  sendMobileOtp:
+    handler: src/handlers/otp/sendMobileOtp.handler
+    events:
+      - httpApi:
+          path: /api/v1/otp/mobile/send
+          method: POST
+
+  verifyMobileOtp:
+    handler: src/handlers/otp/verifyMobileOtp.handler
+    events:
+      - httpApi:
+          path: /api/v1/otp/mobile/verify
+          method: POST
+
+  sendEmailOtp:
+    handler: src/handlers/otp/sendEmailOtp.handler
+    events:
+      - httpApi:
+          path: /api/v1/otp/email/send
+          method: POST
+
+  verifyEmailOtp:
+    handler: src/handlers/otp/verifyEmailOtp.handler
+    events:
+      - httpApi:
+          path: /api/v1/otp/email/verify
+          method: POST
+
+  resendOtp:
+    handler: src/handlers/otp/resendOtp.handler
+    events:
+      - httpApi:
+          path: /api/v1/otp/resend
+          method: POST
+
+  # ── Notification ─────────────────────────────────────────────
+  sendEmailNotification:
+    handler: src/handlers/notification/sendEmail.handler
+    events:
+      - httpApi:
+          path: /api/v1/notifications/email
+          method: POST
+
+  # ── Application ──────────────────────────────────────────────
+  getDraft:
+    handler: src/handlers/application.getDraft
+    events:
+      - httpApi:
+          path: /api/v1/application
+          method: GET
+
+  getAllStepsData:
+    handler: src/handlers/application.getAllStepsData
+    events:
+      - httpApi:
+          path: /api/v1/application/steps/all
+          method: GET
+      - httpApi:
+          path: /api/v1/application/{applicationId}/steps
+          method: GET
+
+  getApplication:
+    handler: src/handlers/application.getApplication
+    events:
+      - httpApi:
+          path: /api/v1/application/{applicationId}
+          method: GET
+
+  saveStep:
+    handler: src/handlers/application.saveStep
+    events:
+      - httpApi:
+          path: /api/v1/application/{applicationId}/step/{stepNumber}
+          method: POST
+
+  getStep:
+    handler: src/handlers/application.getStep
+    events:
+      - httpApi:
+          path: /api/v1/application/{applicationId}/step/{stepNumber}
+          method: GET
+
+  submitApplication:
+    handler: src/handlers/submission.submit
+    events:
+      - httpApi:
+          path: /api/v1/application/{applicationId}/submit
+          method: POST
+
+  finalSubmitLegacy:
+    handler: src/handlers/application.finalSubmitLegacy
+    events:
+      - httpApi:
+          path: /api/v1/application/{applicationId}/submit-final
+          method: POST
+
+  unifiedFinalSubmit:
+    handler: src/handlers/application.unifiedFinalSubmit
+    events:
+      - httpApi:
+          path: /api/v1/application/{applicationId}/final-submit
+          method: POST
+
+  getPrintPreview:
+    handler: src/handlers/application.getPrintPreview
+    events:
+      - httpApi:
+          path: /api/v1/application/{applicationId}/print
+          method: GET
+
+  # ── Documents ────────────────────────────────────────────────
+  uploadDocument:
+    handler: src/handlers/document.upload
+    events:
+      - httpApi:
+          path: /api/v1/documents/upload
+          method: POST
+
+  getDocuments:
+    handler: src/handlers/document.getAll
+    events:
+      - httpApi:
+          path: /api/v1/documents
+          method: GET
+
+  getDocumentDownloadUrl:
+    handler: src/handlers/document.getDownloadUrl
+    events:
+      - httpApi:
+          path: /api/v1/documents/{documentId}/download
+          method: GET
+
+  getDocumentPresignedUrl:
+    handler: src/handlers/document.getPresignedUrl
+    events:
+      - httpApi:
+          path: /api/v1/documents/{documentId}/presigned-url
+          method: GET
+
+  deleteDocument:
+    handler: src/handlers/document.deleteDocument
+    events:
+      - httpApi:
+          path: /api/v1/documents/{documentId}
+          method: DELETE
+
+  # ── Payments ─────────────────────────────────────────────────
+  initiatePayment:
+    handler: src/handlers/payment.initiate
+    events:
+      - httpApi:
+          path: /api/v1/payment/initiate
+          method: POST
+
+  verifyPayment:
+    handler: src/handlers/payment.verify
+    events:
+      - httpApi:
+          path: /api/v1/payment/verify
+          method: POST
+
+  getPaymentStatus:
+    handler: src/handlers/payment.getStatus
+    events:
+      - httpApi:
+          path: /api/v1/payment/{applicationId}/status
+          method: GET
+
+  getFeeStructure:
+    handler: src/handlers/payment.getFeeStructure
+    events:
+      - httpApi:
+          path: /api/v1/payment/fee-structure
+          method: GET
+
+  getInvoice:
+    handler: src/handlers/payment.getInvoice
+    events:
+      - httpApi:
+          path: /api/v1/payment/{paymentOrderId}/invoice
+          method: GET
+
+  freePaymentReturn:
+    handler: src/handlers/payment.freePaymentReturn
+    events:
+      - httpApi:
+          path: /api/v1/payment/free/return
+          method: GET
+
+  # ── Gateway Payments ─────────────────────────────────────────
+  gatewayCreatePayment:
+    handler: src/handlers/gatewayPayment.create
+    events:
+      - httpApi:
+          path: /api/v1/payment/create
+          method: POST
+
+  gatewayVerifyPayment:
+    handler: src/handlers/gatewayPayment.verify
+    events:
+      - httpApi:
+          path: /api/v1/payment/gateway/verify
+          method: POST
+
+  gatewayGetPaymentStatus:
+    handler: src/handlers/gatewayPayment.getStatus
+    events:
+      - httpApi:
+          path: /api/v1/payment/status/{transaction_id}
+          method: GET
+
+  gatewayRefundPayment:
+    handler: src/handlers/gatewayPayment.refund
+    events:
+      - httpApi:
+          path: /api/v1/payment/refund
+          method: POST
+
+  gatewayWebhook:
+    handler: src/handlers/gatewayPayment.webhook
+    events:
+      - httpApi:
+          path: /api/v1/payment/webhook/{gateway}
+          method: POST
+
+  gatewayReturnRedirect:
+    handler: src/handlers/gatewayPayment.returnRedirect
+    events:
+      - httpApi:
+          path: /api/v1/payment/gateway/return
+          method: POST
+
+  # ── Locations ────────────────────────────────────────────────
+  getCountries:
+    handler: src/handlers/location.getCountries
+    events:
+      - httpApi:
+          path: /api/v1/countries
+          method: GET
+
+  getStates:
+    handler: src/handlers/location.getStates
+    events:
+      - httpApi:
+          path: /api/v1/countries/{countryId}/states
+          method: GET
+
+  getDistricts:
+    handler: src/handlers/location.getDistricts
+    events:
+      - httpApi:
+          path: /api/v1/states/{stateId}/districts
+          method: GET
+
+  # ── Dashboard ────────────────────────────────────────────────
+  getDashboard:
+    handler: src/handlers/dashboard.getDashboard
+    events:
+      - httpApi:
+          path: /api/v1/dashboard
+          method: GET
+
+  getNotifications:
+    handler: src/handlers/dashboard.getNotifications
+    events:
+      - httpApi:
+          path: /api/v1/dashboard/notifications
+          method: GET
+
+  getAdmitCard:
+    handler: src/handlers/dashboard.getAdmitCard
+    events:
+      - httpApi:
+          path: /api/v1/dashboard/admit-card
+          method: GET
+
+  getResult:
+    handler: src/handlers/dashboard.getResult
+    events:
+      - httpApi:
+          path: /api/v1/dashboard/result
+          method: GET
+
+  # ── Subjects ───────────────────────────────────────────────
+  seedSubjects:
+    handler: src/handlers/subject.seedSubjects
+    events:
+      - httpApi:
+          path: /api/v1/subjects/seed
+          method: POST
+
+  createSubject:
+    handler: src/handlers/subject.createSubject
+    events:
+      - httpApi:
+          path: /api/v1/subjects
+          method: POST
+
+  listSubjects:
+    handler: src/handlers/subject.listSubjects
+    events:
+      - httpApi:
+          path: /api/v1/subjects
+          method: GET
+
+  # ── Degrees ───────────────────────────────────────────────
+  seedDegrees:
+    handler: src/handlers/degree.seedDegrees
+    events:
+      - httpApi:
+          path: /api/v1/degrees/seed
+          method: POST
+
+  createDegree:
+    handler: src/handlers/degree.createDegree
+    events:
+      - httpApi:
+          path: /api/v1/degrees
+          method: POST
+
+  listDegrees:
+    handler: src/handlers/degree.listDegrees
+    events:
+      - httpApi:
+          path: /api/v1/degrees
+          method: GET
+
+  # ── Categories ─────────────────────────────────────────────
+  seedCategories:
+    handler: src/handlers/category.seedCategories
+    events:
+      - httpApi:
+          path: /api/v1/categories/seed
+          method: POST
+
+  createCategory:
+    handler: src/handlers/category.createCategory
+    events:
+      - httpApi:
+          path: /api/v1/categories
+          method: POST
+
+  listCategories:
+    handler: src/handlers/category.listCategories
+    events:
+      - httpApi:
+          path: /api/v1/categories
+          method: GET
+
+  # ── Disabilities ───────────────────────────────────────────
+  listDisabilities:
+    handler: src/handlers/disability.listDisabilities
+    events:
+      - httpApi:
+          path: /api/v1/disabilities
+          method: GET
+
+  # ── Posts ──────────────────────────────────────────────────
+  listPosts:
+    handler: src/handlers/post.listPosts
+    events:
+      - httpApi:
+          path: /api/v1/posts
+          method: POST
+
+  # ── Admin ──────────────────────────────────────────────────
+  adminGetStats:
+    handler: src/handlers/admin/getStats.handler
+    events:
+      - httpApi:
+          path: /api/v1/admin/stats
+          method: GET
+
+  adminListCandidates:
+    handler: src/handlers/admin/listCandidates.handler
+    events:
+      - httpApi:
+          path: /api/v1/admin/candidates
+          method: GET
+
+  adminGetCandidateDetail:
+    handler: src/handlers/admin/getCandidateDetail.handler
+    events:
+      - httpApi:
+          path: /api/v1/admin/candidates/{candidateId}
+          method: GET
+
+  adminGetCandidateDocuments:
+    handler: src/handlers/admin/getCandidateDocuments.handler
+    events:
+      - httpApi:
+          path: /api/v1/admin/candidates/{candidateId}/documents
+          method: GET
+
+  adminExportCandidatesXlsx:
+    handler: src/handlers/admin/exportCandidatesXlsx.handler
+    events:
+      - httpApi:
+          path: /api/v1/admin/candidates/export/xlsx
+          method: GET
+
+  adminVerifyDocument:
+    handler: src/handlers/admin/verifyDocument.handler
+    events:
+      - httpApi:
+          path: /api/v1/admin/documents/{documentId}/verify
+          method: PATCH
+
+  # ── Public ─────────────────────────────────────────────────
+  getAgeLimits:
+    handler: src/handlers/public.getAgeLimits
+    events:
+      - httpApi:
+          path: /api/v1/public/age-limits
+          method: POST
+
+  getCognitoSubId:
+    handler: src/handlers/public.getCognitoSubId
+    events:
+      - httpApi:
+          path: /api/v1/public/cognito-sub
+          method: POST
+

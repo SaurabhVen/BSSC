@@ -1,0 +1,276 @@
+erDiagram
+    roles {
+        uuid id PK
+        varchar name UK
+        text description
+        timestamp created_at
+        uuid created_by
+        timestamp updated_at
+        uuid updated_by
+        integer version
+    }
+
+    users {
+        uuid id PK
+        varchar email UK
+        text password_hash
+        varchar first_name
+        varchar last_name
+        uuid role_id FK
+        uuid cognito_sub_id UK
+        boolean is_active
+        timestamp last_login_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    candidates {
+        uuid id PK
+        uuid user_id FK "UK"
+        varchar registration_number UK
+        timestamp date_of_birth
+        varchar mobile_number
+        varchar alternate_number
+        boolean mobile_verified
+        boolean email_verified
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    applications {
+        uuid id PK
+        uuid candidate_id FK
+        varchar status
+        integer current_step
+        jsonb completed_steps
+        boolean is_submitted
+        varchar application_reference_number
+        timestamp submission_date
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    application_step_data {
+        uuid id PK
+        uuid application_id FK
+        integer step_number
+        jsonb data
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    documents {
+        uuid id PK
+        uuid candidate_id FK
+        varchar document_type
+        varchar file_name
+        text file_url
+        varchar mime_type
+        integer file_size
+        boolean is_verified
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    payments {
+        uuid id PK
+        uuid application_id FK
+        varchar payment_order_id UK
+        numeric amount
+        varchar currency
+        varchar transaction_id
+        varchar status
+        varchar payment_mode
+        varchar bank_name
+        text payment_url
+        jsonb gateway_response
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    invoices {
+        uuid id PK
+        uuid payment_id FK
+        varchar invoice_number UK
+        timestamp issue_date
+        timestamp due_date
+        varchar status
+        text pdf_url
+        jsonb details
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    otps {
+        uuid id PK
+        varchar otp_request_id UK
+        varchar type
+        varchar recipient
+        varchar code
+        boolean verified
+        text token
+        varchar purpose
+        timestamp expires_at
+        timestamp resend_at
+        timestamp created_at
+    }
+
+    captchas {
+        uuid id PK
+        varchar code
+        timestamp expires_at
+        timestamp created_at
+    }
+
+    categories {
+        bigint cat_id PK
+        bigint cat_user_id
+        varchar cat_name
+        bigint cat_parent_id
+        smallint cat_publish
+    }
+
+    educations {
+        bigint edu_id PK
+        bigint edu_user_id
+        varchar edu_name
+    }
+
+    subjects {
+        integer subject_id PK
+        varchar subject_name UK
+    }
+
+    posts {
+        varchar post_code PK
+        varchar post_name
+    }
+
+    countries {
+        bigint country_id PK
+        varchar country_name
+        varchar country_code UK
+        boolean is_active
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    states {
+        bigint state_id PK
+        bigint country_id FK
+        varchar state_name
+        varchar state_code
+        boolean is_active
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    districts {
+        bigint district_id PK
+        bigint state_id FK
+        varchar district_name
+        boolean is_active
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    job_qualifications {
+        integer sl_no PK
+        text qualification
+        varchar eligible_post_code
+        text main_posts
+        varchar preference_applicable
+    }
+
+    candidate_qualifications {
+        uuid id PK
+        uuid application_id FK
+        varchar level
+        varchar degree
+        varchar board_university
+        varchar institution_name
+        integer year_of_passing
+        integer total_marks
+        integer marks_obtained
+        numeric percentage
+        varchar roll_number
+        varchar grade
+        varchar specialization
+        integer job_qualification_id FK
+    }
+
+    candidate_experiences {
+        uuid id PK
+        uuid application_id FK
+        varchar designation
+        varchar organization
+        timestamp date_of_joining
+        timestamp relieving_date
+        integer duration_years
+        integer duration_months
+        varchar experience_letter_no
+    }
+
+    candidate_post_preferences {
+        uuid id PK
+        uuid application_id FK
+        varchar post_code FK
+        integer priority
+        boolean is_regular
+        boolean is_backlog
+    }
+
+    candidate_languages {
+        uuid id PK
+        uuid application_id FK
+        varchar paper_one_language
+        varchar paper_two_language
+        varchar paper_three_language
+    }
+
+    degrees {
+        integer degree_id PK
+        varchar degree_name UK
+    }
+
+    job_eligibility {
+        integer id PK
+        integer degree_id FK
+        integer subject_id FK
+        varchar post_code FK
+        boolean is_honours
+        boolean has_math_subsidiary
+        varchar preference_applicable
+        text specialization_notes
+    }
+
+    disabilities {
+        integer id PK
+        varchar code UK
+        varchar name
+    }
+
+    roles ||--o{ users : "has"
+    users ||--|| candidates : "is a"
+    candidates ||--o{ applications : "submits"
+    candidates ||--o{ documents : "uploads"
+    applications ||--o{ application_step_data : "contains"
+    applications ||--o{ payments : "makes"
+    payments ||--o{ invoices : "generates"
+    
+    countries ||--o{ states : "contains"
+    states ||--o{ districts : "contains"
+
+    applications ||--o{ candidate_qualifications : "has"
+    job_qualifications ||--o{ candidate_qualifications : "referenced_by"
+
+    applications ||--o{ candidate_experiences : "has"
+
+    applications ||--o{ candidate_post_preferences : "has"
+    posts ||--o{ candidate_post_preferences : "preferred_as"
+
+    applications ||--o{ candidate_languages : "has"
+
+    degrees ||--o{ job_eligibility : "required_for"
+    subjects ||--o{ job_eligibility : "required_for"
+    posts ||--o{ job_eligibility : "has"

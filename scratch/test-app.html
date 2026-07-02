@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Picture Test</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"] { width: 100%; padding: 8px; box-sizing: border-box; }
+        .btn { padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; border-radius: 4px; margin-right: 5px; }
+        .btn:hover { background: #0056b3; }
+        .img-preview { margin-top: 20px; border: 1px solid #ccc; width: 200px; height: 200px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #f9f9f9; }
+        .img-preview img { max-width: 100%; max-height: 100%; }
+        #logs { margin-top: 20px; background: #333; color: #0f0; padding: 10px; border-radius: 4px; max-height: 200px; overflow-y: auto; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h2>Profile Picture Tester</h2>
+
+    <div class="form-group">
+        <label>Token (Bearer Token)</label>
+        <input type="text" id="token" placeholder="Paste your Access/Id Token here...">
+    </div>
+
+    <div class="form-group">
+        <label>Document ID (Optional for upload, Required for fetch)</label>
+        <input type="text" id="documentId" placeholder="e.g. uuid-1234...">
+    </div>
+
+    <div class="form-group">
+        <label>Upload New Profile Picture</label>
+        <input type="file" id="fileInput" accept="image/*">
+        <button class="btn" onclick="uploadPhoto()" style="margin-top: 10px;">Upload</button>
+    </div>
+
+    <hr>
+
+    <div class="form-group">
+        <button class="btn" onclick="fetchPresignedUrl('view')">View Photo (View Mode)</button>
+        <button class="btn" onclick="fetchPresignedUrl('download')" style="background: #28a745;">Get Download Link</button>
+    </div>
+
+    <div class="img-preview">
+        <img id="photoPreview" style="display: none;">
+        <span id="photoPlaceholder">No Photo</span>
+    </div>
+
+    <div id="logs"></div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api/v1';
+
+        function log(msg) {
+            const el = document.getElementById('logs');
+            el.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>`;
+            el.scrollTop = el.scrollHeight;
+            console.log(msg);
+        }
+
+        async function uploadPhoto() {
+            const token = document.getElementById('token').value;
+            const fileInput = document.getElementById('fileInput');
+            if (!token) return alert('Please provide a token');
+            if (!fileInput.files[0]) return alert('Please select a file');
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = async () => {
+                const base64Content = reader.result.split(',')[1];
+                
+                log('Uploading document...');
+                try {
+                    const response = await fetch(`${API_BASE}/documents/upload`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${token}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            documentType: "photograph",
+                            fileName: file.name,
+                            mimeType: file.type,
+                            fileContent: base64Content
+                        })
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        log('Upload successful! Document ID: ' + result.data.documentId);
+                        document.getElementById('documentId').value = result.data.documentId;
+                    } else {
+                        log('Upload failed: ' + JSON.stringify(result));
+                    }
+                } catch (e) {
+                    log('Error: ' + e.message);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function fetchPresignedUrl(mode) {
+            const token = document.getElementById('token').value;
+            const documentId = document.getElementById('documentId').value;
+            
+            if (!token) return alert('Please provide a token');
+            if (!documentId) return alert('Please provide a document ID');
+
+            log(`Fetching presigned URL in ${mode} mode...`);
+
+            try {
+                const response = await fetch(`${API_BASE}/documents/${documentId}/presigned-url?mode=${mode}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                const result = await response.json();
+                if (result.success && result.data && result.data.url) {
+                    const url = result.data.url;
+                    log('Got URL: ' + url);
+
+                    if (mode === 'view') {
+                        document.getElementById('photoPlaceholder').style.display = 'none';
+                        const img = document.getElementById('photoPreview');
+                        img.src = url;
+                        img.style.display = 'block';
+                    } else {
+                        // For download mode, we just open it to trigger download
+                        window.open(url, '_blank');
+                    }
+                } else {
+                    log('Failed: ' + JSON.stringify(result));
+                }
+            } catch (e) {
+                log('Error: ' + e.message);
+            }
+        }
+    </script>
+</body>
+</html>
