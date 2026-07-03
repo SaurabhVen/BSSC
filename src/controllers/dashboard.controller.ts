@@ -8,6 +8,7 @@ import { NotFoundError } from '../errors/AppError';
 import type { LambdaResponse } from '../types';
 
 export class DashboardController {
+
   // ── GET /dashboard ────────────────────────────────────────────
 
   async getDashboard(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
@@ -76,7 +77,7 @@ export class DashboardController {
     });
   }
 
-  // ── GET /dashboard/notifications ──────────────────────────────
+// ── GET /dashboard/notifications ──────────────────────────────
 
   async getNotifications(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
     await authenticate(event);

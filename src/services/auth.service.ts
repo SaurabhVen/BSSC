@@ -345,6 +345,8 @@ export class AuthService {
     }
 
     // 2. Seed Admin User
+
+
     const adminEmail = 'admin@candidateportal.gov.in';
     const adminPassword = 'Admin@12345';
     const adminRecord = await db.select().from(users).where(eq(users.email, adminEmail)).limit(1);
@@ -368,6 +370,7 @@ export class AuthService {
     }
 
     // 3. Seed Candidate User
+
     const candidateEmail = 'candidate@example.com';
     const candidatePassword = 'Candidate@12345';
     const candidateUserRecord = await db
@@ -395,6 +398,7 @@ export class AuthService {
     }
 
     // 4. Seed Candidate Record
+
     const candidateRecord = await db
       .select()
       .from(candidates)
@@ -423,6 +427,7 @@ export class AuthService {
     }
 
     // 5. Fetch or Create Application
+
     const applicationRecord = await db
       .select()
       .from(applications)
@@ -445,7 +450,8 @@ export class AuthService {
       applicationId = applicationRecord[0].id;
     }
 
-    // 6. Create / Get Dummy Documents
+    // 6. Create / Get Dummy Documents 
+
     const documentTypes = [
       'photograph',
       'signature',
@@ -695,7 +701,8 @@ export class AuthService {
         .where(eq(payments.id, existingPayment[0].id));
     }
 
-    // 9. Submit Application
+// 9. Submit Application
+
     const completedSteps = [0, 1, 2, 3, 4, 5, 6, 7, 8];
     const referenceNumber = `BSSC${Date.now().toString(36).toUpperCase()}`;
     await db

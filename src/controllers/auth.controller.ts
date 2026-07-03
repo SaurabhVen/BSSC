@@ -6,6 +6,8 @@ import { response } from '../helpers/response';
 import { parseEvent, getAuthorizationToken } from '../helpers/request';
 import { validate } from '../middleware/validate';
 import { authenticate } from '../middleware/auth';
+import { calculateBSSCAge, calculateExactAge } from '../utils/age';
+
 import {
   loginSchema,
   validateCaptchaSchema,
@@ -50,6 +52,12 @@ import {
 } from '../database/schema';
 import { eq, asc, or, inArray, and } from 'drizzle-orm';
 import { calculateBSSCAge, getBSSCAgeLimits, checkBSSCEligibility } from '../utils/age';
+
+
+// caclulateExactAge function usage example
+const { years, months, days } = calculateExactAge('25-12-1995');
+console.log(`Age: ${years} years, ${months} months, and ${days} days`);
+
 
 interface UnifiedCandidate {
   dob?: string;
@@ -190,6 +198,7 @@ export class AuthController {
 
   // ── POST /auth/login ──────────────────────────────────────────
 
+  
   async login(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
     const { body } = parseEvent(event);
     const input = validate(loginSchema, body);
@@ -245,125 +254,373 @@ export class AuthController {
 
   // ── POST /auth/candidate/step-1 ───────────────────────────────
 
-  async candidateStep1(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
-    const user = await authenticate(event);
+  // async candidateStep1(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
+  //   const user = await authenticate(event);
     
-    const { body } = parseEvent(event);
+  //   const { body } = parseEvent(event);
 
-    // Pre-calculate age if it is falsy (0, null, undefined) before validation
-    if (
-      body &&
-      typeof body === 'object' &&
-      body.personalInfo &&
-      typeof body.personalInfo === 'object'
-    ) {
-      const pi = body.personalInfo as any;
-      if (pi.dob && typeof pi.dob === 'string') {
-        let parsedDobStr = pi.dob;
-        if (pi.dob.match(/^\d{2}-\d{2}-\d{4}$/)) {
-          const parts = pi.dob.split('-');
-          parsedDobStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
-        }
-        const dobDate = new Date(parsedDobStr);
-        if (!isNaN(dobDate.getTime())) {
-          const calculatedAge = calculateBSSCAge(dobDate);
-          if (pi.age === undefined || pi.age === null || pi.age === 0) {
-            pi.age = calculatedAge;
-          }
-        }
-      }
-    }
+  //   // Pre-calculate age if it is falsy (0, null, undefined) before validation
+  //   if (
+  //     body &&
+  //     typeof body === 'object' &&
+  //     body.personalInfo &&
+  //     typeof body.personalInfo === 'object'
+  //   ) {
+  //     const pi = body.personalInfo as any;
+  //     if (pi.dob && typeof pi.dob === 'string') {
+  //       let parsedDobStr = pi.dob;
+  //       if (pi.dob.match(/^\d{2}-\d{2}-\d{4}$/)) {
+  //         const parts = pi.dob.split('-');
+  //         parsedDobStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
+  //       }
+  //       const dobDate = new Date(parsedDobStr);
+  //       if (!isNaN(dobDate.getTime())) {
+  //         const calculatedAge = calculateBSSCAge(dobDate);
+  //         if (pi.age === undefined || pi.age === null || pi.age === 0) {
+  //           pi.age = calculatedAge;
+  //         }
+  //       }
+  //     }
+  //   }
 
-    const input = validate(candidateStep1Schema, body);
-    const candidate = await userRepository.findCandidateByUserId(user.userId);
-    if (!candidate) throw new NotFoundError('Candidate profile not found');
+  //   const input = validate(candidateStep1Schema, body);
+  //   const candidate = await userRepository.findCandidateByUserId(user.userId);
+  //   if (!candidate) throw new NotFoundError('Candidate profile not found');
 
-    const dobParts = input.personalInfo.dob.split('-');
-    const dobDate = new Date(`${dobParts[2]}-${dobParts[1]}-${dobParts[0]}`);
+  //   const dobParts = input.personalInfo.dob.split('-');
+  //   const dobDate = new Date(`${dobParts[2]}-${dobParts[1]}-${dobParts[0]}`);
 
-    const isEligibleMinAge = checkBSSCEligibility(dobDate, 21, 150);
-    if (!isEligibleMinAge) {
-      throw new ValidationError([], 'Candidate must be at least 21 years old as of 01-08-2025');
-    }
+  //   const isEligibleMinAge = checkBSSCEligibility(dobDate, 21, 150);
+  //   if (!isEligibleMinAge) {
+  //     throw new ValidationError([], 'Candidate must be at least 21 years old as of 01-08-2025');
+  //   }
 
-    const mappedAddress: any = {
-      permanent: {
-        street: input.personalInfo.permanentAddress.street,
-        post: input.personalInfo.permanentAddress.post,
-        city: input.personalInfo.permanentAddress.cityOrVillage,
-        district: input.personalInfo.permanentAddress.district,
-        state: input.personalInfo.permanentAddress.state,
-        pincode: input.personalInfo.permanentAddress.pincode,
-        country: 'India',
-      },
+  //   const mappedAddress: any = {
+  //     permanent: {
+  //       street: input.personalInfo.permanentAddress.street,
+  //       post: input.personalInfo.permanentAddress.post,
+  //       city: input.personalInfo.permanentAddress.cityOrVillage,
+  //       district: input.personalInfo.permanentAddress.district,
+  //       state: input.personalInfo.permanentAddress.state,
+  //       pincode: input.personalInfo.permanentAddress.pincode,
+  //       country: 'India',
+  //     },
+  //   };
+
+  //   if (input.personalInfo.sameAsPermanent) {
+  //     mappedAddress.correspondence = {
+  //       sameAsPermanent: true,
+  //       street: mappedAddress.permanent.street,
+  //       post: mappedAddress.permanent.post,
+  //       city: mappedAddress.permanent.city,
+  //       district: mappedAddress.permanent.district,
+  //       state: mappedAddress.permanent.state,
+  //       pincode: mappedAddress.permanent.pincode,
+  //       country: 'India',
+  //     };
+  //   } else if (input.personalInfo.correspondenceAddress) {
+  //     mappedAddress.correspondence = {
+  //       sameAsPermanent: false,
+  //       street: input.personalInfo.correspondenceAddress.street,
+  //       post: input.personalInfo.correspondenceAddress.post,
+  //       city: input.personalInfo.correspondenceAddress.cityOrVillage,
+  //       district: input.personalInfo.correspondenceAddress.district,
+  //       state: input.personalInfo.correspondenceAddress.state,
+  //       pincode: input.personalInfo.correspondenceAddress.pincode,
+  //       country: 'India',
+  //     };
+  //   }
+
+  //   const mappedData = {
+  //     fullName: input.personalInfo.fullName,
+  //     fatherName: input.personalInfo.fathersName,
+  //     motherName: input.personalInfo.motherName,
+  //     dateOfBirth: input.personalInfo.dob,
+  //     age: input.personalInfo.age || calculateBSSCAge(dobDate),
+  //     gender: input.personalInfo.gender,
+  //     maritalStatus: input.personalInfo.maritalStatus || null,
+  //     spouseName: input.personalInfo.spouseName,
+  //     nationality: input.personalInfo.nationality,
+  //     identityType: 'aadhaar' as const,
+  //     identityNumber: input.personalInfo.aadharNumber,
+  //     identificationMark1: input.personalInfo.identificationMark1,
+  //     identificationMark2: input.personalInfo.identificationMark2,
+  //     mobileNumber: input.personalInfo.mobileNumber,
+  //     alternateNumber: input.personalInfo.alternateNumber,
+  //     emailId: input.personalInfo.emailId,
+  //     address: mappedAddress,
+  //   };
+
+  //   const draft = await applicationService.getOrCreateDraft(candidate.id);
+  //   const result = await applicationService.saveStep(
+  //     draft.applicationId,
+  //     candidate.id,
+  //     0,
+  //     mappedData
+  //   );
+
+  //   // Update candidates table
+  //   await userRepository.updateCandidateDetails(candidate.id, {
+  //     dateOfBirth: dobDate,
+  //     mobileNumber: input.personalInfo.mobileNumber,
+  //   });
+
+  //   return response.success(200, {
+  //     message: 'Candidate personal information (Step 1) saved successfully',
+  //     data: {
+  //       ...result,
+  //       savedData: mappedData,
+  //     },
+  //   });
+  // }
+
+
+
+
+  async candidateStep1(
+  event: APIGatewayProxyEventV2
+): Promise<LambdaResponse> {
+
+  // Authenticate logged-in user using JWT token
+  const user = await authenticate(event);
+
+  // Parse request body
+  const { body } = parseEvent(event);
+
+  // Validate request body using Zod schema
+  const input = validate(candidateStep1Schema, body);
+
+  // Find candidate profile using logged-in user ID
+  const candidate = await userRepository.findCandidateByUserId(user.userId);
+
+  // Throw error if candidate does not exist
+  if (!candidate) {
+    throw new NotFoundError('Candidate profile not found');
+  }
+
+  // Get candidate DOB from database
+  const dobDate = candidate.dateOfBirth
+    ? new Date(candidate.dateOfBirth)
+    : null;
+
+  // DOB is mandatory
+  if (!dobDate) {
+    throw new ValidationError([], 'Date of birth is missing in candidate profile');
+  }
+
+  // Check minimum age eligibility (21 years)
+  const isEligibleMinAge = checkBSSCEligibility(dobDate, 21, 150);
+
+  if (!isEligibleMinAge) {
+    throw new ValidationError(
+      [],
+      'Candidate must be at least 21 years old as of 01-08-2025'
+    );
+  }
+
+  // Map Permanent Address
+  const mappedAddress: any = {
+    permanent: {
+      street: input.personalInfo.permanentAddress.street,
+      post: input.personalInfo.permanentAddress.post,
+      city: input.personalInfo.permanentAddress.cityOrVillage,
+      district: input.personalInfo.permanentAddress.district,
+      state: input.personalInfo.permanentAddress.state,
+      pincode: input.personalInfo.permanentAddress.pincode,
+      country: 'India',
+    },
+  };
+
+  // If correspondence address is same as permanent
+  if (input.personalInfo.sameAsPermanent) {
+
+    mappedAddress.correspondence = {
+      sameAsPermanent: true,
+      street: mappedAddress.permanent.street,
+      post: mappedAddress.permanent.post,
+      city: mappedAddress.permanent.city,
+      district: mappedAddress.permanent.district,
+      state: mappedAddress.permanent.state,
+      pincode: mappedAddress.permanent.pincode,
+      country: 'India',
     };
 
-    if (input.personalInfo.sameAsPermanent) {
-      mappedAddress.correspondence = {
-        sameAsPermanent: true,
-        street: mappedAddress.permanent.street,
-        post: mappedAddress.permanent.post,
-        city: mappedAddress.permanent.city,
-        district: mappedAddress.permanent.district,
-        state: mappedAddress.permanent.state,
-        pincode: mappedAddress.permanent.pincode,
-        country: 'India',
-      };
-    } else if (input.personalInfo.correspondenceAddress) {
-      mappedAddress.correspondence = {
-        sameAsPermanent: false,
-        street: input.personalInfo.correspondenceAddress.street,
-        post: input.personalInfo.correspondenceAddress.post,
-        city: input.personalInfo.correspondenceAddress.cityOrVillage,
-        district: input.personalInfo.correspondenceAddress.district,
-        state: input.personalInfo.correspondenceAddress.state,
-        pincode: input.personalInfo.correspondenceAddress.pincode,
-        country: 'India',
-      };
-    }
+  } else if (input.personalInfo.correspondenceAddress) {
 
-    const mappedData = {
-      fullName: input.personalInfo.fullName,
-      fatherName: input.personalInfo.fathersName,
-      motherName: input.personalInfo.motherName,
-      dateOfBirth: input.personalInfo.dob,
-      age: input.personalInfo.age || calculateBSSCAge(dobDate),
-      gender: input.personalInfo.gender,
-      maritalStatus: input.personalInfo.maritalStatus || null,
-      spouseName: input.personalInfo.spouseName,
-      nationality: input.personalInfo.nationality,
-      identityType: 'aadhaar' as const,
-      identityNumber: input.personalInfo.aadharNumber,
-      identificationMark1: input.personalInfo.identificationMark1,
-      identificationMark2: input.personalInfo.identificationMark2,
-      mobileNumber: input.personalInfo.mobileNumber,
-      alternateNumber: input.personalInfo.alternateNumber,
-      emailId: input.personalInfo.emailId,
-      address: mappedAddress,
+    // Otherwise use separate correspondence address
+    mappedAddress.correspondence = {
+      sameAsPermanent: false,
+      street: input.personalInfo.correspondenceAddress.street,
+      post: input.personalInfo.correspondenceAddress.post,
+      city: input.personalInfo.correspondenceAddress.cityOrVillage,
+      district: input.personalInfo.correspondenceAddress.district,
+      state: input.personalInfo.correspondenceAddress.state,
+      pincode: input.personalInfo.correspondenceAddress.pincode,
+      country: 'India',
     };
+  }
 
-    const draft = await applicationService.getOrCreateDraft(candidate.id);
-    const result = await applicationService.saveStep(
+  // Convert DOB into dd-mm-yyyy format
+  const day = String(dobDate.getDate()).padStart(2, '0');
+  const month = String(dobDate.getMonth() + 1).padStart(2, '0');
+  const year = dobDate.getFullYear();
+
+  const dobStr = `${day}-${month}-${year}`;
+
+  // Create Step 0 payload (Personal Information)
+  const mappedDataStep0 = {
+
+    fullName: candidate.applicantName || '',
+    fatherName: input.personalInfo.fathersName,
+    motherName: input.personalInfo.motherName,
+
+    dateOfBirth: dobStr,
+    age: calculateBSSCAge(dobDate),
+
+    gender: candidate.gender || 'male',
+
+    maritalStatus: input.personalInfo.maritalStatus || null,
+    spouseName: input.personalInfo.spouseName || '',
+
+    nationality: input.personalInfo.nationality,
+
+    identityType: 'aadhaar',
+
+    identityNumber: input.personalInfo.aadharNumber || '',
+
+    identificationMark1: input.personalInfo.identificationMark1,
+    identificationMark2: input.personalInfo.identificationMark2 || '',
+
+    mobileNumber: candidate.mobileNumber || '',
+    alternateNumber: '',
+
+    emailId: candidate.email || '',
+
+    address: mappedAddress,
+  };
+
+  // Database instance
+  const db = getDb();
+
+  // Category ID
+  let mainCategoryId = null;
+
+  // Find category ID from category name
+  if (candidate.category) {
+
+    const cats = await db
+      .select()
+      .from(categories)
+      .where(eq(categories.catName, candidate.category))
+      .limit(1);
+
+    if (cats.length > 0) {
+      mainCategoryId = Number(cats[0].catId);
+    }
+  }
+
+  // Reservation data
+  
+  const rc = input.reservationAndCertificates;
+
+  // Create Step 1 payload
+  const mappedDataStep1 = {
+
+    mainCategory: mainCategoryId,
+    subCategory: null,
+    subSubCategoryId: null,
+
+    categoryCertificateNumber:
+      rc.categoryCertificateNumber,
+
+    categoryCertificateAuthority:
+      rc.categoryCertificateAuthority,
+
+    categoryCertificateIssueDate:
+      rc.categoryCertificateIssueDate,
+
+    // PWD Details
+    isPwd: rc.isPwd,
+    pwdType: null,
+    pwdPercentage: null,
+    pwdCertificateNumber: null,
+    pwdCertificateAuthority: null,
+    pwdCertificateIssueDate: null,
+
+    // Ex Serviceman
+    isExServiceman: rc.isExServiceman,
+    exServicemanYears: null,
+
+    // Sports Quota
+    isSportsQuota: false,
+    sportsLevel: null,
+    sportsAchievement: null,
+    sportsCertificateNumber: null,
+    sportsCertificateAuthority: null,
+    sportsCertificateIssueDate: null,
+
+    // Bihar Domicile
+    isJharkhandDomicile: !rc.isBiharDomicile,
+
+    domicileCertificateNumber:
+      rc.domicileCertificateNumber,
+
+    domicileCertificateAuthority:
+      rc.domicileCertificateAuthority,
+
+    domicileCertificateIssueDate:
+      rc.domicileCertificateIssueDate,
+
+    isLocallyResident: true,
+    localDistrictId: null,
+
+    // Declaration
+    declaration: rc.declaration,
+
+    // Uploaded PDF URLs
+    contractualExperienceCertificateUrl:
+      rc.contractualExperienceCertificateUrl,
+
+    agreementCopyUrl:
+      rc.agreementCopyUrl,
+  };
+
+  // Get existing application draft or create a new one
+  const draft =
+    await applicationService.getOrCreateDraft(candidate.id);
+
+  // Save Personal Information (Step 0)
+  await applicationService.saveStep(
+    draft.applicationId,
+    candidate.id,
+    0,
+    mappedDataStep0
+  );
+
+  // Save Reservation Information (Step 1)
+  const result1 =
+    await applicationService.saveStep(
       draft.applicationId,
       candidate.id,
-      0,
-      mappedData
+      1,
+      mappedDataStep1
     );
 
-    // Update candidates table
-    await userRepository.updateCandidateDetails(candidate.id, {
-      dateOfBirth: dobDate,
-      mobileNumber: input.personalInfo.mobileNumber,
-    });
+  // Return success response
+  return response.success(200, {
+    message:
+      'Candidate personal and reservation information (Step 1 & 2) saved successfully',
 
-    return response.success(200, {
-      message: 'Candidate personal information (Step 1) saved successfully',
-      data: {
-        ...result,
-        savedData: mappedData,
+    data: {
+      ...result1,
+
+      savedData: {
+        personalInfo: mappedDataStep0,
+        reservationAndCertificates: mappedDataStep1,
       },
-    });
-  }
+    },
+  });
+}
 
   // ── PATCH /auth/candidate/step-2 ───────────────────────────
 

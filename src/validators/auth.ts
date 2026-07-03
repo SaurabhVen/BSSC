@@ -161,57 +161,93 @@ export const resendOtpSchema = z.object({
 
 // ── Candidate Step 1 Schema ────────────────────────────────────
 
-export const candidateAddressSchema = z.object({
+// export const candidateAddressSchema = z.object({
+//   street: z.string().min(1, 'Street/House details are required').max(255),
+//   post: z.string().min(1, 'Post office is required').max(100),
+//   state: z.string().min(1, 'State is required').max(100),
+//   district: z.string().min(1, 'District is required').max(100),
+//   pincode: z.string().regex(/^\d{6}$/, 'Pincode must be exactly 6 digits'),
+//   cityOrVillage: z.string().min(1, 'City/Village is required').max(100),
+// });
+// export const candidateStep1Schema = z.object({
+//   personalInfo: z
+//     .object({
+//       fullName: z.string().min(1, 'Full name is required').max(200),
+
+//       fathersName: z.string().min(1, "Father's name is required").max(200),
+
+//       motherName: z.string().min(1, "Mother's name is required").max(200),
+
+//       dob: z
+//         .string()
+//         .regex(
+//           /^(0[1-9]|[12]\d|3[01])-(0[1-9]|1[0-2])-\d{4}$/,
+//           'Date of birth must be in dd-mm-yyyy format'
+//         ),
+
+//       age: z.number().int().min(18).max(100).optional(),
+
+//       gender: z.string().optional(),
+
+//       nationality: z.string().min(1, 'Nationality is required').max(100),
+
+//       aadharNumber: z.string().regex(/^\d{12}$/, 'Aadhaar number must be exactly 12 digits').optional().nullable().or(z.literal('')),
+
+//       identificationMark1: z.string().min(0).max(255),
+
+//       identificationMark2: z.string().max(255).optional(),
+
+//       mobileNumber: mobileSchema,
+
+//       alternateNumber: mobileSchema.optional().or(z.literal('')),
+
+//       maritalStatus: z.string().optional().or(z.literal('')),
+
+//       emailId: emailSchema,
+
+//       permanentAddress: candidateAddressSchema,
+
+//       sameAsPermanent: z.boolean().default(false),
+
+//       correspondenceAddress: candidateAddressSchema.optional(),
+//       spouseName: z.string().max(200).optional(),
+
+//     })
+//     .superRefine((data, ctx) => {
+//       if (!data.sameAsPermanent && !data.correspondenceAddress) {
+//         ctx.addIssue({
+//           code: z.ZodIssueCode.custom,
+//           path: ['correspondenceAddress'],
+//           message: 'Correspondence address is required when sameAsPermanent is false',
+//         });
+//       }
+//     }),
+//});
+
+ export const candidateAddressSchema = z.object({
   street: z.string().min(1, 'Street/House details are required').max(255),
+  policeStation: z.string().min(1, 'Police station is required').max(100), // <-- Add this line
   post: z.string().min(1, 'Post office is required').max(100),
   state: z.string().min(1, 'State is required').max(100),
   district: z.string().min(1, 'District is required').max(100),
   pincode: z.string().regex(/^\d{6}$/, 'Pincode must be exactly 6 digits'),
   cityOrVillage: z.string().min(1, 'City/Village is required').max(100),
-});
+ });
+
 export const candidateStep1Schema = z.object({
   personalInfo: z
     .object({
-      fullName: z.string().min(1, 'Full name is required').max(200),
-
       fathersName: z.string().min(1, "Father's name is required").max(200),
-
       motherName: z.string().min(1, "Mother's name is required").max(200),
-
-      dob: z
-        .string()
-        .regex(
-          /^(0[1-9]|[12]\d|3[01])-(0[1-9]|1[0-2])-\d{4}$/,
-          'Date of birth must be in dd-mm-yyyy format'
-        ),
-
-      age: z.number().int().min(18).max(100).optional(),
-
-      gender: z.string().optional(),
-
       nationality: z.string().min(1, 'Nationality is required').max(100),
-
       aadharNumber: z.string().regex(/^\d{12}$/, 'Aadhaar number must be exactly 12 digits').optional().nullable().or(z.literal('')),
-
-      identificationMark1: z.string().min(0).max(255),
-
+      identificationMark1: z.string().min(1, 'Identification mark is required').max(255),
       identificationMark2: z.string().max(255).optional(),
-
-      mobileNumber: mobileSchema,
-
-      alternateNumber: mobileSchema.optional().or(z.literal('')),
-
       maritalStatus: z.string().optional().or(z.literal('')),
-
-      emailId: emailSchema,
-
-      permanentAddress: candidateAddressSchema,
-
-      sameAsPermanent: z.boolean().default(false),
-
-      correspondenceAddress: candidateAddressSchema.optional(),
       spouseName: z.string().max(200).optional(),
-
+      sameAsPermanent: z.boolean().default(false),
+      permanentAddress: candidateAddressSchema,
+      correspondenceAddress: candidateAddressSchema.optional(),
     })
     .superRefine((data, ctx) => {
       if (!data.sameAsPermanent && !data.correspondenceAddress) {
@@ -222,7 +258,27 @@ export const candidateStep1Schema = z.object({
         });
       }
     }),
+    
+  reservationAndCertificates: z.object({
+    isBiharDomicile: z.boolean().default(true),
+    domicileCertificateNumber: z.string().min(1, 'Domicile certificate number is required'),
+    domicileCertificateAuthority: z.string().min(1, 'Domicile certificate authority is required'),
+    domicileCertificateIssueDate: z.string().min(1, 'Domicile certificate issue date is required'),
+    categoryCertificateNumber: z.string().min(1, 'Certificate number is required'),
+    categoryCertificateAuthority: z.string().min(1, 'Certificate authority is required'),
+    categoryCertificateIssueDate: z.string().min(1, 'Certificate issue date is required'),
+    isPwd: z.boolean().default(false),
+    isExServiceman: z.boolean().default(false),
+    declaration: z.literal(true, {
+      errorMap: () => ({
+        message: 'You must agree to the declaration to proceed.',
+      }),
+    }),
+    contractualExperienceCertificateUrl: z.string().url().min(1, 'Experience certificate PDF URL is required'),
+    agreementCopyUrl: z.string().url().min(1, 'Agreement copy PDF URL is required'),
+  }),
 });
+
 // ── Candidate Step 2 Schema ────────────────────────────────────
 export const candidateStep2Schema = z.object({
   reservationCategory: z

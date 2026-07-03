@@ -24,7 +24,9 @@ export class DegreeController {
   }
 
   // ── POST /degrees ──────────────────────────────────────────
+
   // Insert a single degree via API
+
 
   async create(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
     const { body } = parseEvent(event);
@@ -83,7 +85,9 @@ export class DegreeController {
   }
 
   // ── GET /degrees ───────────────────────────────────────────
+ 
   // List all degrees
+
 
   async list(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
     try {
