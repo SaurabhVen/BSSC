@@ -38,7 +38,7 @@ export const handler = async (
     const existingUser = await userRepository.findByCognitoSubId(event.userName);
     if (existingUser) {
       console.log(`User ${email} already exists in DB with Cognito Sub ID: ${event.userName}`);
-      
+
       const candidate = await userRepository.findCandidateByUserId(existingUser.id);
       if (candidate && candidate.registrationNumber) {
         console.log(`[Trigger] Existing candidate registration number is ${candidate.registrationNumber}. Updating Cognito custom attributes...`);
