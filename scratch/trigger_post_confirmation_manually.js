@@ -9,7 +9,7 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 const COGNITO_USER_POOL_ID = process.env.COGNITO_USER_POOL_ID;
 
 async function triggerConfirmation() {
-  const email = 'shivam+4@vensysco.in';
+  const email = 'shivam+5@vensysco.in';
   console.log(`Fetching Cognito user details for email: ${email}...`);
 
   const cognitoUser = await getCognitoUserByEmail(email);

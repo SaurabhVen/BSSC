@@ -39,10 +39,14 @@ const cognitoClient = new CognitoIdentityProviderClient({
   region: config.AWS_REGION,
 });
 
-const computeSecretHash = (username: string): string =>
-  createHmac('sha256', config.COGNITO_CLIENT_SECRET)
+const computeSecretHash = (username: string): string | undefined => {
+  if (!config.COGNITO_CLIENT_SECRET || config.COGNITO_CLIENT_SECRET === 'mockClientSecret1234567890') {
+    return undefined;
+  }
+  return createHmac('sha256', config.COGNITO_CLIENT_SECRET)
     .update(username + config.COGNITO_CLIENT_ID)
     .digest('base64');
+};
 
 const mockUsers: Map<string, MockUser> = new Map([
   [
@@ -116,13 +120,14 @@ export const cognitoLogin = async (email: string, password: string): Promise<Cog
     return generateMockTokens(user.email, user.userId);
   }
 
+  const secretHash = computeSecretHash(email);
   const params: InitiateAuthCommandInput = {
     AuthFlow: 'USER_PASSWORD_AUTH',
     ClientId: config.COGNITO_CLIENT_ID,
     AuthParameters: {
       USERNAME: email,
       PASSWORD: password,
-      SECRET_HASH: computeSecretHash(email),
+      ...(secretHash ? { SECRET_HASH: secretHash } : {}),
     },
   };
 
@@ -174,8 +179,20 @@ export const cognitoRegister = async (
   email: string,
   password: string,
   attributes: Record<string, string> = {}
-) => {
-  // Map standard and custom attributes...
+): Promise<{ userSub: string }> => {
+  if (config.MOCK_COGNITO) {
+    const { v4: uuidv4 } = await import('uuid');
+    const mockId = uuidv4();
+    mockUsers.set(email.toLowerCase(), {
+      userId: mockId,
+      email,
+      password,
+      roles: ['candidate'],
+    });
+    return { userSub: mockId };
+  }
+
+  const secretHash = computeSecretHash(email);
   const userAttributesList = Object.entries(attributes).map(([Name, Value]) => ({
     Name,
     Value,
@@ -185,10 +202,12 @@ export const cognitoRegister = async (
     ClientId: config.COGNITO_CLIENT_ID,
     Username: email.toLowerCase().trim(),
     Password: password,
-    SecretHash: computeSecretHash(email),
+    ...(secretHash ? { SecretHash: secretHash } : {}),
     UserAttributes: userAttributesList,
   });
-  // Send command...
+
+  const result = await cognitoClient.send(command);
+  return { userSub: result.UserSub ?? '' };
 };
 
 
@@ -255,12 +274,13 @@ export const cognitoRefreshToken = async (
     return generateMockTokens(user.email, user.userId);
   }
 
+  const secretHash = computeSecretHash(email);
   const params: InitiateAuthCommandInput = {
     AuthFlow: 'REFRESH_TOKEN_AUTH',
     ClientId: config.COGNITO_CLIENT_ID,
     AuthParameters: {
       REFRESH_TOKEN: refreshToken,
-      SECRET_HASH: computeSecretHash(email),
+      ...(secretHash ? { SECRET_HASH: secretHash } : {}),
     },
   };
 
@@ -279,11 +299,12 @@ export const cognitoRefreshToken = async (
 export const cognitoForgotPassword = async (email: string): Promise<void> => {
   if (config.MOCK_COGNITO) return;
 
+  const secretHash = computeSecretHash(email);
   await cognitoClient.send(
     new ForgotPasswordCommand({
       ClientId: config.COGNITO_CLIENT_ID,
       Username: email,
-      SecretHash: computeSecretHash(email),
+      ...(secretHash ? { SecretHash: secretHash } : {}),
     })
   );
 };
@@ -299,13 +320,14 @@ export const cognitoConfirmForgotPassword = async (
     return;
   }
 
+  const secretHash = computeSecretHash(email);
   await cognitoClient.send(
     new ConfirmForgotPasswordCommand({
       ClientId: config.COGNITO_CLIENT_ID,
       Username: email,
       ConfirmationCode: confirmationCode,
       Password: newPassword,
-      SecretHash: computeSecretHash(email),
+      ...(secretHash ? { SecretHash: secretHash } : {}),
     })
   );
 };
@@ -326,12 +348,13 @@ export const cognitoConfirmSignUp = async (
 ): Promise<void> => {
   if (config.MOCK_COGNITO) return;
 
+  const secretHash = computeSecretHash(email);
   await cognitoClient.send(
     new ConfirmSignUpCommand({
       ClientId: config.COGNITO_CLIENT_ID,
       Username: email,
       ConfirmationCode: confirmationCode,
-      SecretHash: computeSecretHash(email),
+      ...(secretHash ? { SecretHash: secretHash } : {}),
     })
   );
 };
@@ -341,11 +364,12 @@ export const cognitoConfirmSignUp = async (
 export const cognitoResendConfirmationCode = async (email: string): Promise<void> => {
   if (config.MOCK_COGNITO) return;
 
+  const secretHash = computeSecretHash(email);
   await cognitoClient.send(
     new ResendConfirmationCodeCommand({
       ClientId: config.COGNITO_CLIENT_ID,
       Username: email,
-      SecretHash: computeSecretHash(email),
+      ...(secretHash ? { SecretHash: secretHash } : {}),
     })
   );
 };

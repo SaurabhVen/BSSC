@@ -304,6 +304,24 @@ export const handler = async (
       );
     }
 
+    // 7. Send registration success email with registration number
+    try {
+      const { notificationService } = await import('../../services/notification.service');
+      const emailTemplate = notificationService.renderRegistrationSuccessEmail({
+        candidateName: fullName,
+        applicationNo: registrationNumber,
+        password: '(आपके द्वारा रजिस्ट्रेशन के दौरान सेट किया गया पासवर्ड / Password set during registration)',
+        email: email,
+      });
+      await notificationService.sendEmail(email, emailTemplate.subject, emailTemplate.body);
+      console.log(`[Trigger] Sent registration success email with registration_no to ${email}`);
+    } catch (err) {
+      console.warn(
+        '[Trigger] Sending registration success email failed (non-fatal):',
+        (err as Error).message
+      );
+    }
+
     console.log(`[Trigger] Successfully synced Cognito user ${email} and created candidate record.`);
     return event;
   } catch (error) {
