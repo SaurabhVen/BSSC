@@ -1,0 +1,1282 @@
+{
+  "info": {
+    "name": "BSSC Full API Collection (With Payloads)",
+    "description": "Complete Postman collection with realistic dummy Indian payloads for all BSSC APIs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "your_jwt_token",
+      "type": "string"
+    },
+    {
+      "key": "applicationId",
+      "value": "your_app_id",
+      "type": "string"
+    },
+    {
+      "key": "documentId",
+      "value": "your_doc_id",
+      "type": "string"
+    },
+    {
+      "key": "countryId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "stateId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "paymentOrderId",
+      "value": "order_xyz",
+      "type": "string"
+    },
+    {
+      "key": "candidateId",
+      "value": "your_candidate_id",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Get Captcha",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/auth/captcha"
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rahul.sharma@example.com\",\n  \"password\": \"Rahul@123!\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/login"
+          }
+        },
+        {
+          "name": "Register Admin",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Admin\",\n  \"lastName\": \"User\",\n  \"email\": \"admin@bssc.in\",\n  \"password\": \"Admin@123!\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/register"
+          }
+        },
+        {
+          "name": "Candidate Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Rahul\",\n  \"lastName\": \"Sharma\",\n  \"email\": \"rahul.sharma@example.com\",\n  \"mobileNumber\": \"9876543210\",\n  \"password\": \"Rahul@123!\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/candidate/register"
+          }
+        },
+        {
+          "name": "Candidate Registration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Rahul\",\n  \"lastName\": \"Sharma\",\n  \"email\": \"rahul.sharma@example.com\",\n  \"mobileNumber\": \"9876543210\",\n  \"password\": \"Rahul@123!\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/candidate/registration"
+          }
+        },
+        {
+          "name": "Candidate Step 1 (Personal Info)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"personalInfo\": {\n    \"fullName\": \"Rahul Sharma\",\n    \"fathersName\": \"Ramesh Sharma\",\n    \"motherName\": \"Sita Sharma\",\n    \"dob\": \"1995-08-15\",\n    \"age\": 28,\n    \"gender\": \"male\",\n    \"nationality\": \"Indian\",\n    \"aadharNumber\": \"123456789012\",\n    \"identificationMark1\": \"Mole on right cheek\",\n    \"identificationMark2\": \"\",\n    \"mobileNumber\": \"9876543210\",\n    \"alternateNumber\": \"8765432109\",\n    \"emailId\": \"rahul.sharma@example.com\",\n    \"permanentAddress\": {\n      \"street\": \"MGM Medical College Road\",\n      \"post\": \"Mango\",\n      \"cityOrVillage\": \"Jamshedpur\",\n      \"district\": \"East Singhbhum\",\n      \"state\": \"Jharkhand\",\n      \"pincode\": \"831001\"\n    },\n    \"sameAsPermanent\": true\n  }\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/candidate/step-1"
+          }
+        },
+        {
+          "name": "Candidate Step 2 (Reservation)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isJharkhandDomicile\": true,\n  \"mainCategory\": 54,\n  \"subCategory\": 0,\n  \"isPwd\": false,\n  \"isExServiceman\": false,\n  \"isSportsQuota\": false,\n  \"declaration\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/candidate/step-2"
+          }
+        },
+        {
+          "name": "Candidate Step 3 (Experience/Edu)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"highestQualification\": \"graduation\",\n  \"experience\": {\n    \"hasExperience\": true,\n    \"organization\": \"Tech Solutions\",\n    \"designation\": \"Software Engineer\",\n    \"durationYears\": 2,\n    \"durationMonths\": 5\n  },\n  \"qualifications\": [\n    {\n      \"level\": \"matriculation\",\n      \"degree\": \"10th\",\n      \"boardUniversity\": \"JAC\",\n      \"institutionName\": \"Ranchi High School\",\n      \"yearOfPassing\": 2011,\n      \"totalMarks\": 500,\n      \"marksObtained\": 400,\n      \"percentage\": 80,\n      \"rollNumber\": \"100123\"\n    }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/candidate/step-3"
+          }
+        },
+        {
+          "name": "Candidate Step 4 (Post Pref)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vacancyStream\": \"both\",\n  \"isRegular\": true,\n  \"isBacklog\": true,\n  \"postRankings\": [\n    { \"postId\": 46, \"priority\": 1 },\n    { \"postId\": 44, \"priority\": 2 }\n  ]\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/candidate/step-4"
+          }
+        },
+        {
+          "name": "Candidate Step 5 (Languages)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"paperOneLanguage\": \"Hindi\",\n  \"paperTwoLanguage\": \"Khortha\",\n  \"paperThreeLanguage\": \"Mathematics\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/candidate/step-5"
+          }
+        },
+        {
+          "name": "Candidate Step 6 (Documents)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"photo\": \"uuid-for-photo\",\n  \"signature\": \"uuid-for-signature\",\n  \"tenthMarksheet\": \"uuid-for-tenth\",\n  \"declarationAccepted\": true\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/candidate/step-6"
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"your_refresh_token\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/refresh-token"
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rahul.sharma@example.com\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/forgot-password"
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rahul.sharma@example.com\",\n  \"code\": \"123456\",\n  \"newPassword\": \"Rahul@New123!\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/reset-password"
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"oldPassword\": \"Rahul@123!\",\n  \"newPassword\": \"Rahul@New123!\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/change-password"
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/auth/logout"
+          }
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/auth/profile"
+          }
+        },
+        {
+          "name": "Seed Dummy Data",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/seed-dummy"
+          }
+        }
+      ]
+    },
+    {
+      "name": "OTP",
+      "item": [
+        {
+          "name": "Send Mobile OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mobileNumber\": \"9876543210\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/otp/mobile/send"
+          }
+        },
+        {
+          "name": "Verify Mobile OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"otpRequestId\": \"sample-uuid-request-id\",\n  \"code\": \"1234\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/otp/mobile/verify"
+          }
+        },
+        {
+          "name": "Send Email OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"rahul.sharma@example.com\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/otp/email/send"
+          }
+        },
+        {
+          "name": "Verify Email OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"otpRequestId\": \"sample-uuid-request-id\",\n  \"code\": \"1234\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/otp/email/verify"
+          }
+        },
+        {
+          "name": "Resend OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"otpRequestId\": \"sample-uuid-request-id\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/otp/resend"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Application",
+      "item": [
+        {
+          "name": "Get Draft",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/application"
+          }
+        },
+        {
+          "name": "Get All Steps",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/application/steps/all"
+          }
+        },
+        {
+          "name": "Get Application Status",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/application/{{applicationId}}"
+          }
+        },
+        {
+          "name": "Save Step Data (Example)",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Rahul\",\n  \"lastName\": \"Sharma\",\n  \"dateOfBirth\": \"1995-08-15\",\n  \"mobileNumber\": \"9876543210\",\n  \"emailId\": \"rahul.sharma@example.com\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/application/{{applicationId}}/step/0"
+          }
+        },
+        {
+          "name": "Get Step Data",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/application/{{applicationId}}/step/0"
+          }
+        },
+        {
+          "name": "Standard Submit",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/application/{{applicationId}}/submit"
+          }
+        },
+        {
+          "name": "Final Submit Legacy",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/application/{{applicationId}}/submit-final"
+          }
+        },
+        {
+          "name": "Print Preview",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/application/{{applicationId}}/print"
+          }
+        },
+        {
+          "name": "Get Eligible Posts",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": "{{baseUrl}}/api/v1/posts"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Documents",
+      "item": [
+        {
+          "name": "Upload Document",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/documents/upload"
+          }
+        },
+        {
+          "name": "Get All Documents",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/documents"
+          }
+        },
+        {
+          "name": "Get Download URL",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/documents/{{documentId}}/download"
+          }
+        },
+        {
+          "name": "Delete Document",
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/documents/{{documentId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "item": [
+        {
+          "name": "Initiate Payment",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"applicationId\": \"{{applicationId}}\",\n  \"amount\": 500\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/payment/initiate"
+          }
+        },
+        {
+          "name": "Verify Payment",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"razorpay_order_id\": \"order_abc123\",\n  \"razorpay_payment_id\": \"pay_abc123\",\n  \"razorpay_signature\": \"signature_abc123\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/payment/verify"
+          }
+        },
+        {
+          "name": "Get Payment Status",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/payment/{{applicationId}}/status"
+          }
+        },
+        {
+          "name": "Get Fee Structure",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/payment/fee-structure"
+          }
+        },
+        {
+          "name": "Get Invoice",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/payment/{{paymentOrderId}}/invoice"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Locations",
+      "item": [
+        {
+          "name": "Get Countries",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/countries"
+          }
+        },
+        {
+          "name": "Get States",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/countries/{{countryId}}/states"
+          }
+        },
+        {
+          "name": "Get Districts",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/states/{{stateId}}/districts"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get Dashboard Info",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/dashboard"
+          }
+        },
+        {
+          "name": "Get Notifications",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/dashboard/notifications"
+          }
+        },
+        {
+          "name": "Get Admit Card",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/dashboard/admit-card"
+          }
+        },
+        {
+          "name": "Get Result",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "url": "{{baseUrl}}/api/v1/dashboard/result"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Subjects & Categories",
+      "item": [
+        {
+          "name": "Seed Subjects",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/subjects/seed"
+          }
+        },
+        {
+          "name": "List Subjects",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/subjects"
+          }
+        },
+        {
+          "name": "Create Subject",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Mathematics\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/subjects"
+          }
+        },
+        {
+          "name": "Seed Categories",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/categories/seed"
+          }
+        },
+        {
+          "name": "List Categories",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/categories"
+          }
+        },
+        {
+          "name": "Create Category",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"General Category\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/categories"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "item": [
+        {
+          "name": "Get Admin Stats",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "stats"
+              ]
+            },
+            "description": "Retrieve statistics summary for the admin dashboard (e.g. total, submitted, verified applications)."
+          },
+          "response": []
+        },
+        {
+          "name": "List Candidates",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/candidates?page=1&limit=20&search=&status=&isSubmitted=true&mobileVerified=true&emailVerified=true&fromDate=&toDate=&sortBy=createdAt&sortOrder=desc",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "candidates"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Limit of candidates per page"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Search filter (candidate name/email)"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filter by status"
+                },
+                {
+                  "key": "isSubmitted",
+                  "value": "true",
+                  "description": "Filter by application submission status"
+                },
+                {
+                  "key": "mobileVerified",
+                  "value": "true",
+                  "description": "Filter by mobile verification status"
+                },
+                {
+                  "key": "emailVerified",
+                  "value": "true",
+                  "description": "Filter by email verification status"
+                },
+                {
+                  "key": "fromDate",
+                  "value": "",
+                  "description": "Candidate registration starting date"
+                },
+                {
+                  "key": "toDate",
+                  "value": "",
+                  "description": "Candidate registration ending date"
+                },
+                {
+                  "key": "sortBy",
+                  "value": "createdAt",
+                  "description": "Field to sort by"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "desc",
+                  "description": "Sort direction"
+                }
+              ]
+            },
+            "description": "Retrieve candidate lists with pagination, sorting, and filters."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Candidate Detail",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/candidates/{{candidateId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "candidates",
+                "{{candidateId}}"
+              ]
+            },
+            "description": "Retrieve details of a specific candidate."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Candidate Documents",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/candidates/{{candidateId}}/documents?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "candidates",
+                "{{candidateId}}",
+                "documents"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            },
+            "description": "Retrieve uploaded documents of a specific candidate."
+          },
+          "response": []
+        },
+        {
+          "name": "Export Candidates to XLSX",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/candidates/export/xlsx?search=&status=&isSubmitted=true&mobileVerified=true&emailVerified=true&fromDate=&toDate=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "candidates",
+                "export",
+                "xlsx"
+              ],
+              "query": [
+                {
+                  "key": "search",
+                  "value": ""
+                },
+                {
+                  "key": "status",
+                  "value": ""
+                },
+                {
+                  "key": "isSubmitted",
+                  "value": "true"
+                },
+                {
+                  "key": "mobileVerified",
+                  "value": "true"
+                },
+                {
+                  "key": "emailVerified",
+                  "value": "true"
+                },
+                {
+                  "key": "fromDate",
+                  "value": ""
+                },
+                {
+                  "key": "toDate",
+                  "value": ""
+                }
+              ]
+            },
+            "description": "Export filtered candidates spreadsheet (base64 encoded XLSX binary)."
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Document",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isVerified\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/admin/documents/{{documentId}}/verify",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "documents",
+                "{{documentId}}",
+                "verify"
+              ]
+            },
+            "description": "Mark document as verified/unverified."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

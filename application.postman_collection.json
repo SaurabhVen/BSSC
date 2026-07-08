@@ -1,0 +1,331 @@
+{
+	"info": {
+		"_postman_id": "aa12b456-1234-5678-abcd-1234567890ab",
+		"name": "BSSC Application API",
+		"description": "Postman collection for Candidate Application workflow.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Get Application Draft",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/application",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"application"
+					]
+				},
+				"description": "Retrieves the current draft application for the logged-in candidate."
+			},
+			"response": []
+		},
+		{
+			"name": "2. Get Specific Step Data",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/application/{{applicationId}}/step/0",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"application",
+						"{{applicationId}}",
+						"step",
+						"0"
+					]
+				},
+				"description": "Get data for a specific step (0 to 8)."
+			},
+			"response": []
+		},
+		{
+			"name": "3. Save Step Data (Example Step 0)",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"firstName\": \"Shivam\",\n    \"lastName\": \"Singh\",\n    \"dateOfBirth\": \"2001-02-07\",\n    \"mobileNumber\": \"8382044417\",\n    \"alternateNumber\": \"8382044418\",\n    \"emailId\": \"shivam@vensysco.in\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/application/{{applicationId}}/step/0",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"application",
+						"{{applicationId}}",
+						"step",
+						"0"
+					]
+				},
+				"description": "Saves data for a particular step. Replace the payload with the schema required for that step."
+			},
+			"response": []
+		},
+		{
+			"name": "4. Get All Steps Data",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/application/steps/all",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"application",
+						"steps",
+						"all"
+					]
+				},
+				"description": "Retrieves the aggregated JSON payload of all completed steps."
+			},
+			"response": []
+		},
+		{
+			"name": "5. Standard Submit",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/application/{{applicationId}}/submit",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"application",
+						"{{applicationId}}",
+						"submit"
+					]
+				},
+				"description": "Standard application submission. Fails if mandatory steps are not completed."
+			},
+			"response": []
+		},
+		{
+			"name": "6. Final Submit (Legacy - No Validation)",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/application/{{applicationId}}/submit-final",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"application",
+						"{{applicationId}}",
+						"submit-final"
+					]
+				},
+				"description": "Forcefully extracts all step data from JSON, saves it into relational tables (experience, qualification, documents, etc.), and marks the application as submitted."
+			},
+			"response": []
+		},
+		{
+			"name": "7. Get Application Status",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/application/{{applicationId}}",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"application",
+						"{{applicationId}}"
+					]
+				},
+				"description": "Gets the overall status of the application."
+			},
+			"response": []
+		},
+		{
+			"name": "8. Get Print Preview",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/application/{{applicationId}}/print",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"application",
+						"{{applicationId}}",
+						"print"
+					]
+				},
+				"description": "Returns formatting data required for printing the final submitted application."
+			},
+			"response": []
+		},
+		{
+			"name": "9. Initiate Payment",
+			"request": {
+				"auth": {
+					"type": "bearer",
+					"bearer": [
+						{
+							"key": "token",
+							"value": "{{token}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"applicationId\": \"03650bfe-bac8-4eca-9a89-64a5a78b9465\",\n  \"paymentMode\": \"online_card\",\n  \"feeCategory\": \"sc_st_ph\"\n}"
+				},
+				"url": {
+					"raw": "{{baseUrl}}/api/v1/payment/initiate",
+					"host": [
+						"{{baseUrl}}"
+					],
+					"path": [
+						"api",
+						"v1",
+						"payment",
+						"initiate"
+					]
+				},
+				"description": "Initiates a new payment order and returns Razorpay Order ID"
+			},
+			"response": []
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "your_jwt_token_here",
+			"type": "string"
+		},
+		{
+			"key": "applicationId",
+			"value": "0679925f-33e1-468a-a2c1-a75efb09c4f2",
+			"type": "string"
+		}
+	]
+}

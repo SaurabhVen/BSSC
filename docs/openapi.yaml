@@ -1,0 +1,1703 @@
+openapi: 3.0.3
+info:
+  title: Candidate Portal REST API
+  version: 1.0.0
+  description: >
+    OpenAPI specification for candidate registration, mobile/email OTP verification, CAPTCHA login, draft-based
+    multi-step application form, document upload, payment verification, final submission, dashboard status, and print preview.
+servers:
+  - url: https://api.example.com/api/v1
+    description: Production / configured API server
+  - url: http://localhost:3000/api/v1
+    description: Local development server
+tags:
+  - name: Auth
+    description: CAPTCHA, login, refresh token and logout APIs
+  - name: Candidate Registration
+    description: Candidate registration flow with mobile and email OTP verification
+  - name: Candidate Application
+    description: Draft-based multi-step candidate application form APIs
+  - name: Documents
+    description: Candidate document upload and delete APIs
+  - name: Payment
+    description: Application fee payment initiation and verification APIs
+  - name: Submission
+    description: Final application submission APIs
+  - name: Dashboard
+    description: Candidate dashboard and print preview APIs
+
+paths:
+  /auth/captcha:
+    get:
+      tags:
+        - Auth
+      summary: Generate CAPTCHA
+      operationId: generateCaptcha
+      responses:
+        '200':
+          description: 200 OK - request processed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/CaptchaResponseData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/candidate/registration/mobile-otp:
+    post:
+      tags:
+        - Candidate Registration
+      summary: Send mobile OTP for candidate registration
+      operationId: sendCandidateMobileOtp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpSendRequest'
+      responses:
+        '200':
+          description: 200 OK - request processed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/OtpSendResponseData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/candidate/registration/mobile-otp/verify:
+    post:
+      tags:
+        - Candidate Registration
+      summary: Verify candidate mobile OTP
+      operationId: verifyCandidateMobileOtp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MobileOtpVerifyRequest'
+      responses:
+        '200':
+          description: 200 OK - request processed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/MobileOtpVerifyResponseData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/candidate/registration/email-otp:
+    post:
+      tags:
+        - Candidate Registration
+      summary: Send email OTP for candidate registration
+      operationId: sendCandidateEmailOtp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OtpSendRequest'
+      responses:
+        '200':
+          description: 200 OK - request processed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/OtpSendResponseData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/candidate/registration/email-otp/verify:
+    post:
+      tags:
+        - Candidate Registration
+      summary: Verify candidate email OTP
+      operationId: verifyCandidateEmailOtp
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmailOtpVerifyRequest'
+      responses:
+        '200':
+          description: 200 OK - request processed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/EmailOtpVerifyResponseData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/candidate/registration:
+    post:
+      tags:
+        - Candidate Registration
+      summary: Create candidate account after mobile and email verification
+      operationId: registerCandidate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CandidateRegistrationRequest'
+      responses:
+        '201':
+          description: 201 Created - resource created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/CandidateRegistrationResponseData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/candidate/step-1:
+    patch:
+      tags:
+        - Candidate Application
+      summary: Save or update personal information (Step 1)
+      operationId: candidateStep1
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - personalInfo
+              properties:
+                personalInfo:
+                  $ref: '#/components/schemas/PersonalInfo'
+      responses:
+        '200':
+          description: 200 OK - request processed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Candidate personal information (Step 1) saved successfully
+                  data:
+                    $ref: '#/components/schemas/SaveStepResponseData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - bearerAuth: []
+
+  /auth/candidate/login:
+    post:
+      tags:
+        - Auth
+      summary: Candidate login with registration number, password and CAPTCHA
+      operationId: candidateLogin
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CandidateLoginRequest'
+      responses:
+        '200':
+          description: 200 OK - request processed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/LoginResponseData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/refresh-token:
+    post:
+      tags:
+        - Auth
+      summary: Refresh access token
+      operationId: refreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: 200 OK - request processed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/RefreshTokenResponseData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: Logout candidate and invalidate refresh token
+      operationId: logoutCandidate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '200':
+          description: 200 OK - request processed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/LogoutResponseData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - bearerAuth: []
+
+  /candidate/application:
+    get:
+      tags:
+        - Candidate Application
+      summary: Fetch saved candidate application draft
+      operationId: getCandidateApplication
+      responses:
+        '200':
+          description: 200 OK - request processed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/ApplicationResponseData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - bearerAuth: []
+
+  /candidate/application/metadata:
+    get:
+      tags:
+        - Candidate Application
+      summary: Fetch application dropdown metadata and validation rules
+      operationId: getApplicationMetadata
+      responses:
+        '200':
+          description: 200 OK - request processed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/MetadataResponseData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - bearerAuth: []
+
+  /candidate/application/steps/{stepNo}:
+    put:
+      tags:
+        - Candidate Application
+      summary: Save or update one application step as draft
+      operationId: saveApplicationStep
+      parameters:
+        - $ref: '#/components/parameters/StepNo'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplicationStepPayload'
+      responses:
+        '200':
+          description: 200 OK - request processed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/SaveStepResponseData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - bearerAuth: []
+
+  /candidate/application/documents:
+    post:
+      tags:
+        - Documents
+      summary: Upload candidate document/photo/signature
+      operationId: uploadCandidateDocument
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - documentType
+                - file
+              properties:
+                documentType:
+                  type: string
+                  example: photo
+                file:
+                  type: string
+                  format: binary
+                stepNo:
+                  type: integer
+                  example: 6
+      responses:
+        '201':
+          description: 201 Created - resource created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/DocumentUploadResponseData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - bearerAuth: []
+
+  /candidate/application/documents/{documentType}:
+    delete:
+      tags:
+        - Documents
+      summary: Delete uploaded candidate document
+      operationId: deleteCandidateDocument
+      parameters:
+        - $ref: '#/components/parameters/DocumentType'
+      responses:
+        '200':
+          description: 200 OK - request processed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/DeleteDocumentResponseData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - bearerAuth: []
+
+  /candidate/application/payment/initiate:
+    post:
+      tags:
+        - Payment
+      summary: Initiate application fee payment
+      operationId: initiateApplicationPayment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentInitiateRequest'
+      responses:
+        '201':
+          description: 201 Created - resource created successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/PaymentInitiateResponseData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - bearerAuth: []
+
+  /candidate/application/payment/verify:
+    post:
+      tags:
+        - Payment
+      summary: Verify application payment
+      operationId: verifyApplicationPayment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentVerifyRequest'
+      responses:
+        '200':
+          description: 200 OK - request processed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/PaymentVerifyResponseData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - bearerAuth: []
+
+  /candidate/application/submit:
+    post:
+      tags:
+        - Submission
+      summary: Final submit application after validation, documents, declarations, and payment
+      operationId: submitApplication
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitApplicationRequest'
+      responses:
+        '200':
+          description: 200 OK - request processed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/SubmitApplicationResponseData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - bearerAuth: []
+
+  /candidate/dashboard:
+    get:
+      tags:
+        - Dashboard
+      summary: Fetch candidate dashboard status
+      operationId: getCandidateDashboard
+      responses:
+        '200':
+          description: 200 OK - request processed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/DashboardResponseData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - bearerAuth: []
+
+  /candidate/application/print-preview:
+    get:
+      tags:
+        - Dashboard
+      summary: Fetch printable application preview
+      operationId: getApplicationPrintPreview
+      responses:
+        '200':
+          description: 200 OK - request processed successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                  data:
+                    $ref: '#/components/schemas/PrintPreviewResponseData'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+      security:
+        - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    StepNo:
+      name: stepNo
+      in: path
+      required: true
+      description: Application step number from 0 to 8.
+      schema:
+        type: integer
+        minimum: 0
+        maximum: 8
+    DocumentType:
+      name: documentType
+      in: path
+      required: true
+      description: Document type key, for example photo, signature.
+      schema:
+        type: string
+        example: photo
+  schemas:
+    ApiSuccess:
+      type: object
+      required:
+        - success
+        - message
+        - data
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Request processed successfully
+        data:
+          type: object
+    ApiError:
+      type: object
+      required:
+        - success
+        - message
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Validation failed
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+    FieldError:
+      type: object
+      properties:
+        field:
+          type: string
+          example: mobileNumber
+        message:
+          type: string
+          example: Mobile number must be 10 digits
+    CaptchaResponseData:
+      type: object
+      properties:
+        captchaId:
+          type: string
+          example: cap_82a91f
+        captchaImage:
+          type: string
+          example: data:image/svg+xml;base64,iVBORw0KGgo...
+        expiresInSeconds:
+          type: integer
+          example: 300
+    OtpSendRequest:
+      type: object
+      required:
+        - purpose
+      properties:
+        mobileNumber:
+          type: string
+          pattern: ^[0-9]{10}$
+          example: '9876543210'
+        email:
+          type: string
+          format: email
+          example: candidate@example.com
+        purpose:
+          type: string
+          enum:
+            - registration
+            - login
+            - forgot_password
+          example: registration
+    OtpSendResponseData:
+      type: object
+      properties:
+        otpRequestId:
+          type: string
+          example: mob_otp_10001
+        expiresInSeconds:
+          type: integer
+          example: 300
+        resendAllowedAfterSeconds:
+          type: integer
+          example: 60
+    MobileOtpVerifyRequest:
+      type: object
+      required:
+        - mobileNumber
+        - otpRequestId
+        - otp
+      properties:
+        mobileNumber:
+          type: string
+          example: '9876543210'
+        otpRequestId:
+          type: string
+          example: mob_otp_10001
+        otp:
+          type: string
+          minLength: 6
+          maxLength: 6
+          example: '123456'
+    MobileOtpVerifyResponseData:
+      type: object
+      properties:
+        mobileVerified:
+          type: boolean
+          example: true
+        mobileVerificationToken:
+          type: string
+          example: mv_token_8x92ks
+    EmailOtpVerifyRequest:
+      type: object
+      required:
+        - email
+        - otpRequestId
+        - otp
+      properties:
+        email:
+          type: string
+          format: email
+          example: candidate@example.com
+        otpRequestId:
+          type: string
+          example: email_otp_10001
+        otp:
+          type: string
+          minLength: 6
+          maxLength: 6
+          example: '456789'
+    EmailOtpVerifyResponseData:
+      type: object
+      properties:
+        emailVerified:
+          type: boolean
+          example: true
+        emailVerificationToken:
+          type: string
+          example: ev_token_93ksla
+    CandidateRegistrationRequest:
+      type: object
+      required:
+        - fullName
+        - dateOfBirth
+        - mobileNumber
+        - email
+        - password
+        - confirmPassword
+        - captchaId
+        - captchaCode
+      properties:
+        fullName:
+          type: string
+          example: Rajesh Kumar
+        dateOfBirth:
+          type: string
+          format: date
+          example: '2000-08-15'
+        mobileNumber:
+          type: string
+          example: '9876543210'
+        email:
+          type: string
+          format: email
+          example: candidate@example.com
+        password:
+          type: string
+          format: password
+          example: Pass@123
+        confirmPassword:
+          type: string
+          format: password
+          example: Pass@123
+        captchaId:
+          type: string
+          example: cap_82a91f
+        captchaCode:
+          type: string
+          example: K7P4N
+    CandidateRegistrationResponseData:
+      type: object
+      properties:
+        candidateId:
+          type: string
+          example: cand_10001
+        registrationNumber:
+          type: string
+          example: JTGLCCE2026-10001
+        mobileVerified:
+          type: boolean
+          example: true
+        emailVerified:
+          type: boolean
+          example: true
+    CandidateLoginRequest:
+      type: object
+      required:
+        - registrationNumber
+        - password
+        - captchaId
+        - captchaCode
+      properties:
+        registrationNumber:
+          type: string
+          example: JTGLCCE2026-10001
+        password:
+          type: string
+          format: password
+          example: Pass@123
+        captchaId:
+          type: string
+          example: cap_login_291
+        captchaCode:
+          type: string
+          example: CMW7N
+    CandidateSummary:
+      type: object
+      properties:
+        candidateId:
+          type: string
+          example: cand_10001
+        registrationNumber:
+          type: string
+          example: JTGLCCE2026-10001
+        fullName:
+          type: string
+          example: Rajesh Kumar
+    LoginResponseData:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          example: jwt_access_token
+        refreshToken:
+          type: string
+          example: jwt_refresh_token
+        expiresIn:
+          type: integer
+          example: 3600
+        candidate:
+          $ref: '#/components/schemas/CandidateSummary'
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          example: jwt_refresh_token
+    RefreshTokenResponseData:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          example: new_jwt_access_token
+        expiresIn:
+          type: integer
+          example: 3600
+    LogoutRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          example: jwt_refresh_token
+    LogoutResponseData:
+      type: object
+      properties:
+        loggedOut:
+          type: boolean
+          example: true
+    Address:
+      type: object
+      properties:
+        street:
+          type: string
+          example: House No. 12
+        post:
+          type: string
+          example: Ranchi GPO
+        state:
+          type: string
+          example: Jharkhand
+        district:
+          type: string
+          example: Ranchi
+        pincode:
+          type: string
+          example: '834001'
+        cityOrVillage:
+          type: string
+          example: Ranchi
+    PersonalInfo:
+      type: object
+      properties:
+        fullName:
+          type: string
+          example: Rajesh Kumar
+        fathersName:
+          type: string
+          example: Suresh Kumar
+        motherName:
+          type: string
+          example: Sunita Devi
+        dob:
+          type: string
+          format: date
+          example: '2000-08-15'
+        gender:
+          type: string
+          enum:
+            - male
+            - female
+            - other
+          example: male
+        nationality:
+          type: string
+          example: Indian
+        aadharNumber:
+          type: string
+          example: '123456789012'
+        identificationMark1:
+          type: string
+          example: Mole on left cheek
+        identificationMark2:
+          type: string
+          example: Scar on right hand
+        mobileNumber:
+          type: string
+          example: '9876543210'
+        alternateNumber:
+          type: string
+          example: '9123456780'
+        emailId:
+          type: string
+          format: email
+          example: candidate@example.com
+        permanentAddress:
+          $ref: '#/components/schemas/Address'
+        sameAsPermanent:
+          type: boolean
+          example: true
+        correspondenceAddress:
+          $ref: '#/components/schemas/Address'
+    ReservationCategory:
+      type: object
+      properties:
+        mainCategory:
+          type: string
+          example: general
+        subCategory:
+          type: string
+          example: ''
+        isPwd:
+          type: string
+          enum:
+            - 'yes'
+            - 'no'
+          example: 'no'
+        pwdType:
+          type: string
+          example: ''
+        pwdPercentage:
+          type: string
+          example: ''
+        isExServiceman:
+          type: string
+          enum:
+            - 'yes'
+            - 'no'
+          example: 'no'
+        exServicemanYears:
+          type: string
+          example: ''
+        isSportsQuota:
+          type: string
+          enum:
+            - 'yes'
+            - 'no'
+          example: 'no'
+        sportsLevel:
+          type: string
+          example: ''
+        sportsAchievement:
+          type: string
+          example: ''
+        isJharkhandDomicile:
+          type: string
+          enum:
+            - 'yes'
+            - 'no'
+          example: 'yes'
+        declaration:
+          type: boolean
+          example: true
+    Education:
+      type: object
+      properties:
+        highestQualification:
+          type: string
+          example: graduation
+        tenth:
+          type: object
+          additionalProperties: true
+        twelfth:
+          type: object
+          additionalProperties: true
+        graduation:
+          type: object
+          additionalProperties: true
+    PostPreference:
+      type: object
+      properties:
+        vacancyStream:
+          type: string
+          example: both
+        postRankings:
+          type: object
+          additionalProperties:
+            type: integer
+    LanguageSelection:
+      type: object
+      properties:
+        paperOneLanguage:
+          type: string
+          example: Hindi
+        paperTwoLanguage:
+          type: string
+          example: English
+        paperThreeLanguage:
+          type: string
+          example: Hindi
+    CenterSelection:
+      type: object
+      properties:
+        firstPreference:
+          type: string
+          example: Center A - New Delhi
+        secondPreference:
+          type: string
+          example: Center B - Mumbai
+        thirdPreference:
+          type: string
+          example: Center C - Bangalore
+    DocumentsDeclaration:
+      type: object
+      properties:
+        allRequiredDocumentsUploaded:
+          type: boolean
+          example: true
+    FeePayment:
+      type: object
+      properties:
+        applicationFee:
+          type: number
+          example: 100
+        paymentMode:
+          type: string
+          example: online
+        paymentStatus:
+          type: string
+          enum:
+            - pending
+            - completed
+            - failed
+          example: pending
+    Review:
+      type: object
+      properties:
+        allDetailsVerified:
+          type: boolean
+          example: true
+        declarationAccepted:
+          type: boolean
+          example: true
+    ApplicationStepPayload:
+      type: object
+      properties:
+        personalInfo:
+          $ref: '#/components/schemas/PersonalInfo'
+        reservationCategory:
+          $ref: '#/components/schemas/ReservationCategory'
+        education:
+          $ref: '#/components/schemas/Education'
+        postPreference:
+          $ref: '#/components/schemas/PostPreference'
+        languageSelection:
+          $ref: '#/components/schemas/LanguageSelection'
+        centerSelection:
+          $ref: '#/components/schemas/CenterSelection'
+        documentsDeclaration:
+          $ref: '#/components/schemas/DocumentsDeclaration'
+        feePayment:
+          $ref: '#/components/schemas/FeePayment'
+        review:
+          $ref: '#/components/schemas/Review'
+    ApplicationData:
+      type: object
+      properties:
+        personalInfo:
+          type: object
+        reservationCategory:
+          type: object
+        education:
+          type: object
+        postPreference:
+          type: object
+        languageSelection:
+          type: object
+        centerSelection:
+          type: object
+        documents:
+          type: object
+        feePayment:
+          type: object
+        review:
+          type: object
+    ApplicationResponseData:
+      type: object
+      properties:
+        applicationId:
+          type: string
+          example: app_10001
+        candidateId:
+          type: string
+          example: cand_10001
+        status:
+          type: string
+          enum:
+            - draft
+            - submitted
+            - locked
+          example: draft
+        currentStep:
+          type: integer
+          example: 6
+        completedSteps:
+          type: array
+          items:
+            type: integer
+          example: [0, 1, 2, 3, 4, 5]
+        isSubmitted:
+          type: boolean
+          example: false
+        application:
+          $ref: '#/components/schemas/ApplicationData'
+    MetadataResponseData:
+      type: object
+      properties:
+        activeExam:
+          type: object
+          properties:
+            examId:
+              type: string
+              example: exam_2026_01
+            name:
+              type: string
+              example: JTGLCCE 2026
+        categories:
+          type: array
+          items:
+            type: string
+          example: [UR, SC, ST, OBC, EWS]
+        genders:
+          type: array
+          items:
+            type: string
+          example: [male, female, other]
+        centers:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                example: CTR001
+              name:
+                type: string
+                example: Center A - New Delhi
+        documentRules:
+          type: object
+          additionalProperties: true
+    SaveStepResponseData:
+      type: object
+      properties:
+        applicationId:
+          type: string
+          example: app_10001
+        savedStep:
+          type: integer
+          example: 0
+        currentStep:
+          type: integer
+          example: 1
+        status:
+          type: string
+          example: draft
+        updatedAt:
+          type: string
+          format: date-time
+          example: '2026-06-02T08:45:00Z'
+    ValidateStepRequest:
+      type: object
+      required:
+        - stepPayload
+      properties:
+        stepPayload:
+          $ref: '#/components/schemas/ApplicationStepPayload'
+    ValidateStepResponseData:
+      type: object
+      properties:
+        stepNo:
+          type: integer
+          example: 0
+        valid:
+          type: boolean
+          example: true
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldError'
+    DocumentUploadResponseData:
+      type: object
+      properties:
+        documentId:
+          type: string
+          example: doc_10001
+        documentType:
+          type: string
+          example: photo
+        fileName:
+          type: string
+          example: photo.jpg
+        fileUrl:
+          type: string
+          format: uri
+          example: https://cdn.example.com/documents/photo.jpg
+        mimeType:
+          type: string
+          example: image/jpeg
+        fileSize:
+          type: integer
+          example: 204800
+        uploadedAt:
+          type: string
+          format: date-time
+          example: '2026-06-02T08:50:00Z'
+    DeleteDocumentResponseData:
+      type: object
+      properties:
+        documentType:
+          type: string
+          example: photo
+        deleted:
+          type: boolean
+          example: true
+    PaymentInitiateRequest:
+      type: object
+      required:
+        - applicationId
+        - amount
+        - currency
+        - paymentMode
+      properties:
+        applicationId:
+          type: string
+          example: app_10001
+        amount:
+          type: number
+          example: 100
+        currency:
+          type: string
+          example: INR
+        paymentMode:
+          type: string
+          enum:
+            - online
+            - challan
+          example: online
+    PaymentInitiateResponseData:
+      type: object
+      properties:
+        paymentOrderId:
+          type: string
+          example: order_10001
+        amount:
+          type: number
+          example: 100
+        currency:
+          type: string
+          example: INR
+        paymentUrl:
+          type: string
+          format: uri
+          example: https://payment.example.com/pay/order_10001
+    PaymentVerifyRequest:
+      type: object
+      required:
+        - paymentOrderId
+        - transactionId
+        - paymentStatus
+      properties:
+        paymentOrderId:
+          type: string
+          example: order_10001
+        transactionId:
+          type: string
+          example: TXN882910022
+        paymentStatus:
+          type: string
+          enum:
+            - completed
+            - failed
+            - pending
+          example: completed
+        paymentDate:
+          type: string
+          format: date
+          example: '2026-06-02'
+        bankName:
+          type: string
+          example: SBI
+    PaymentVerifyResponseData:
+      type: object
+      properties:
+        paymentStatus:
+          type: string
+          example: completed
+        transactionId:
+          type: string
+          example: TXN882910022
+        paidAmount:
+          type: number
+          example: 100
+    SubmitApplicationRequest:
+      type: object
+      required:
+        - applicationId
+        - declarationAccepted
+      properties:
+        applicationId:
+          type: string
+          example: app_10001
+        declarationAccepted:
+          type: boolean
+          example: true
+    SubmitApplicationResponseData:
+      type: object
+      properties:
+        applicationId:
+          type: string
+          example: app_10001
+        registrationNumber:
+          type: string
+          example: JTGLCCE2026-10001
+        applicationReferenceNumber:
+          type: string
+          example: JTGLCCE-2026-X92
+        submissionDate:
+          type: string
+          format: date
+          example: '2026-06-02'
+        status:
+          type: string
+          example: submitted
+    DashboardResponseData:
+      type: object
+      properties:
+        candidateName:
+          type: string
+          example: Rajesh Kumar
+        registrationNumber:
+          type: string
+          example: JTGLCCE2026-10001
+        applicationStatus:
+          type: string
+          example: submitted
+        paymentStatus:
+          type: string
+          example: completed
+        verificationStatus:
+          type: string
+          example: in_progress
+        admitCard:
+          type: object
+          properties:
+            available:
+              type: boolean
+              example: false
+            downloadUrl:
+              type: string
+              nullable: true
+              example: null
+        notices:
+          type: array
+          items:
+            type: object
+    PrintPreviewResponseData:
+      type: object
+      properties:
+        applicationId:
+          type: string
+          example: app_10001
+        previewUrl:
+          type: string
+          format: uri
+          example: https://cdn.example.com/previews/app_10001.pdf
+        generatedAt:
+          type: string
+          format: date-time
+          example: '2026-06-02T09:15:00Z'
+
+  responses:
+    BadRequest:
+      description: 400 Bad Request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: 401 Unauthorized
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Forbidden:
+      description: 403 Forbidden
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: 404 Not Found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Conflict:
+      description: 409 Conflict
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    UnprocessableEntity:
+      description: 422 Unprocessable Entity
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    TooManyRequests:
+      description: 429 Too Many Requests
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    InternalServerError:
+      description: 500 Internal Server Error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'

@@ -1,0 +1,1 @@
+ALTER TABLE "categories" ADD COLUMN "cat_value" varchar(255);
