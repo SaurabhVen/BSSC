@@ -246,6 +246,24 @@ export class AuthService {
         );
       }
 
+      // 4. Send email to candidate with registration number and password
+      try {
+        const { notificationService } = await import('./notification.service');
+        const emailTemplate = notificationService.renderRegistrationSuccessEmail({
+          candidateName: input.fullName,
+          applicationNo: registrationNumber,
+          password: input.password,
+          email: input.email,
+        });
+        await notificationService.sendEmail(input.email, emailTemplate.subject, emailTemplate.body);
+        console.log(`[Registration Email] Successfully sent credentials to ${input.email}`);
+      } catch (err) {
+        console.warn(
+          'Sending registration success email failed (non-fatal):',
+          (err as Error).message
+        );
+      }
+
       return {
         userId: user.id,
         candidateId: candidate.id,
@@ -389,6 +407,24 @@ export class AuthService {
       });
     } catch (err) {
       console.warn('Updating candidate attributes in Cognito failed (non-fatal):', (err as Error).message);
+    }
+
+    // Send email to candidate with registration number and password
+    try {
+      const { notificationService } = await import('./notification.service');
+      const emailTemplate = notificationService.renderRegistrationSuccessEmail({
+        candidateName: input.fullName,
+        applicationNo: registrationNumber,
+        password: input.password,
+        email: input.email,
+      });
+      await notificationService.sendEmail(input.email, emailTemplate.subject, emailTemplate.body);
+      console.log(`[Registration Email] Successfully sent credentials to ${input.email}`);
+    } catch (err) {
+      console.warn(
+        'Sending registration success email failed (non-fatal):',
+        (err as Error).message
+      );
     }
 
     return {
