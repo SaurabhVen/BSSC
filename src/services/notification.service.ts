@@ -34,7 +34,7 @@ export class NotificationService {
 
   private getSesClient(): SESClient {
     const awsConfig: any = { region: config.AWS_REGION };
-    if (config.AWS_ACCESS_KEY_ID && config.AWS_ACCESS_KEY_ID !== 'mock-key') {
+    if (!process.env.AWS_LAMBDA_FUNCTION_NAME && config.AWS_ACCESS_KEY_ID && config.AWS_ACCESS_KEY_ID !== 'mock-key') {
       awsConfig.credentials = {
         accessKeyId: config.AWS_ACCESS_KEY_ID,
         secretAccessKey: config.AWS_SECRET_ACCESS_KEY || '',
@@ -45,7 +45,7 @@ export class NotificationService {
 
   private getSnsClient(): SNSClient {
     const awsConfig: any = { region: config.AWS_REGION };
-    if (config.AWS_ACCESS_KEY_ID && config.AWS_ACCESS_KEY_ID !== 'mock-key') {
+    if (!process.env.AWS_LAMBDA_FUNCTION_NAME && config.AWS_ACCESS_KEY_ID && config.AWS_ACCESS_KEY_ID !== 'mock-key') {
       awsConfig.credentials = {
         accessKeyId: config.AWS_ACCESS_KEY_ID,
         secretAccessKey: config.AWS_SECRET_ACCESS_KEY || '',

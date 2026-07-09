@@ -22,6 +22,9 @@ export const handler = async (
   console.log('User Sub ID:', event.userName);
 
   const attributes = event.request.userAttributes;
+  const userSub = attributes['sub'] || event.userName;
+  console.log('User Sub UUID:', userSub);
+
   const email = attributes['email'];
   const fullName = attributes['name'] || 'Candidate Name';
   const mobileNumber = attributes['phone_number'] || attributes['custom:mobile_no'] || '';
@@ -35,9 +38,9 @@ export const handler = async (
 
   try {
     // 1. Check if user already exists locally in PostgreSQL database
-    const existingUser = await userRepository.findByCognitoSubId(event.userName);
+    const existingUser = await userRepository.findByCognitoSubId(userSub);
     if (existingUser) {
-      console.log(`User ${email} already exists in DB with Cognito Sub ID: ${event.userName}`);
+      console.log(`User ${email} already exists in DB with Cognito Sub ID: ${userSub}`);
 
       const candidate = await userRepository.findCandidateByUserId(existingUser.id);
       if (candidate && candidate.registrationNumber) {
@@ -55,10 +58,26 @@ export const handler = async (
               Username: event.userName,
               UserAttributes: [
                 { Name: 'custom:registration_no', Value: candidate.registrationNumber },
+                { Name: 'preferred_username', Value: candidate.registrationNumber },
               ],
             })
           );
-          console.log(`[Trigger] Successfully updated registration_no for existing user in Cognito.`);
+          console.log(`[Trigger] Successfully updated registration_no and preferred_username for existing user in Cognito.`);
+
+          try {
+            await cognitoClient.send(
+              new AdminUpdateUserAttributesCommand({
+                UserPoolId: event.userPoolId,
+                Username: event.userName,
+                UserAttributes: [
+                  { Name: 'custom:registration_number', Value: candidate.registrationNumber },
+                ],
+              })
+            );
+            console.log(`[Trigger] Successfully updated custom:registration_number for existing user in Cognito.`);
+          } catch (innerErr) {
+            console.log(`[Trigger] Optional custom:registration_number attribute update for existing user skipped/failed: ${(innerErr as Error).message}`);
+          }
         } catch (err) {
           console.warn(
             '[Trigger] Updating registration attributes for existing user in Cognito failed (non-fatal):',
@@ -93,12 +112,12 @@ export const handler = async (
 
     // 3. Create user locally, using Cognito sub ID as the primary key id
     const user = await userRepository.create({
-      id: event.userName,
+      id: userSub,
       email: email.toLowerCase().trim(),
       passwordHash: 'COGNITO_CONFIRMED_USER', // Federated or Cognito-validated user indicator
       fullName,
       roleId,
-      cognitoSubId: event.userName,
+      cognitoSubId: userSub,
       isActive: true,
     });
 
@@ -293,10 +312,26 @@ export const handler = async (
           Username: event.userName,
           UserAttributes: [
             { Name: 'custom:registration_no', Value: registrationNumber },
+            { Name: 'preferred_username', Value: registrationNumber },
           ],
         })
       );
-      console.log(`[Trigger] Successfully updated registration_no in Cognito.`);
+      console.log(`[Trigger] Successfully updated registration_no and preferred_username in Cognito.`);
+
+      try {
+        await cognitoClient.send(
+          new AdminUpdateUserAttributesCommand({
+            UserPoolId: event.userPoolId,
+            Username: event.userName,
+            UserAttributes: [
+              { Name: 'custom:registration_number', Value: registrationNumber },
+            ],
+          })
+        );
+        console.log(`[Trigger] Successfully updated custom:registration_number in Cognito.`);
+      } catch (innerErr) {
+        console.log(`[Trigger] Optional custom:registration_number attribute update skipped/failed: ${(innerErr as Error).message}`);
+      }
     } catch (err) {
       console.warn(
         '[Trigger] Updating registration attributes in Cognito failed (non-fatal):',

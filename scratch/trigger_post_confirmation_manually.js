@@ -9,7 +9,7 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 const COGNITO_USER_POOL_ID = process.env.COGNITO_USER_POOL_ID;
 
 async function triggerConfirmation() {
-  const email = 'shivam+5@vensysco.in';
+  const email = 'shivam@vensysco.in';
   console.log(`Fetching Cognito user details for email: ${email}...`);
 
   const cognitoUser = await getCognitoUserByEmail(email);
@@ -25,7 +25,7 @@ async function triggerConfirmation() {
     version: '1',
     region: process.env.AWS_REGION || 'ap-south-1',
     userPoolId: COGNITO_USER_POOL_ID,
-    userName: cognitoUser.username, // This is the Cognito Sub ID (username field in getCognitoUserByEmail)
+    userName: cognitoUser.username, // This is the Cognito Username (email or UUID)
     triggerSource: 'PostConfirmation_ConfirmSignUp',
     callerContext: {
       awsSdkVersion: 'aws-sdk-js-3.0.0',
@@ -33,7 +33,7 @@ async function triggerConfirmation() {
     },
     request: {
       userAttributes: {
-        sub: cognitoUser.username,
+        sub: cognitoUser.sub || cognitoUser.username,
         email: email,
         email_verified: String(cognitoUser.email_verified || 'true'),
         birthdate: cognitoUser.birthdate || '2023-02-03',

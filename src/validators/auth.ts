@@ -104,7 +104,7 @@ export const candidateRegisterSchema = z
       password: passwordSchema,
       confirmPassword: z.string().min(1, 'Confirm password is required'),
       // cognitoSubId: z.string().uuid('Invalid Cognito Sub ID').optional(),
-      
+
       // Optional Cognito Custom and standard attributes
       bihar_domicile: z.string().optional(),
       bihar_govt_emp: z.string().optional(),

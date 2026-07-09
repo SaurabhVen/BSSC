@@ -9,7 +9,7 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 async function findUser() {
   const db = getDb();
   try {
-    const emails = ['shivam+4@vensysco.in', 'shivam+5@vensysco.in'];
+    const emails = ['shivam@vensysco.in'];
     for (const email of emails) {
       console.log(`Checking DB for email: ${email}...`);
       const userRows = await db.select().from(users).where(eq(users.email, email)).limit(1);

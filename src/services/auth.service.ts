@@ -233,12 +233,22 @@ export class AuthService {
         emailVerified: false,
       });
 
-      // 3. Update Cognito attributes with registration_no
+      // 3. Update Cognito attributes with registration_no and preferred_username
       try {
         const { cognitoAdminUpdateUserAttributes } = await import('../utils/cognito');
         await cognitoAdminUpdateUserAttributes(input.email, {
           'custom:registration_no': registrationNumber,
+          'preferred_username': registrationNumber,
         });
+
+        // Optionally update custom:registration_number if defined
+        try {
+          await cognitoAdminUpdateUserAttributes(input.email, {
+            'custom:registration_number': registrationNumber,
+          });
+        } catch (innerErr) {
+          // Skip if custom:registration_number does not exist in pool schema
+        }
       } catch (err) {
         console.warn(
           'Updating candidate attributes in Cognito failed (non-fatal):',
@@ -404,7 +414,17 @@ export class AuthService {
       const { cognitoAdminUpdateUserAttributes } = await import('../utils/cognito');
       await cognitoAdminUpdateUserAttributes(input.email, {
         'custom:registration_no': registrationNumber,
+        'preferred_username': registrationNumber,
       });
+
+      // Optionally update custom:registration_number if defined
+      try {
+        await cognitoAdminUpdateUserAttributes(input.email, {
+          'custom:registration_number': registrationNumber,
+        });
+      } catch (innerErr) {
+        // Skip if custom:registration_number does not exist in pool schema
+      }
     } catch (err) {
       console.warn('Updating candidate attributes in Cognito failed (non-fatal):', (err as Error).message);
     }

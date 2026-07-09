@@ -69,6 +69,7 @@ provider:
     MOCK_S3: ${env:MOCK_S3, 'false'}
     MOCK_PAYMENT: ${env:MOCK_PAYMENT, 'false'}
     MOCK_SMS_EMAIL: ${env:MOCK_SMS_EMAIL, 'false'}
+    SES_SOURCE_EMAIL: ${env:SES_SOURCE_EMAIL, 'noreply@vensysco.in'}
     RAZORPAY_KEY_ID: ${env:RAZORPAY_KEY_ID, 'rzp_test_mock_key'}
     RAZORPAY_SECRET: ${env:RAZORPAY_SECRET, 'rzp_test_mock_secret'}
     GETEPAY_RETURN_URL: ${env:GETEPAY_RETURN_URL, 'http://localhost:3000/api/v1/payment/gateway/return'}
@@ -105,6 +106,11 @@ provider:
         - Effect: Allow
           Action:
             - kms:Decrypt
+          Resource: '*'
+        - Effect: Allow
+          Action:
+            - ses:SendEmail
+            - ses:SendRawEmail
           Resource: '*'
 
 

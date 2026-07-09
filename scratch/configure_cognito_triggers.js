@@ -7,8 +7,8 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const AWS_REGION = process.env.AWS_REGION || 'ap-south-1';
 const COGNITO_USER_POOL_ID = process.env.COGNITO_USER_POOL_ID;
-const LAMBDA_FUNCTION_NAME = 'bssc-dev-postConfirmation';
-const LAMBDA_ARN = `arn:aws:lambda:${AWS_REGION}:485038482643:function:${LAMBDA_FUNCTION_NAME}`;
+const POST_CONFIRMATION_LAMBDA = 'bssc-dev-postConfirmation';
+const CUSTOM_MESSAGE_LAMBDA = 'bssc-dev-customMessage';
 
 async function configureTriggers() {
   if (!COGNITO_USER_POOL_ID) {
@@ -20,47 +20,71 @@ async function configureTriggers() {
   const lambdaClient = new LambdaClient({ region: AWS_REGION });
 
   try {
-    // 1. Add Permission to Lambda function so Cognito can invoke it
-    console.log(`Adding permission to Lambda function ${LAMBDA_FUNCTION_NAME} for Cognito...`);
+    // 1. Add permission for PostConfirmation Lambda
+    console.log(`Adding permission to Lambda function ${POST_CONFIRMATION_LAMBDA} for Cognito...`);
     try {
-      // Try removing existing permission first to avoid collision if it exists
       await lambdaClient.send(new RemovePermissionCommand({
-        FunctionName: LAMBDA_FUNCTION_NAME,
+        FunctionName: POST_CONFIRMATION_LAMBDA,
         StatementId: 'CognitoPostConfirmationTrigger'
       })).catch(() => {});
 
       await lambdaClient.send(new AddPermissionCommand({
-        FunctionName: LAMBDA_FUNCTION_NAME,
+        FunctionName: POST_CONFIRMATION_LAMBDA,
         StatementId: 'CognitoPostConfirmationTrigger',
         Action: 'lambda:InvokeFunction',
         Principal: 'cognito-idp.amazonaws.com',
         SourceArn: `arn:aws:cognito-idp:${AWS_REGION}:485038482643:userpool/${COGNITO_USER_POOL_ID}`
       }));
-      console.log('Successfully added invocation permission to Lambda.');
+      console.log('Successfully added PostConfirmation permission.');
     } catch (err) {
-      console.error('Failed to add Lambda permission:', err.message);
-      throw err;
+      console.error('Failed to add PostConfirmation permission:', err.message);
     }
 
-    // 2. Describe User Pool to get current schema and configs
+    // 2. Add permission for CustomMessage Lambda
+    console.log(`Adding permission to Lambda function ${CUSTOM_MESSAGE_LAMBDA} for Cognito...`);
+    try {
+      await lambdaClient.send(new RemovePermissionCommand({
+        FunctionName: CUSTOM_MESSAGE_LAMBDA,
+        StatementId: 'CognitoCustomMessageTrigger'
+      })).catch(() => {});
+
+      await lambdaClient.send(new AddPermissionCommand({
+        FunctionName: CUSTOM_MESSAGE_LAMBDA,
+        StatementId: 'CognitoCustomMessageTrigger',
+        Action: 'lambda:InvokeFunction',
+        Principal: 'cognito-idp.amazonaws.com',
+        SourceArn: `arn:aws:cognito-idp:${AWS_REGION}:485038482643:userpool/${COGNITO_USER_POOL_ID}`
+      }));
+      console.log('Successfully added CustomMessage permission.');
+    } catch (err) {
+      console.error('Failed to add CustomMessage permission:', err.message);
+    }
+
+    // 3. Describe User Pool to get current configs
     console.log(`Describing User Pool ${COGNITO_USER_POOL_ID}...`);
     const poolInfo = await cognitoClient.send(new DescribeUserPoolCommand({
       UserPoolId: COGNITO_USER_POOL_ID
     }));
 
-    // 3. Update User Pool LambdaConfig
-    console.log('Updating User Pool Lambda triggers...');
+    // 4. Update User Pool LambdaConfig & EmailConfiguration
+    console.log('Updating User Pool Lambda triggers and Email settings...');
     const currentLambdaConfig = poolInfo.UserPool.LambdaConfig || {};
     const updatedLambdaConfig = {
       ...currentLambdaConfig,
-      PostConfirmation: LAMBDA_ARN
+      PostConfirmation: `arn:aws:lambda:${AWS_REGION}:485038482643:function:${POST_CONFIRMATION_LAMBDA}`,
+      CustomMessage: `arn:aws:lambda:${AWS_REGION}:485038482643:function:${CUSTOM_MESSAGE_LAMBDA}`
     };
 
     await cognitoClient.send(new UpdateUserPoolCommand({
       UserPoolId: COGNITO_USER_POOL_ID,
-      LambdaConfig: updatedLambdaConfig
+      LambdaConfig: updatedLambdaConfig,
+      EmailConfiguration: {
+        EmailSendingAccount: 'DEVELOPER',
+        SourceArn: `arn:aws:ses:${AWS_REGION}:485038482643:identity/vensysco.in`,
+        From: 'noreply@vensysco.in'
+      }
     }));
-    console.log('🎉 Successfully configured PostConfirmation Lambda trigger on Cognito User Pool!');
+    console.log('🎉 Successfully configured triggers and Developer SES sending on Cognito!');
   } catch (err) {
     console.error('Error during configuration:', err.message);
   }

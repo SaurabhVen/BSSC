@@ -30,6 +30,7 @@
     "@aws-sdk/client-ses": "^3.1069.0",
     "@aws-sdk/client-sns": "^3.1069.0",
     "@aws-sdk/s3-request-presigner": "^3.500.0",
+    "amazon-cognito-identity-js": "^6.3.20",
     "bcryptjs": "^2.4.3",
     "crypto-js": "^4.2.0",
     "dotenv": "^16.4.5",

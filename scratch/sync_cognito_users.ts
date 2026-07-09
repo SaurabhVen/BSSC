@@ -69,9 +69,6 @@ async function syncUsers() {
 
       for (const cognitoUser of cognitoUsers) {
         totalProcessed++;
-        const cognitoSub = cognitoUser.Username; // The User's unique sub ID
-        if (!cognitoSub) continue;
-
         // Convert user attribute list to map for easy retrieval
         const attributes = (cognitoUser.Attributes || []).reduce((acc, attr) => {
           if (attr.Name) {
@@ -79,6 +76,9 @@ async function syncUsers() {
           }
           return acc;
         }, {} as Record<string, string>);
+
+        const cognitoSub = attributes['sub'] || cognitoUser.Username; // The actual Cognito User Sub UUID
+        if (!cognitoSub) continue;
 
         const email = attributes['email'];
         const fullName = attributes['name'] || 'Candidate Name';
@@ -106,70 +106,96 @@ async function syncUsers() {
           )
           .limit(1);
 
+        let registrationNumber: string;
+        let candidateId: string;
+        let isNewImport = false;
+
         if (existing.length > 0) {
-          console.log(`[Skip] User ${normalizedEmail} (${cognitoSub}) already exists in PostgreSQL database.`);
-          totalSkipped++;
-          continue;
-        }
-
-        console.log(`[Importing] User: ${normalizedEmail} (Name: ${fullName})...`);
-
-        // 2. Insert User row locally using Cognito sub as DB primary key ID
-        const localUser = await db.insert(users).values({
-          id: cognitoSub,
-          email: normalizedEmail,
-          passwordHash: 'COGNITO_CONFIRMED_USER',
-          fullName,
-          roleId: candidateRoleId,
-          cognitoSubId: cognitoSub,
-          isActive: true,
-        }).returning();
-
-        // 3. Insert Candidate row locally
-        const registrationNumber = generateRegistrationNumber('BSSC');
-        const cleanedMobile = mobileNumber ? mobileNumber.replace(/^\+91/, '') : null;
-        
-        let dob: Date | null = null;
-        if (dateOfBirthStr) {
-          const parsedDob = new Date(dateOfBirthStr);
-          if (!isNaN(parsedDob.getTime())) {
-            dob = parsedDob;
+          console.log(`[Sync] User ${normalizedEmail} (${cognitoSub}) already exists in PostgreSQL database. Synchronizing Cognito attributes...`);
+          const candidateRecord = await db.select().from(candidates).where(eq(candidates.userId, existing[0].id)).limit(1);
+          if (candidateRecord.length > 0 && candidateRecord[0].registrationNumber) {
+            registrationNumber = candidateRecord[0].registrationNumber;
+            candidateId = candidateRecord[0].id;
+          } else {
+            console.warn(`[Warning] Candidate record or registration number not found for existing user ${normalizedEmail}. Skipping.`);
+            totalSkipped++;
+            continue;
           }
+        } else {
+          console.log(`[Importing] User: ${normalizedEmail} (Name: ${fullName})...`);
+          isNewImport = true;
+
+          // 2. Insert User row locally using Cognito sub as DB primary key ID
+          const localUser = await db.insert(users).values({
+            id: cognitoSub,
+            email: normalizedEmail,
+            passwordHash: 'COGNITO_CONFIRMED_USER',
+            fullName,
+            roleId: candidateRoleId,
+            cognitoSubId: cognitoSub,
+            isActive: true,
+          }).returning();
+
+          // 3. Insert Candidate row locally
+          registrationNumber = generateRegistrationNumber('BSSC');
+          const cleanedMobile = mobileNumber ? mobileNumber.replace(/^\+91/, '') : null;
+          
+          let dob: Date | null = null;
+          if (dateOfBirthStr) {
+            const parsedDob = new Date(dateOfBirthStr);
+            if (!isNaN(parsedDob.getTime())) {
+              dob = parsedDob;
+            }
+          }
+
+          // Use Cognito custom attribute candidate ID if available, otherwise generate new
+          candidateId = cognitoCandidateId || uuidv4();
+
+          await db.insert(candidates).values({
+            id: candidateId,
+            userId: localUser[0].id,
+            registrationNumber,
+            dateOfBirth: dob,
+            mobileNumber: cleanedMobile,
+            mobileVerified: true,
+            emailVerified: true,
+          });
         }
 
-        // Use Cognito custom attribute candidate ID if available, otherwise generate new
-        const candidateId = cognitoCandidateId || uuidv4();
+        // 4. Update Cognito user attributes (preferred_username & custom:registration_no)
+        try {
+          const userAttributesToUpdate = [
+            { Name: 'custom:registration_no', Value: registrationNumber },
+            { Name: 'preferred_username', Value: registrationNumber },
+          ];
 
-        const candidateResult = await db.insert(candidates).values({
-          id: candidateId,
-          userId: localUser[0].id,
-          registrationNumber,
-          dateOfBirth: dob,
-          mobileNumber: cleanedMobile,
-          mobileVerified: true,
-          emailVerified: true,
-        }).returning();
+          await cognitoClient.send(new AdminUpdateUserAttributesCommand({
+            UserPoolId: COGNITO_USER_POOL_ID,
+            Username: cognitoUser.Username, // Cognito Username parameter (email or UUID)
+            UserAttributes: userAttributesToUpdate
+          }));
+          console.log(`  Successfully updated Cognito attributes for ${normalizedEmail}.`);
 
-        // 4. If custom:candidate_id was NOT in Cognito, update Cognito so they map correctly
-        if (!cognitoCandidateId) {
+          // Safe optional update for custom:registration_number
           try {
             await cognitoClient.send(new AdminUpdateUserAttributesCommand({
               UserPoolId: COGNITO_USER_POOL_ID,
-              Username: cognitoSub,
+              Username: cognitoUser.Username,
               UserAttributes: [
-                {
-                  Name: 'custom:candidate_id',
-                  Value: candidateId,
-                }
+                { Name: 'custom:registration_number', Value: registrationNumber }
               ]
             }));
-            console.log(`  Updated Cognito user with custom:candidate_id: ${candidateId}`);
-          } catch (cognitoErr: any) {
-            console.warn(`  [Warning] Failed to update custom:candidate_id in Cognito: ${cognitoErr.message}`);
-          }
+          } catch (innerErr) {}
+
+        } catch (cognitoErr: any) {
+          console.warn(`  [Warning] Failed to update attributes in Cognito for ${normalizedEmail}: ${cognitoErr.message}`);
         }
 
-        totalImported++;
+        if (isNewImport) {
+          totalImported++;
+        } else {
+          totalSkipped++;
+        }
       }
 
     } catch (err: any) {

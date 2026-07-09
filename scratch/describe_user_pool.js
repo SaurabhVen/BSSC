@@ -21,8 +21,11 @@ async function run() {
     });
 
     const response = await client.send(command);
-    const attributes = response.UserPool.SchemaAttributes.map(attr => attr.Name);
-    console.log(JSON.stringify(attributes, null, 2));
+    const result = {
+      Alias: response.UserPool.AliasAttributes || null,
+      Username: response.UserPool.UsernameAttributes || null
+    };
+    console.log(JSON.stringify(result, null, 2));
   } catch (err) {
     console.error('Failed to describe user pool:', err.message);
     process.exit(1);
