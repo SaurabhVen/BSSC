@@ -1,0 +1,40 @@
+{
+  "baseUrl": "https://e3llr43lb5.execute-api.ap-south-1.amazonaws.com",
+  "steps": {
+    "step0_registration": {
+      "method": "POST",
+      "url": "{{baseUrl}}/api/v1/auth/register",
+      "description": "User registration with custom Cognito attributes"
+    },
+    "step1_personal_info": {
+      "method": "POST",
+      "url": "{{baseUrl}}/api/v1/application/{applicationId}/step/0",
+      "description": "Save candidate personal and category information"
+    },
+    "step2_payment_initiate": {
+      "method": "POST",
+      "url": "{{baseUrl}}/api/v1/payment/initiate",
+      "description": "Create Razorpay Order ID for application"
+    },
+    "step2_payment_verify": {
+      "method": "POST",
+      "url": "{{baseUrl}}/api/v1/payment/verify",
+      "description": "Verify Razorpay payment signature"
+    },
+    "step3_education": {
+      "method": "POST",
+      "url": "{{baseUrl}}/api/v1/application/{applicationId}/step/2",
+      "description": "Save educational qualifications"
+    },
+    "step4_photo_signature": {
+      "method": "POST",
+      "url": "{{baseUrl}}/api/v1/application/{applicationId}/step/4",
+      "description": "Save S3 object keys for photograph and signatures"
+    },
+    "step5_live_photo": {
+      "method": "POST",
+      "url": "{{baseUrl}}/api/v1/application/{applicationId}/step/5",
+      "description": "Save S3 object key for live webcam photo"
+    }
+  }
+}

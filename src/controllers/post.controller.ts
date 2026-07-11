@@ -9,7 +9,7 @@ import {
   jobQualifications,
   categories,
 } from '../database/schema';
-import { calculateBSSCAge, getBSSCAgeLimits, calculateExactAge } from '../utils/age';
+import { calculateBSSCAge, getBSSCAgeLimits, calculateExactAge, checkBSSCEligibility } from '../utils/age';
 import { eq, inArray } from 'drizzle-orm';
 import { response } from '../helpers/response';
 import { AppError, DatabaseError, NotFoundError } from '../errors/AppError';
@@ -69,9 +69,9 @@ export class PostController {
       if (step0Data?.dateOfBirth) {
         const dobStr = String(step0Data.dateOfBirth);
         // Safely parse date and calculate age using the updated calculateBSSCAge utility
-        candidateAge = calculateBSSCAge(dobStr);
+        candidateAge = calculateBSSCAge(dobStr, '2025-08-01');
 
-        const exactAge = calculateExactAge(dobStr);
+        const exactAge = calculateExactAge(dobStr, '2025-08-01');
         candidateAge = exactAge.years;
 
         // Get category value
@@ -91,14 +91,37 @@ export class PostController {
         const isPwd = step1Data?.isPwd === true || step1Data?.isPwd === 'true';
         const isExServiceman =
           step1Data?.isExServiceman === true || step1Data?.isExServiceman === 'true';
+        const exServicemanYears = Number(step1Data?.exServicemanYears || 0);
+        const isGovtServant =
+          step1Data?.isGovtServant === true || step1Data?.isGovtServant === 'true';
+        const isCommissionedOfficer =
+          step1Data?.isCommissionedOfficer === true || step1Data?.isCommissionedOfficer === 'true';
 
-        const limits = getBSSCAgeLimits(catValue, gender, isPwd, isExServiceman);
+        // Check if candidate qualified on or before 2022-08-01
+        let qualifiedPre2022 = false;
+        const qualifications = step2Data?.qualifications;
+        if (Array.isArray(qualifications)) {
+          const grad = qualifications.find((q: any) => q.level === 'graduation');
+          if (grad && grad.passingYear) {
+            qualifiedPre2022 = Number(grad.passingYear) <= 2022;
+          }
+        }
 
-        if (
-          exactAge.years < limits.minAge ||
-          exactAge.years > limits.maxAge ||
-          (exactAge.years === limits.maxAge && (exactAge.months > 0 || exactAge.days > 0))
-        ) {
+        const limits = getBSSCAgeLimits(
+          catValue,
+          gender,
+          isPwd,
+          isExServiceman,
+          exServicemanYears,
+          isGovtServant,
+          isCommissionedOfficer
+        );
+
+        const isMinAgeEligible = checkBSSCEligibility(dobStr, limits.minAge, 150, '2025-08-01');
+        const isMaxAgeEligibleBase = checkBSSCEligibility(dobStr, 0, limits.maxAge, '2025-08-01');
+        const isMaxAgeEligibleCarryForward = checkBSSCEligibility(dobStr, 0, limits.maxAge, '2022-08-01') && qualifiedPre2022;
+
+        if (!isMinAgeEligible || (!isMaxAgeEligibleBase && !isMaxAgeEligibleCarryForward)) {
           isEligibleByAge = false;
         }
       }

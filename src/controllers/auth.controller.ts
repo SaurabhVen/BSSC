@@ -250,7 +250,86 @@ export class AuthController {
 
   async candidateStep1(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
     const user = await authenticate(event);
-    const { body } = parseEvent(event);
+    const rawBody = parseEvent(event).body as any;
+
+    // Normalize flat payload if necessary
+    let body = rawBody;
+    if (rawBody && typeof rawBody === 'object' && !rawBody.personalInfo && rawBody.fullName) {
+      body = {
+        personalInfo: {
+          fullName: rawBody.fullName,
+          fathersName: rawBody.fatherName || rawBody.fathersName,
+          motherName: rawBody.motherName,
+          dob: rawBody.dateOfBirth
+            ? (rawBody.dateOfBirth.includes('-') && rawBody.dateOfBirth.split('-')[0].length === 4
+                ? rawBody.dateOfBirth.split('-').reverse().join('-')
+                : rawBody.dateOfBirth)
+            : '16-10-1999',
+          gender: rawBody.gender || 'MALE',
+          nationality: rawBody.nationality || 'Indian',
+          aadharNumber: rawBody.aadharCardNumber || rawBody.idProofNo || '',
+          identificationMark1: rawBody.identificationMarkEn || '',
+          identificationMark2: '',
+          mobileNumber: rawBody.mobileNo || rawBody.mobileNumber || '',
+          alternateNumber: rawBody.alternateNo || '',
+          maritalStatus: rawBody.isMarried === 'NO' ? 'unmarried' : rawBody.isMarried === 'YES' ? 'married' : (rawBody.isMarried || ''),
+          emailId: rawBody.emailId || '',
+          permanentAddress: {
+            street: rawBody.permVillage || '',
+            post: rawBody.permPostOffice || '',
+            district: rawBody.permDistrict || '',
+            cityOrVillage: rawBody.permVillage || '',
+            state: rawBody.permState || '',
+            pincode: rawBody.permPinCode || '',
+          },
+          sameAsPermanent: rawBody.sameAsPermanent === true || rawBody.sameAsPermanent === 'true',
+          correspondenceAddress: {
+            street: rawBody.corrVillage || '',
+            post: rawBody.corrPostOffice || '',
+            district: rawBody.corrDistrict || '',
+            cityOrVillage: rawBody.corrVillage || '',
+            state: rawBody.corrState || '',
+            pincode: rawBody.corrPinCode || '',
+          },
+          spouseName: rawBody.spouseName || '',
+        },
+        reservationCategory: {
+          isJharkhandDomicile: rawBody.domicileOfBihar === 'YES' || rawBody.isJharkhandDomicile === true || rawBody.isJharkhandDomicile === 'true',
+          domicileCertificateNumber: rawBody.domicileCertNo || null,
+          domicileCertificateAuthority: rawBody.domicileAuthority || null,
+          domicileCertificateIssueDate: rawBody.domicileIssueDate
+            ? (rawBody.domicileIssueDate.includes('-') && rawBody.domicileIssueDate.split('-')[0].length === 4
+                ? rawBody.domicileIssueDate.split('-').reverse().join('-')
+                : rawBody.domicileIssueDate)
+            : null,
+          mainCategory: rawBody.categoryId ? parseInt(String(rawBody.categoryId)) : 1,
+          subCategory: null,
+          subSubCategoryId: null,
+          categoryCertificateNumber: rawBody.categoryCertNo || null,
+          categoryCertificateAuthority: rawBody.categoryAuthority || null,
+          categoryCertificateIssueDate: rawBody.categoryIssueDate
+            ? (rawBody.categoryIssueDate.includes('-') && rawBody.categoryIssueDate.split('-')[0].length === 4
+                ? rawBody.categoryIssueDate.split('-').reverse().join('-')
+                : rawBody.categoryIssueDate)
+            : null,
+          isPwd: rawBody.disability === 'YES' || rawBody.isPwd === true || rawBody.isPwd === 'true',
+          pwdType: null,
+          pwdPercentage: null,
+          pwdCertificateNumber: null,
+          pwdCertificateAuthority: null,
+          pwdCertificateIssueDate: null,
+          isExServiceman: rawBody.exServiceman === 'YES' || rawBody.isExServiceman === true || rawBody.isExServiceman === 'true',
+          exServicemanYears: null,
+          isSportsQuota: false,
+          sportsLevel: '',
+          sportsAchievement: '',
+          sportsCertificateNumber: '',
+          sportsCertificateAuthority: '',
+          sportsCertificateIssueDate: '',
+          declaration: true,
+        }
+      };
+    }
 
     // Pre-calculate age if it is falsy (0, null, undefined) before validation
     if (
@@ -276,7 +355,7 @@ export class AuthController {
       }
     }
 
-    const input = validate(candidateStep1Schema, body);
+    const input = validate(candidateStep1Schema, body) as any;
     const candidate = await userRepository.findCandidateByUserId(user.userId);
     if (!candidate) throw new NotFoundError('Candidate profile not found');
 
@@ -324,7 +403,7 @@ export class AuthController {
       };
     }
 
-    const mappedData = {
+    const mappedPersonalInfo = {
       fullName: input.personalInfo.fullName,
       fatherName: input.personalInfo.fathersName,
       motherName: input.personalInfo.motherName,
@@ -344,12 +423,88 @@ export class AuthController {
       address: mappedAddress,
     };
 
+    const rc = input.reservationCategory;
+    const mappedReservation = {
+      mainCategory: rc.mainCategory,
+      subCategory: rc.subCategory,
+      subSubCategoryId: rc.subSubCategoryId ?? null,
+      categoryCertificateNumber: rc.categoryCertificateNumber ?? null,
+      categoryCertificateAuthority: rc.categoryCertificateAuthority ?? null,
+      categoryCertificateIssueDate: rc.categoryCertificateIssueDate ?? null,
+
+      isPwd: rc.isPwd,
+      pwdType: rc.isPwd ? (rc.pwdType ?? null) : null,
+      pwdPercentage: rc.isPwd ? (rc.pwdPercentage ?? null) : null,
+      pwdCertificateNumber: rc.isPwd ? (rc.pwdCertificateNumber ?? null) : null,
+      pwdCertificateAuthority: rc.isPwd ? (rc.pwdCertificateAuthority ?? null) : null,
+      pwdCertificateIssueDate: rc.isPwd ? (rc.pwdCertificateIssueDate ?? null) : null,
+
+      isExServiceman: rc.isExServiceman,
+      exServicemanYears: rc.isExServiceman ? (rc.exServicemanYears ?? null) : null,
+
+      isSportsQuota: rc.isSportsQuota,
+      sportsLevel: rc.isSportsQuota ? (rc.sportsLevel ?? null) : null,
+      sportsAchievement: rc.isSportsQuota ? (rc.sportsAchievement ?? null) : null,
+      sportsCertificateNumber: rc.isSportsQuota ? (rc.sportsCertificateNumber ?? null) : null,
+      sportsCertificateAuthority: rc.isSportsQuota ? (rc.sportsCertificateAuthority ?? null) : null,
+      sportsCertificateIssueDate: rc.isSportsQuota ? (rc.sportsCertificateIssueDate ?? null) : null,
+
+      isJharkhandDomicile: rc.isJharkhandDomicile,
+      domicileCertificateNumber: rc.isJharkhandDomicile
+        ? (rc.domicileCertificateNumber ?? null)
+        : null,
+      domicileCertificateAuthority: rc.isJharkhandDomicile
+        ? (rc.domicileCertificateAuthority ?? null)
+        : null,
+      domicileCertificateIssueDate: rc.isJharkhandDomicile
+        ? (rc.domicileCertificateIssueDate ?? null)
+        : null,
+
+      isLocallyResident: rc.isLocallyResident,
+      localDistrictId: rc.isLocallyResident ? (rc.localDistrictId ?? null) : null,
+
+      declaration: rc.declaration,
+
+      // Additional BSSC properties from flat body/rawBody
+      biharGovtEmp: (rawBody as any).biharGovtEmployee || (rawBody as any).biharGovtEmp || 'NO',
+      bsscAttempts: (rawBody as any).numberOfAttempts || (rawBody as any).bsscAttempts || '0',
+      contractualEmp: (rawBody as any).contractualEmployee || (rawBody as any).contractualEmp || 'NO',
+      nccCadet: (rawBody as any).nccCadet || 'NO',
+      nonCreamyLayer: (rawBody as any).isNonCreamyLayer || (rawBody as any).nonCreamyLayer || 'NO',
+      pwd40Percent: (rawBody as any).disabilityPercent || (rawBody as any).pwd40Percent || 'NO',
+      contractualPeriod: (rawBody as any).contractualPeriod || '0-0-0',
+      postName: (rawBody as any).nameOfPost || (rawBody as any).postName || '',
+      hasAgreement: (rawBody as any).agreementCircular || (rawBody as any).hasAgreement || 'NO',
+      officeName: (rawBody as any).officeName || '',
+      officeOrderNo: (rawBody as any).officeOrderNo || '',
+      isFreedomFighter: (rawBody as any).isFreedomFighter || 'NO',
+      isDebarred: (rawBody as any).isDebarred || 'NO',
+    };
+
     const draft = await applicationService.getOrCreateDraft(candidate.id);
-    const result = await applicationService.saveStep(
+
+    // Save Step 0 (Personal Details)
+    await applicationService.saveStep(
       draft.applicationId,
       candidate.id,
       0,
-      mappedData
+      {
+        ...rawBody,
+        personalInfo: mappedPersonalInfo,
+        ...mappedPersonalInfo
+      }
+    );
+
+    // Save Step 1 (Reservation Details)
+    const result = await applicationService.saveStep(
+      draft.applicationId,
+      candidate.id,
+      1,
+      {
+        ...rawBody,
+        reservationCategory: mappedReservation,
+        ...mappedReservation
+      }
     );
 
     // Update candidates table
@@ -359,16 +514,21 @@ export class AuthController {
     });
 
     return response.success(200, {
-      message: 'Candidate personal information (Step 1) saved successfully',
+      message: 'Candidate personal and reservation details (Step 1) saved successfully',
       data: {
         ...result,
-        savedData: mappedData,
+        savedData: {
+          personalInfo: mappedPersonalInfo,
+          reservationCategory: mappedReservation,
+        },
       },
     });
   }
 
   // ── PATCH /auth/candidate/step-2 ───────────────────────────
 
+  /*
+  // ── Original JSSC candidateStep2 (Reservation Category) ──
   async candidateStep2(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
     const user = await authenticate(event);
     const { body } = parseEvent(event);
@@ -440,7 +600,33 @@ export class AuthController {
       },
     });
   }
+  */
 
+  async candidateStep2(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
+    const user = await authenticate(event);
+    const candidate = await userRepository.findCandidateByUserId(user.userId);
+    if (!candidate) throw new NotFoundError('Candidate profile not found');
+
+    const draft = await applicationService.getOrCreateDraft(candidate.id);
+
+    const { paymentService } = await import('../services/payment.service');
+    const payments = await paymentService.getPaymentStatus(draft.applicationId, candidate.id);
+
+    const completedPayment = payments.find((p: any) => p.status === 'completed');
+
+    return response.success(200, {
+      message: 'Candidate payment status retrieved successfully',
+      data: {
+        paymentStatus: completedPayment ? 'completed' : payments.length > 0 ? 'initiated' : 'not_initiated',
+        payments: payments,
+      },
+    });
+  }
+
+  // ── PATCH /auth/candidate/step-3 ───────────────────────────
+
+  /*
+  // ── Original JSSC candidateStep3 (Educational Details) ──
   async candidateStep3(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
     const user = await authenticate(event);
     const { body } = parseEvent(event);
@@ -540,7 +726,6 @@ export class AuthController {
       mappedData
     );
 
-    // Fetch eligible posts for this candidate based on their job qualifications
     const qualIds = qualifications
       .map((q) => q.jobQualificationId)
       .filter((id): id is number => typeof id === 'number' && id > 0);
@@ -560,7 +745,6 @@ export class AuthController {
         }
       }
 
-      // General recruitment rules for BSSC eligibility
       const hasMatric = qualifications.some((q) => q.level === 'matriculation');
       const hasGradOrPG = qualifications.some(
         (q) => q.level === 'graduation' || q.level === 'post_graduation'
@@ -575,19 +759,239 @@ export class AuthController {
       }
 
       if (hasMatric) {
-        postCodes.add('104'); // Matric level clerk (Mock)
+        postCodes.add('104');
       }
 
       if (hasGradOrPG) {
-        postCodes.add('101'); // Block Development Officer / general graduate posts (Mock)
-        postCodes.add('1'); // Production BDO
-        postCodes.add('2'); // Production VBDCO
-        postCodes.add('3'); // Production VBDCO Inspector
+        postCodes.add('101');
+        postCodes.add('1');
+        postCodes.add('2');
+        postCodes.add('3');
 
         if (hasMathStatsEco) {
-          postCodes.add('102'); // Statistical Assistant / Auditor (Mock)
-          postCodes.add('4'); // Block Statistical Supervisor
-          postCodes.add('7'); // Auditor
+          postCodes.add('102');
+          postCodes.add('4');
+          postCodes.add('7');
+        }
+      }
+
+      if (postCodes.size > 0) {
+        eligiblePosts = await db
+          .select()
+          .from(posts)
+          .where(inArray(posts.postCode, Array.from(postCodes)));
+      }
+    }
+
+    return response.success(200, {
+      message: 'Candidate educational details (Step 3) saved successfully',
+      data: {
+        ...result,
+        savedData: mappedData,
+      },
+    });
+  }
+  */
+
+  async candidateStep3(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
+    const user = await authenticate(event);
+    const { body } = parseEvent(event);
+
+    const input = validate(candidateStep3Schema, body);
+
+    const candidate = await userRepository.findCandidateByUserId(user.userId);
+    if (!candidate) throw new NotFoundError('Candidate profile not found');
+
+    const qualifications: any[] = [
+      {
+        level: 'matriculation',
+        boardUniversity: input.tenth?.board || 'N/A',
+        degree: '10th',
+        totalMarks: Number(input.tenth?.totalMarks || 0),
+        marksObtained: Number(input.tenth?.marksObtained || 0),
+        percentage: Number(input.tenth?.percentage || 0),
+        passingYear: input.tenth?.passingYear || null,
+        jobQualificationId: resolveJobQualificationId('matriculation', '10th', ''),
+      },
+    ];
+
+    if (
+      input.twelfth &&
+      ((input.twelfth.board && input.twelfth.board !== 'N/A') ||
+        (input.twelfth.totalMarks && Number(input.twelfth.totalMarks) > 0))
+    ) {
+      qualifications.push({
+        level: 'intermediate',
+        boardUniversity: input.twelfth.board || 'N/A',
+        degree: '12th',
+        totalMarks: Number(input.twelfth.totalMarks || 0),
+        marksObtained: Number(input.twelfth.marksObtained || 0),
+        percentage: Number(input.twelfth.percentage || 0),
+        passingYear: input.twelfth?.passingYear || null,
+        jobQualificationId: resolveJobQualificationId('intermediate', '12th', ''),
+      });
+    }
+
+    if (
+      input.graduation &&
+      (input.graduation.university ||
+        input.graduation.degreeId ||
+        (input.graduation.totalMarks && Number(input.graduation.totalMarks) > 0))
+    ) {
+      qualifications.push({
+        level: 'graduation',
+        boardUniversity: input.graduation.university || 'N/A',
+        degree: input.graduation.degreeId ? String(input.graduation.degreeId) : '0',
+        specialization: undefined,
+        totalMarks: Number(input.graduation.totalMarks || 0),
+        marksObtained: Number(input.graduation.marksObtained || 0),
+        percentage: Number(input.graduation.percentage || 0),
+        passingYear: input.graduation?.passingYear || null,
+        jobQualificationId: resolveJobQualificationId(
+          'graduation',
+          input.graduation.degreeId ? String(input.graduation.degreeId) : 'Graduation',
+          ''
+        ),
+      });
+    }
+
+    if (
+      input.postGraduation &&
+      (input.postGraduation.hasPostGraduation ||
+        input.postGraduation.university ||
+        input.postGraduation.degreeId ||
+        (input.postGraduation.totalMarks && Number(input.postGraduation.totalMarks) > 0))
+    ) {
+      qualifications.push({
+        level: 'post_graduation',
+        boardUniversity: input.postGraduation.university || 'N/A',
+        degree: input.postGraduation.degreeId ? String(input.postGraduation.degreeId) : '0',
+        specialization: undefined,
+        totalMarks: Number(input.postGraduation.totalMarks || 0),
+        marksObtained: Number(input.postGraduation.marksObtained || 0),
+        percentage: Number(input.postGraduation.percentage || 0),
+        passingYear: input.postGraduation?.passingYear || null,
+        jobQualificationId: resolveJobQualificationId(
+          'post_graduation',
+          input.postGraduation.degreeId ? String(input.postGraduation.degreeId) : 'Post Graduation',
+          ''
+        ),
+      });
+    }
+
+    // Normalize BSSC flat format fields to match what frontend sends
+    const bsscTenth = (body as any).tenth
+      ? {
+          subject: (body as any).tenth.subject || (body as any).tenth.board || '',
+          boardUniversity: (body as any).tenth.boardUniversity || (body as any).tenth.board || 'N/A',
+          totalMarks: String((body as any).tenth.totalMarks || '0'),
+          obtainedMarks: String((body as any).tenth.obtainedMarks || (body as any).tenth.marksObtained || '0'),
+          percentage: String((body as any).tenth.percentage || '0'),
+          certNumber: (body as any).tenth.certNumber || '',
+          certIssueDate: (body as any).tenth.certIssueDate || null,
+        }
+      : undefined;
+
+    const bsscTwelfth = (body as any).twelfth
+      ? {
+          subject: (body as any).twelfth.subject || (body as any).twelfth.board || '',
+          boardUniversity: (body as any).twelfth.boardUniversity || (body as any).twelfth.board || 'N/A',
+          totalMarks: String((body as any).twelfth.totalMarks || '0'),
+          obtainedMarks: String((body as any).twelfth.obtainedMarks || (body as any).twelfth.marksObtained || '0'),
+          percentage: String((body as any).twelfth.percentage || '0'),
+          certNumber: (body as any).twelfth.certNumber || '',
+          certIssueDate: (body as any).twelfth.certIssueDate || null,
+        }
+      : undefined;
+
+    const bsscGraduation = (body as any).graduation
+      ? {
+          subject: (body as any).graduation.subject || (body as any).graduation.degreeId || '',
+          boardUniversity: (body as any).graduation.boardUniversity || (body as any).graduation.university || 'N/A',
+          totalMarks: String((body as any).graduation.totalMarks || '0'),
+          obtainedMarks: String((body as any).graduation.obtainedMarks || (body as any).graduation.marksObtained || '0'),
+          percentage: String((body as any).graduation.percentage || '0'),
+          certNumber: (body as any).graduation.certNumber || '',
+          certIssueDate: (body as any).graduation.certIssueDate || null,
+        }
+      : undefined;
+
+    const bsscPostGraduation = (body as any).postGraduation
+      ? {
+          subject: (body as any).postGraduation.subject || (body as any).postGraduation.degreeId || '',
+          boardUniversity: (body as any).postGraduation.boardUniversity || (body as any).postGraduation.university || 'N/A',
+          totalMarks: String((body as any).postGraduation.totalMarks || '0'),
+          obtainedMarks: String((body as any).postGraduation.obtainedMarks || (body as any).postGraduation.marksObtained || '0'),
+          percentage: String((body as any).postGraduation.percentage || '0'),
+          certNumber: (body as any).postGraduation.certNumber || '',
+          certIssueDate: (body as any).postGraduation.certIssueDate || null,
+        }
+      : undefined;
+
+    const mappedData = {
+      ...input,
+      // Save BSSC flat format so frontend can retrieve exact fields it submitted
+      ...(bsscTenth ? { tenth: bsscTenth } : {}),
+      ...(bsscTwelfth ? { twelfth: bsscTwelfth } : {}),
+      ...(bsscGraduation ? { graduation: bsscGraduation } : {}),
+      ...(bsscPostGraduation ? { postGraduation: bsscPostGraduation } : {}),
+      qualifications,
+    };
+
+    const draft = await applicationService.getOrCreateDraft(candidate.id);
+    const result = await applicationService.saveStep(
+      draft.applicationId,
+      candidate.id,
+      3, // Educational details is Step 3 in the DB
+      mappedData
+    );
+
+    const qualIds = qualifications
+      .map((q) => q.jobQualificationId)
+      .filter((id): id is number => typeof id === 'number' && id > 0);
+
+    const db = getDb();
+    let eligiblePosts: any[] = [];
+    if (qualIds.length > 0) {
+      const jobQuals = await db
+        .select()
+        .from(jobQualifications)
+        .where(inArray(jobQualifications.slNo, qualIds));
+
+      const postCodes = new Set<string>();
+      for (const jq of jobQuals) {
+        if (jq.eligiblePostCode) {
+          postCodes.add(String(jq.eligiblePostCode));
+        }
+      }
+
+      const hasMatric = qualifications.some((q) => q.level === 'matriculation');
+      const hasGradOrPG = qualifications.some(
+        (q) => q.level === 'graduation' || q.level === 'post_graduation'
+      );
+
+      let hasMathStatsEco = false;
+      for (const q of qualifications) {
+        const spec = String(q.specialization || q.degree || '').toLowerCase();
+        if (spec.includes('math') || spec.includes('stat') || spec.includes('eco')) {
+          hasMathStatsEco = true;
+        }
+      }
+
+      if (hasMatric) {
+        postCodes.add('104');
+      }
+
+      if (hasGradOrPG) {
+        postCodes.add('101');
+        postCodes.add('1');
+        postCodes.add('2');
+        postCodes.add('3');
+
+        if (hasMathStatsEco) {
+          postCodes.add('102');
+          postCodes.add('4');
+          postCodes.add('7');
         }
       }
 
@@ -610,6 +1014,170 @@ export class AuthController {
 
   // ── PATCH /auth/candidate/step-4 ───────────────────────────
 
+  async candidateStep4(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
+    const user = await authenticate(event);
+    const candidate = await userRepository.findCandidateByUserId(user.userId);
+    if (!candidate) throw new NotFoundError('Candidate profile not found');
+
+    let parsed: ReturnType<typeof parseMultipart>;
+    try {
+      parsed = parseMultipart(event);
+    } catch (err: any) {
+      if (err.message && err.message.includes('Unsupported Media Type')) {
+        throw new UnsupportedMediaTypeError(err.message);
+      }
+      throw new ValidationError([], err.message || 'Invalid multipart/form-data request body');
+    }
+
+    const { files } = parsed;
+
+    const existingDocs = await documentService.getCandidateDocuments(candidate.id);
+    const existingDocsMap = new Map(existingDocs.map((d) => [d.documentType, d.documentId]));
+
+    const DOCUMENT_FIELDS = ['photograph', 'signatureEnglish', 'signatureHindi'];
+    const errors: Array<{ field: string; message: string }> = [];
+
+    // Photograph, English Signature, Hindi Signature are required (either uploaded now or exist already)
+    for (const req of DOCUMENT_FIELDS) {
+      const docTypeMapped =
+        req === 'photograph'
+          ? 'photograph'
+          : req === 'signatureEnglish'
+            ? 'signature_english'
+            : 'signature_hindi';
+      if (!files[req] && !existingDocsMap.has(docTypeMapped)) {
+        errors.push({ field: req, message: `${req} is required` });
+      }
+    }
+
+    if (errors.length > 0) {
+      throw new ValidationError(errors);
+    }
+
+    // Pre-validate file sizes and mime types
+    for (const [fieldName, file] of Object.entries(files)) {
+      if (!DOCUMENT_FIELDS.includes(fieldName)) continue;
+
+      const fileObj = file as any;
+      const allowedTypes = ['image/jpeg', 'image/jpg'];
+
+      if (!allowedTypes.includes(fileObj.mimetype)) {
+        errors.push({
+          field: fieldName,
+          message: `Invalid file type. Allowed types: ${allowedTypes.join(', ')}`,
+        });
+      }
+
+      // Max size: Photo (50 KB), Signature (30 KB)
+      const maxSize = fieldName === 'photograph' ? 50 * 1024 : 30 * 1024;
+      if (fileObj.data.length > maxSize) {
+        errors.push({
+          field: fieldName,
+          message: `File size exceeds limit. Maximum allowed: ${fieldName === 'photograph' ? '50 KB' : '30 KB'}`,
+        });
+      }
+    }
+
+    if (errors.length > 0) {
+      throw new ValidationError(errors);
+    }
+
+    // Upload files and populate documentIds
+    const documentIds: Record<string, string | null> = {};
+
+    for (const fieldName of DOCUMENT_FIELDS) {
+      const file = files[fieldName];
+      const docTypeMapped =
+        fieldName === 'photograph'
+          ? 'photograph'
+          : fieldName === 'signatureEnglish'
+            ? 'signature_english'
+            : 'signature_hindi';
+      if (file) {
+        const uploadResult = await documentService.uploadDocument({
+          candidateId: candidate.id,
+          documentType: docTypeMapped,
+          fileName: file.filename,
+          mimeType: file.mimetype,
+          fileContent: file.data,
+          fileSize: file.data.length,
+        });
+        documentIds[fieldName] = uploadResult.documentId;
+      } else {
+        documentIds[fieldName] = existingDocsMap.get(docTypeMapped) ?? null;
+      }
+    }
+
+    const draft = await applicationService.getOrCreateDraft(candidate.id);
+    const result = await applicationService.saveStep(
+      draft.applicationId,
+      candidate.id,
+      4, // Step 4 in application.service is BSSC Photo & Signature
+      documentIds
+    );
+
+    return response.success(200, {
+      message: 'Candidate photos and signatures saved successfully',
+      data: {
+        ...result,
+        savedData: documentIds,
+      },
+    });
+  }
+
+  // ── PATCH /auth/candidate/step-5 ───────────────────────────
+
+  async candidateStep5(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
+    const user = await authenticate(event);
+    const candidate = await userRepository.findCandidateByUserId(user.userId);
+    if (!candidate) throw new NotFoundError('Candidate profile not found');
+
+    const { body } = parseEvent(event);
+    let livePhotoUuid: string | null = null;
+
+    let livePhotoData = (body?.livePhoto || body?.livePhotoBase64) as string;
+    if (!livePhotoData) {
+      throw new ValidationError([{ field: 'livePhoto', message: 'Live photo (UUID or base64) is required' }]);
+    }
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (uuidRegex.test(livePhotoData)) {
+      livePhotoUuid = livePhotoData;
+    } else {
+      if (livePhotoData.includes(';base64,')) {
+        livePhotoData = livePhotoData.split(';base64,')[1];
+      }
+      const fileBuffer = Buffer.from(livePhotoData, 'base64');
+      const uploadResult = await documentService.uploadDocument({
+        candidateId: candidate.id,
+        documentType: 'live_photo',
+        fileName: 'live_photo.jpg',
+        mimeType: 'image/jpeg',
+        fileContent: fileBuffer,
+        fileSize: fileBuffer.length,
+      });
+      livePhotoUuid = uploadResult.documentId;
+    }
+
+    const draft = await applicationService.getOrCreateDraft(candidate.id);
+    const result = await applicationService.saveStep(
+      draft.applicationId,
+      candidate.id,
+      5, // Step 5 in application.service is BSSC Live Photo
+      { livePhoto: livePhotoUuid }
+    );
+
+    return response.success(200, {
+      message: 'Candidate live photo saved successfully',
+      data: {
+        ...result,
+        savedData: { livePhoto: livePhotoUuid },
+      },
+    });
+  }
+
+  /*
+  // ── Original JSSC candidateStep4 (Languages Selection) ──
   async candidateStep4(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
     const user = await authenticate(event);
     const { body } = parseEvent(event);
@@ -636,9 +1204,7 @@ export class AuthController {
     });
   }
 
-  // ── PATCH /auth/candidate/step-5 ───────────────────────────
-
-
+  // ── Original JSSC candidateStep5 (Documents Upload) ──
   async candidateStep5(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
     const user = await authenticate(event);
     const candidate = await userRepository.findCandidateByUserId(user.userId);
@@ -765,7 +1331,6 @@ export class AuthController {
 
     // Required fields: signature, photo, tenthMarksheet
     const requiredFields = ['signature', 'photo', 'tenthMarksheet'];
-    // Removed other dynamic document validations as requested
 
     for (const req of requiredFields) {
       if (!files[req] && !existingDocsMap.has(req)) {
@@ -849,6 +1414,7 @@ export class AuthController {
       },
     });
   }
+  */
 
   // ── PATCH /auth/candidate/step-6 ───────────────────────────
 

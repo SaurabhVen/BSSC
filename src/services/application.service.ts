@@ -111,6 +111,49 @@ export class ApplicationService {
       }
     }
 
+    // Support BSSC flat educational details format by normalizing to JSSC qualifications array
+    if ((stepNumber === 2 || stepNumber === 3) && data && typeof data === 'object' && !Array.isArray(data.qualifications)) {
+      const qualifications: any[] = [];
+      const levels = ['tenth', 'twelfth', 'graduation', 'postGraduation'] as const;
+      for (const lvl of levels) {
+        if (data[lvl] && typeof data[lvl] === 'object') {
+          const q = data[lvl] as any;
+          let dbLevel = 'unknown';
+          let degree = '';
+          if (lvl === 'tenth') {
+            dbLevel = 'matriculation';
+            degree = '10th';
+          } else if (lvl === 'twelfth') {
+            dbLevel = 'intermediate';
+            degree = '12th';
+          } else if (lvl === 'graduation') {
+            dbLevel = 'graduation';
+            degree = q.subject || 'Graduation';
+          } else if (lvl === 'postGraduation') {
+            dbLevel = 'post_graduation';
+            degree = q.subject || 'Post Graduation';
+          }
+
+          qualifications.push({
+            level: dbLevel,
+            degree: degree,
+            boardUniversity: q.boardUniversity || 'N/A',
+            totalMarks: q.totalMarks ? String(q.totalMarks) : '0',
+            obtainedMarks: q.obtainedMarks || q.marksObtained || '0',
+            marksObtained: q.obtainedMarks || q.marksObtained || '0',
+            percentage: q.percentage ? String(q.percentage) : '0',
+            specialization: q.subject || null,
+            passingYear: q.certIssueDate ? String(q.certIssueDate).split('-')[0] : null,
+            certNumber: q.certNumber || '',
+            certIssueDate: q.certIssueDate || null,
+          });
+        }
+      }
+      if (qualifications.length > 0) {
+        (data as any).qualifications = qualifications;
+      }
+    }
+
     const schema = STEP_SCHEMAS[stepNumber as StepNumber];
     if (schema) {
       validate(schema as any, data);
@@ -443,7 +486,6 @@ export class ApplicationService {
     for (const row of stepDataRows) {
       stepDataMap[row.stepNumber] = row.data as Record<string, any>;
     }
-
     // Process Step 0 -> Candidates table
     if (stepDataMap[0]) {
       const s0 = stepDataMap[0];
@@ -454,76 +496,139 @@ export class ApplicationService {
           mobileNumber: s0.mobileNumber || null,
           dateOfBirth: s0.dateOfBirth
             ? new Date(
-                s0.dateOfBirth.includes('-') && s0.dateOfBirth.split('-')[0].length === 2
-                  ? s0.dateOfBirth.split('-').reverse().join('-')
-                  : s0.dateOfBirth
-              )
+              s0.dateOfBirth.includes('-') && s0.dateOfBirth.split('-')[0].length === 2
+                ? s0.dateOfBirth.split('-').reverse().join('-')
+                : s0.dateOfBirth
+            )
             : null,
           updatedAt: new Date(),
         })
         .where(eq(candidates.id, candidateId));
     }
 
-    // Process Step 2 -> Experiences and Qualifications
-    if (stepDataMap[2]) {
-      const s2 = stepDataMap[2];
+    // Determine whether this application is using BSSC step numbers (educational details in step 3) or JSSC step numbers (educational details in step 2)
+    const isBSSC = !!(
+      (stepDataMap[3] && (stepDataMap[3].tenth || stepDataMap[3].qualifications)) ||
+      (stepDataMap[4] && stepDataMap[4].postRankings) ||
+      (stepDataMap[5] && (stepDataMap[5].paperOne || stepDataMap[5].paperOneLanguage))
+    );
 
-      // Qualifications
-      if (Array.isArray(s2.qualifications)) {
-        await db
-          .delete(candidateQualifications)
-          .where(eq(candidateQualifications.applicationId, applicationId));
-        for (const q of s2.qualifications) {
-          await db.insert(candidateQualifications).values({
-            applicationId,
+    const qualificationsStep = isBSSC ? 3 : 2;
+    const postPreferencesStep = isBSSC ? 4 : 3;
+    const languagesStep = isBSSC ? 5 : 4;
+
+    // Process Experiences and Qualifications (Step 2 or 3)
+    const sQuals = stepDataMap[qualificationsStep];
+    if (sQuals) {
+      const parsedQualifications: any[] = [];
+
+      // 1. Support JSSC format (array of qualifications)
+      if (Array.isArray(sQuals.qualifications)) {
+        for (const q of sQuals.qualifications) {
+          parsedQualifications.push({
             level: q.level || 'unknown',
-            degree: q.degree,
-            boardUniversity: q.boardUniversity,
-            totalMarks: parseInt(q.totalMarks) || null,
-            marksObtained: parseInt(q.marksObtained) || null,
-            percentage: parseFloat(q.percentage) ? String(parseFloat(q.percentage)) : null,
-            specialization: q.specialization,
+            degree: q.degree || null,
+            boardUniversity: q.boardUniversity || null,
+            totalMarks: q.totalMarks ? parseInt(String(q.totalMarks)) : null,
+            marksObtained: q.marksObtained ? parseInt(String(q.marksObtained)) : null,
+            percentage: q.percentage ? String(parseFloat(String(q.percentage))) : null,
+            specialization: q.specialization || null,
             passingYear: q.passingYear || null,
             jobQualificationId: q.jobQualificationId || null,
           });
         }
-      }
-    }
+      } else {
+        // 2. Support BSSC format (nested objects tenth, twelfth, graduation, postGraduation)
+        const levels = ['tenth', 'twelfth', 'graduation', 'postGraduation'] as const;
+        for (const lvl of levels) {
+          if (sQuals[lvl] && typeof sQuals[lvl] === 'object') {
+            const q = sQuals[lvl] as any;
+            let dbLevel = 'unknown';
+            let degree = '';
+            if (lvl === 'tenth') {
+              dbLevel = 'matriculation';
+              degree = '10th';
+            } else if (lvl === 'twelfth') {
+              dbLevel = 'intermediate';
+              degree = '12th';
+            } else if (lvl === 'graduation') {
+              dbLevel = 'graduation';
+              degree = q.subject || 'Graduation';
+            } else if (lvl === 'postGraduation') {
+              dbLevel = 'post_graduation';
+              degree = q.subject || 'Post Graduation';
+            }
 
-    // Process Step 3 -> Post Preferences
-    if (stepDataMap[3]) {
-      const s3 = stepDataMap[3];
-      if (Array.isArray(s3.postRankings)) {
+            parsedQualifications.push({
+              level: dbLevel,
+              degree: degree,
+              boardUniversity: q.boardUniversity || null,
+              totalMarks: q.totalMarks ? parseInt(String(q.totalMarks)) : null,
+              marksObtained: q.obtainedMarks ? parseInt(String(q.obtainedMarks)) : null,
+              percentage: q.percentage ? String(parseFloat(String(q.percentage))) : null,
+              specialization: q.subject || null,
+              passingYear: q.certIssueDate ? String(q.certIssueDate).split('-')[0] : null,
+              jobQualificationId: null,
+            });
+          }
+        }
+      }
+
+      if (parsedQualifications.length > 0) {
         await db
-          .delete(candidatePostPreferences)
-          .where(eq(candidatePostPreferences.applicationId, applicationId));
-        for (const p of s3.postRankings) {
-          await db.insert(candidatePostPreferences).values({
+          .delete(candidateQualifications)
+          .where(eq(candidateQualifications.applicationId, applicationId));
+        for (const q of parsedQualifications) {
+          await db.insert(candidateQualifications).values({
             applicationId,
-            postCode: String(p.postCode || p.postId),
-            priority: parseInt(p.priority),
-            isRegular: s3.isRegular ?? true,
-            isBacklog: s3.isBacklog ?? false,
+            level: q.level,
+            degree: q.degree,
+            boardUniversity: q.boardUniversity,
+            totalMarks: q.totalMarks,
+            marksObtained: q.marksObtained,
+            percentage: q.percentage,
+            specialization: q.specialization,
+            passingYear: q.passingYear,
+            jobQualificationId: q.jobQualificationId,
           });
         }
       }
     }
 
-    // Process Step 4 -> Languages / Subjects
-    if (stepDataMap[4]) {
-      const s4 = stepDataMap[4];
+    // Process Post Preferences (Step 3 or 4)
+    const sPrefs = stepDataMap[postPreferencesStep];
+    if (sPrefs) {
+      if (Array.isArray(sPrefs.postRankings)) {
+        await db
+          .delete(candidatePostPreferences)
+          .where(eq(candidatePostPreferences.applicationId, applicationId));
+        for (const p of sPrefs.postRankings) {
+          await db.insert(candidatePostPreferences).values({
+            applicationId,
+            postCode: String(p.postCode || p.postId),
+            priority: parseInt(p.priority),
+            isRegular: sPrefs.isRegular ?? true,
+            isBacklog: sPrefs.isBacklog ?? false,
+          });
+        }
+      }
+    }
+
+    // Process Languages / Subjects (Step 4 or 5)
+    const sLangs = stepDataMap[languagesStep];
+    if (sLangs) {
       await db
         .delete(candidateLanguages)
         .where(eq(candidateLanguages.applicationId, applicationId));
       await db.insert(candidateLanguages).values({
         applicationId,
-        paperOneLanguage: s4.paperOne || s4.paperOneLanguage,
-        paperTwoLanguage: s4.paperTwo || s4.paperTwoLanguage,
+        paperOneLanguage: sLangs.paperOne || sLangs.paperOneLanguage,
+        paperTwoLanguage: sLangs.paperTwo || sLangs.paperTwoLanguage,
         paperThreeLanguage:
-          s4.paperThreeForPost4 ||
-          s4.paperThreeForPost6 ||
-          s4.paperThreeForPost7 ||
-          s4.paperThreeLanguage ||
+          sLangs.paperThreeForPost4 ||
+          sLangs.paperThreeForPost6 ||
+          sLangs.paperThreeForPost7 ||
+          sLangs.paperThreeLanguage ||
           '',
       });
     }

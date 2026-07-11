@@ -26,10 +26,13 @@ export function parseBSSCDate(dateStr: string | Date): Date {
  * @param dobInput Date of birth (string or Date)
  * @returns Object containing years, months, and days
  */
-export function calculateExactAge(dobInput: string | Date): { years: number; months: number; days: number } {
+export function calculateExactAge(
+  dobInput: string | Date,
+  referenceDate?: string | Date
+): { years: number; months: number; days: number } {
   const dob = parseBSSCDate(dobInput);
   if (isNaN(dob.getTime())) return { years: 0, months: 0, days: 0 };
-  const refDate = new Date('2025-08-01');
+  const refDate = referenceDate ? new Date(referenceDate) : new Date('2025-08-01');
 
   let years = refDate.getFullYear() - dob.getFullYear();
   let months = refDate.getMonth() - dob.getMonth();
@@ -94,10 +97,12 @@ export function getBSSCAgeLimits(
   categoryValue: string,
   gender: string,
   isPwd: boolean,
-  isExServiceman: boolean
+  isExServiceman: boolean,
+  exServicemanYears: number = 0,
+  isGovtServant: boolean = false,
+  isCommissionedOfficer: boolean = false
 ): AgeLimits {
   const minAge = 21;
-  let maxAge = 35; // Default for UR/EWS
 
   const catVal = (categoryValue || '').toLowerCase();
   const genderLower = (gender || '').toLowerCase();
@@ -118,19 +123,29 @@ export function getBSSCAgeLimits(
   ].includes(catVal);
   const isBc = ['bc1', 'bc2'].includes(catVal);
 
+  let baseMax = 37; // Default for UR/EWS
   if (isScSt) {
-    maxAge = 40;
-  } else if (genderLower === 'female') {
-    maxAge = 38;
+    baseMax = 42;
   } else if (isBc) {
-    maxAge = 37;
+    baseMax = 40;
+  } else if (genderLower === 'female' || genderLower === 'transgender') {
+    baseMax = 40;
+  } else {
+    baseMax = 37;
   }
+
+  let maxAge = baseMax;
 
   // Apply relaxations (PwD relaxation takes precedence if both, or PwD is 10, Ex-Serviceman is 5)
   if (isPwd) {
-    maxAge += 10;
+    maxAge = baseMax + 10;
   } else if (isExServiceman) {
-    maxAge += 5;
+    const extraForScSt = isScSt ? 5 : 0;
+    maxAge = Math.min(baseMax + 3 + exServicemanYears + extraForScSt, 53);
+  } else if (isGovtServant) {
+    maxAge = baseMax + 5;
+  } else if (isCommissionedOfficer) {
+    maxAge = baseMax + 5;
   }
 
   return { minAge, maxAge };

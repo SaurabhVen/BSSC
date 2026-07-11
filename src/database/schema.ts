@@ -517,6 +517,12 @@ export const paymentRefunds = pgTable('payment_refunds', {
   deletedBy: uuid('deleted_by'),
   version: integer('version').default(1).notNull(),
 });
+// ── Type of Ex-Officers ───────────────────────────────────────
+export const typeOfExOfficers = pgTable('type_of_ex_officers', {
+  id: serial('id').primaryKey(),
+  name: varchar('name', { length: 255 }).notNull(),
+});
+
 export type Role = typeof roles.$inferSelect;
 export type NewRole = typeof roles.$inferInsert;
 
@@ -594,3 +600,6 @@ export type NewPaymentLog = typeof paymentLogs.$inferInsert;
 
 export type PaymentRefund = typeof paymentRefunds.$inferSelect;
 export type NewPaymentRefund = typeof paymentRefunds.$inferInsert;
+
+export type TypeOfExOfficer = typeof typeOfExOfficers.$inferSelect;
+export type NewTypeOfExOfficer = typeof typeOfExOfficers.$inferInsert;

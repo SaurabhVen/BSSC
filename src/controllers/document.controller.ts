@@ -10,6 +10,9 @@ import type { LambdaResponse } from '../types';
 const VALID_DOCUMENT_TYPES = [
   'photograph',
   'signature',
+  'signature_english',
+  'signature_hindi',
+  'live_photo',
   'identityProof',
   'categoryProof',
   'educationProof',

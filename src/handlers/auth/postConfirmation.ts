@@ -268,19 +268,15 @@ export const handler = async (
       hasAgreement: attributes['custom:has_agreement'] || 'NO',
     };
 
-    // 4.4 Save step data
+    // 4.4 Save step data (combining both Step 0 and Step 1 data into Step 0)
     await db.insert(applicationStepData).values({
       id: uuidv4(),
       applicationId: applicationId,
       stepNumber: 0,
-      data: step0Data,
-    });
-
-    await db.insert(applicationStepData).values({
-      id: uuidv4(),
-      applicationId: applicationId,
-      stepNumber: 1,
-      data: step1Data,
+      data: {
+        ...step0Data,
+        ...step1Data,
+      },
     });
 
     // 5. Create document locally if document URL is present

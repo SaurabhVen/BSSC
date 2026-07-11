@@ -1,17 +1,31 @@
 import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { response } from '../helpers/response';
 import { parseEvent } from '../helpers/request';
-import { getBSSCAgeLimits, calculateExactAge } from '../utils/age';
+import { getBSSCAgeLimits, calculateExactAge, checkBSSCEligibility } from '../utils/age';
 import type { LambdaResponse } from '../types';
 import { getDb } from '../database/drizzle';
-import { categories } from '../database/schema';
+import { categories, typeOfExOfficers, users } from '../database/schema';
 import { eq } from 'drizzle-orm';
+import { DatabaseError } from '../errors/AppError';
+
 
 export class PublicController {
   async getAgeLimits(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
     try {
       const { body } = parseEvent(event);
-      const { dob, cat_id, gender, isPwd, isExServiceman } = body || {};
+      const {
+        dob,
+        cat_id,
+        gender,
+        isPwd,
+        isExServiceman,
+        exServicemanYears,
+        isGovtServant,
+        isCommissionedOfficer,
+        qualificationYear,
+        passingYear,
+        qualificationDate
+      } = body || {};
 
       if (!dob) {
         return response.error(400, { message: 'Date of birth is required' });
@@ -41,25 +55,40 @@ export class PublicController {
         return response.error(400, { message: 'Invalid date of birth format' });
       }
 
+      let qualifiedPre2022 = false;
+      const qualYear = qualificationYear || passingYear;
+      if (qualYear) {
+        qualifiedPre2022 = Number(qualYear) <= 2022;
+      } else if (qualificationDate) {
+        const qDate = new Date(qualificationDate as any);
+        if (!isNaN(qDate.getTime())) {
+          qualifiedPre2022 = qDate.getTime() <= new Date('2022-08-01').getTime();
+        }
+      }
+
       const limits = getBSSCAgeLimits(
         (categoryValue as string) || 'unreserved',
         (gender as string) || 'Male',
         isPwd === true || String(isPwd) === 'true',
-        isExServiceman === true || String(isExServiceman) === 'true'
+        isExServiceman === true || String(isExServiceman) === 'true',
+        Number(exServicemanYears || 0),
+        isGovtServant === true || String(isGovtServant) === 'true',
+        isCommissionedOfficer === true || String(isCommissionedOfficer) === 'true'
       );
 
-      const exactAge = calculateExactAge(parsedDob);
+      const exactAge = calculateExactAge(parsedDob, '2025-08-01');
+
+      const isMinAgeEligible = checkBSSCEligibility(parsedDob, limits.minAge, 150, '2025-08-01');
+      const isMaxAgeEligibleBase = checkBSSCEligibility(parsedDob, 0, limits.maxAge, '2025-08-01');
+      const isMaxAgeEligibleCarryForward = checkBSSCEligibility(parsedDob, 0, limits.maxAge, '2022-08-01') && qualifiedPre2022;
 
       let isEligible = true;
       let reason = '';
 
-      if (exactAge.years < limits.minAge) {
+      if (!isMinAgeEligible) {
         isEligible = false;
         reason = 'Under age';
-      } else if (
-        exactAge.years > limits.maxAge ||
-        (exactAge.years === limits.maxAge && (exactAge.months > 0 || exactAge.days > 0))
-      ) {
+      } else if (!isMaxAgeEligibleBase && !isMaxAgeEligibleCarryForward) {
         isEligible = false;
         reason = 'Over age';
       }
@@ -118,6 +147,26 @@ export class PublicController {
       return response.error(500, { message: 'Failed to retrieve Cognito sub ID' });
     }
   }
+
+  async listTypeOfExOfficers(_event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
+    try {
+      const db = getDb();
+
+      // Select all ex-officer types from the DB
+      const list = await db.select().from(typeOfExOfficers).orderBy(typeOfExOfficers.id);
+      return response.success(200, {
+        message: 'Ex-Officer types fetched successfully',
+        data: list.map((item) => ({
+          value: item.id,
+          label: item.name,
+        })),
+        total: list.length,
+      });
+    } catch (err) {
+      throw new DatabaseError('Failed to fetch ex-officer types', err as Error);
+    }
+  }
+
 }
 
 export const publicController = new PublicController();

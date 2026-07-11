@@ -193,7 +193,11 @@ export const cognitoRegister = async (
   }
 
   const secretHash = computeSecretHash(email);
-  const userAttributesList = Object.entries(attributes).map(([Name, Value]) => ({
+  const attrsToSend = {
+    email: email.toLowerCase().trim(),
+    ...attributes,
+  };
+  const userAttributesList = Object.entries(attrsToSend).map(([Name, Value]) => ({
     Name,
     Value,
   }));
@@ -487,6 +491,7 @@ export const verifyJwt = async (token: string): Promise<JwtPayload> => {
       issuer,
     }) as JwtPayload;
   } catch (err) {
+    console.error('Actual verifyJwt error:', err);
     throw new Error(
       'For your security, your session has timed out. Please log in again to continue.'
     );

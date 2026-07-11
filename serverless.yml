@@ -25,6 +25,7 @@ package:
     - '!.git/**'
     - '!.serverless/**'
     - '!.build/**'
+    
 
 provider:
   name: aws
@@ -193,11 +194,11 @@ functions:
   candidateStep5:
     handler: src/handlers/auth/candidateStep5.handler
     memorySize: 1024
-    timeout: 60
+    timeout: 29
     events:
       - httpApi:
           path: /api/v1/auth/candidate/step-5
-          method: POST
+          method: PATCH
 
 
   candidateStep6:
@@ -712,4 +713,11 @@ functions:
       - httpApi:
           path: /api/v1/public/cognito-sub
           method: POST
+
+  listTypeOfExOfficers:
+    handler: src/handlers/public/listTypeOfExOfficers.handler
+    events:
+      - httpApi:
+          path: /api/v1/public/type-of-ex-officer
+          method: GET
 

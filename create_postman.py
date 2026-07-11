@@ -46,7 +46,7 @@ endpoints = [
           "fullName": "John Doe",
           "fathersName": "Richard Doe",
           "motherName": "Jane Doe",
-          "dob": "1990-01-01",
+          "dob": "01-01-1990",
           "age": 30,
           "gender": "male",
           "nationality": "Indian",
@@ -57,38 +57,54 @@ endpoints = [
           "permanentAddress": {
               "street": "123 Main St",
               "post": "Central Post Office",
-              "state": "Jharkhand",
-              "district": "Ranchi",
-              "pincode": "834001",
-              "cityOrVillage": "Ranchi"
+              "state": "Bihar",
+              "district": "Patna",
+              "pincode": "800001",
+              "cityOrVillage": "Patna"
           },
           "sameAsPermanent": True
+      },
+      "reservationCategory": {
+          "isLocallyResident": True,
+          "isJharkhandDomicile": True,
+          "domicileCertificateNumber": "DOM-BIH-2026-99282",
+          "mainCategory": 1,
+          "isPwd": False,
+          "isExServiceman": False,
+          "isSportsQuota": False,
+          "declaration": True
       }
   }),
   ("PATCH", "/api/v1/auth/candidate/step-2", {
-      "reservationCategory": {}
+      "paymentMode": "online_upi"
   }),
   ("PATCH", "/api/v1/auth/candidate/step-3", {
       "highestQualification": "graduation",
+      "tenth": {
+          "board": "BSEB",
+          "percentage": "80",
+          "totalMarks": "500",
+          "marksObtained": "400",
+          "passingCertificateNo": "10TH-123",
+          "passingYear": "2011"
+      },
       "graduation": {
-          "graduationCourse": "B.Tech",
-          "university": "Ranchi University",
-          "passoutYear": "2012",
-          "percentage": "75.5"
+          "degreeId": 1,
+          "university": "Patna University",
+          "percentage": "72.3",
+          "totalMarks": "1000",
+          "marksObtained": "723",
+          "passingCertificateNo": "GRAD-112998",
+          "passingYear": "2016"
       }
   }),
   ("PATCH", "/api/v1/auth/candidate/step-4", {
-      "languageSelection": {
-          "paperOneLanguage": "Hindi",
-          "paperTwoLanguage": "English",
-          "paperThreeLanguage": "Sanskrit"
-      }
+      "photograph": "{{documentId}}",
+      "signatureEnglish": "{{documentId}}",
+      "signatureHindi": "{{documentId}}"
   }),
-  ("POST", "/api/v1/auth/candidate/step-5", {
-      "tenthMarksheet": "{{documentId}}",
-      "signature": "{{documentId}}",
-      "photo": "{{documentId}}",
-      "declarationAccepted": True
+  ("PATCH", "/api/v1/auth/candidate/step-5", {
+      "livePhoto": "{{documentId}}"
   }),
   ("PATCH", "/api/v1/auth/candidate/step-6", {
       "postPreferences": {
@@ -97,7 +113,7 @@ endpoints = [
           "isBacklog": True,
           "postRankings": [
               {
-                  "postId": 1,
+                  "postCode": "101",
                   "priority": 1
               }
           ]
@@ -250,6 +266,7 @@ endpoints = [
   ("GET", "/api/v1/countries", None),
   ("GET", "/api/v1/countries/{countryId}/states", None),
   ("GET", "/api/v1/states/{stateId}/districts", None),
+  ("GET", "/api/v1/public/type-of-ex-officer", None),
   ("GET", "/api/v1/dashboard", None),
   ("GET", "/api/v1/dashboard/notifications", None),
   ("GET", "/api/v1/dashboard/admit-card", None),

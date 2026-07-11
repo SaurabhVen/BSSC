@@ -44,6 +44,13 @@ const envSchema = z.object({
   GETEPAY_RETURN_URL: z.string().optional().default('https://api-jtglcce.panjikaran.in'),
   FRONTEND_URL: z.string().optional().default('https://jtglcce-2026.panjikaran.in'),
   SES_SOURCE_EMAIL: z.string().optional().default('noreply@bssc-portal.gov.in'),
+
+  // BSSC Fee Settings
+  FEE_UR_EBC_BC_MALE: z.coerce.number().default(540),
+  FEE_SC_ST_BIHAR: z.coerce.number().default(135),
+  FEE_PWD_BIHAR: z.coerce.number().default(135),
+  FEE_WOMEN_BIHAR: z.coerce.number().default(135),
+  FEE_OUTSIDE_BIHAR: z.coerce.number().default(540),
 });
 
 export type AppConfig = z.infer<typeof envSchema>;
