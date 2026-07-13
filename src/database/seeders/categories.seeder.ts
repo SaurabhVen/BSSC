@@ -7,6 +7,124 @@ import { eq, sql } from 'drizzle-orm';
  * Sub-categories use catParentId to reference the parent row.
  */
 
+const EBC_CATEGORIES = [
+  "Please Select",
+  "Kapadia / कपरिया",
+  "Kanu / कानू",
+  "Kalandar / कलन्दर",
+  "Kochh / कोछ",
+  "Kurmi (Mahto) (Jharkhand autonomous area) / कुर्मी (महतो) झारखंड स्वशासी क्षेत्र",
+  "Kewat (Kaut) / केवट (कउट)",
+  "Kadar / कादर",
+  "Kaura / कोरा",
+  "Korku / कोरकू",
+  "Kaibart / केवर्त",
+  "Khatwa / खटवा",
+  "Khatouri / खतौरी",
+  "Khangar / खंगर",
+  "Khatik / खटिक",
+  "Khelta / खेलटा",
+  "Gorhi (Chhabi) / गोड़ी (छावी)",
+  "Gangai (Ganesh) / गंगई (गणेश)",
+  "Gangota / गंगोता",
+  "Gandharb / गंधर्व",
+  "Gulgulia / गुलगुलिया",
+  "Chain / चांय",
+  "Chapota / चपोता",
+  "Chandrabansi (Kahar, Kamkar) / चन्द्रवंशी(कहार, कमकर)",
+  "Tikulhar / टिकुलहार",
+  "Dhekaru / ढेकारू",
+  "Tanti (Tatwa) / तांती (ततवा)",
+  "Tamaria / तमरिया",
+  "Turha / तुरहा",
+  "Tiar / तियर",
+  "Dhanuk / धानुक",
+  "Dhamin / धामिन",
+  "Dhimar / धीमर",
+  "Dhanwar / धनवार",
+  "Nonia / नोनिया",
+  "Nai / नाई",
+  "Namsudar / नामशुद्र",
+  "Pandi / पाण्डी",
+  "Pal (Bherihar, Gareri) / पाल (भेड़िहार, गड़ेरी)",
+  "Pradhan / प्रधान",
+  "Pingania / पिनगनिया",
+  "Pahira / पहिरा",
+  "Bari / वारी",
+  "Beldar / बेलदार",
+  "Bind / बिन्द",
+  "Shekhra / शेखड़ा",
+  "Bagdi / बागदी",
+  "Bhuiyar / भुईयार",
+  "Bhar / भार",
+  "Bhaskar / भास्कर",
+  "Mali (Malakar) / माली (मालाकार)",
+  "Mangar / मांगर",
+  "Madar / मदार",
+  "Mallah / मल्लाह",
+  "Majhwar / मझवार",
+  "Markandey / मारकन्डे",
+  "Moriyari / मोरियारी",
+  "Malar (Malhor) / मलार (मालहोर)",
+  "Molik / मौलिक",
+  "Rajdhobi / राजधोबी",
+  "Rajbhar / राजभर",
+  "Rangwa / रंगवा",
+  "Banpar / वनपर",
+  "Shota (Shota) / सौटा (सोता)",
+  "Sang-Trash (for Nawada district only) / संतराश (केवल नवादा जिले के लिए)",
+  "Aghouri / अघोरी",
+  "Abdal / अबदल",
+  "Kasab (Kasai) (Muslim) / कसाब (कसाई) (मुस्लिम)",
+  "Chik (Muslim) / चीक (मुस्लिम)",
+  "Dafali (Muslim) / डफाली (मुस्लिम)",
+  "Dhunia (Muslim) / धुनिया (मुस्लिम)",
+  "Dhobi (Muslim) / धोबी (मुस्लिम)",
+  "Nut (Muslim) / नट (मुस्लिम)",
+  "Pamaria (Muslim) / पमरिया (मुस्लिम)",
+  "Bhathiara (Muslim) / भठियारा (मुस्लिम)",
+  "Bhat (Muslim) / भाट (मुस्लिम)",
+  "Mehtar, Lalbegia, Halalkhor, Bhangi (Muslim) / मेहतर, लालबेगीया, हलालखोर, भंगी (मुस्लिम)",
+  "Miriasin (Muslim) / मिरियासीन (मुस्लिम)",
+  "Madari (Muslim) / मदारी (मुस्लिम)",
+  "Meershikar (Muslim) / मोरशिकार (मुस्लिम)",
+  "Saeen/Fakir/Diwan/Madar (Muslim) / साई/फकीर/दिवान/मदार (मुस्लिम)",
+  "Momin (Muslim) (Julaha, Ansari) / मोमिन (मुस्लिम) (जुलाहा, अंसारी)",
+  "Amat / अमात",
+  "Churihar (Muslim) / चूड़ीहार (मुस्लिम)",
+  "Prajapati (Kumhar) / प्रजापति (कुम्हार)",
+  "Raeen or Kunjara (Muslim) / राईन या कुंजरा (मुस्लिम)",
+  "Soyar / सोयर",
+  "Thakurai (Muslim) / ठकुराई (मुस्लिम)",
+  "Nagar / नागर",
+  "Shershahbadi / शेरशाहबादी",
+  "Bakkho (Muslim) / बक्खो (मुस्लिम)",
+  "Adrakhi / अदरखी",
+  "Chhipi / छीपी",
+  "Tili / तिली",
+  "Idrisi or Darji (Muslim) / इदरीसी या दर्जी (मुस्लिम)",
+  "Saikalgar (Sikalgar) (Muslim) / सैकलगर (सिकलगर) (मुस्लिम)",
+  "Rangrej (Muslim) / रंगरेज (मुस्लिम)",
+  "Sinduria Bania, Kaithal Vaishya, Kath Bania / सिंदुरिया बनिया, कैथल वैश्य, कथबनिया",
+  "Mukeri (Muslim) / मुकेरी (मुस्लिम)",
+  "Itfarosh, Itafarosh, Gadheri, Itpaj Ibrahimi (Muslim) / ईटफरोश, ईटाफरोश, गदहेड़ी, ईटपज इब्राहिमी (मुस्लिम)",
+  "Barhi / बढ़ई",
+  "Patwa / पटवा",
+  "Kamar (Lohar and Karmkar) / कमार (लोहार और कर्मकार)",
+  "Dewhar / देवहार",
+  "Samari Vaishya / सामरी वैश्य",
+  "Haluwai / हलुवाई",
+  "Pairgha, Parihar / पैरघा, परिहार",
+  "Jaga / जागा",
+  "Laheri / लहेड़ी",
+  "Rajbanshi (Risia, Deshiya or Polia) / राजवंशी (रिसिया, देशिया या पोलिया)",
+  "Kulhaiya / कुल्हैया",
+  "Awadh Bania / अवध बनिया",
+  "Barai, Tamoli (Chaurasia) / बरई, तमोली (चौरसिया)",
+  "Teli / तेली",
+  "Dangi / दांगी"
+]
+
 const EBC_BC_SUBCATEGORIES = [
   { value: "kagji", label: "Kagji / कागजी" },
   { value: "kushwaha", label: "Kushwaha (Koiri) / कुशवाहा (कोईरी)" },
@@ -104,7 +222,7 @@ const CATEGORY_DATA = [
   {
     value: 'ebc1',
     label: 'Extremely Backward Class (Annexure-1) / अत्यंत पिछड़ा वर्ग (अनुसूची-1)',
-    subCategories: EBC_BC_SUBCATEGORIES,
+    subCategories: EBC_CATEGORIES,
   },
   {
     value: 'bc2',
@@ -141,7 +259,20 @@ export const seedCategories = async (
   const skipped: string[] = [];
 
   const seedRecursive = async (categoriesData: any[], parentId: number | null, level: number) => {
-    for (const cat of categoriesData) {
+    for (let cat of categoriesData) {
+      if (typeof cat === 'string') {
+        if (cat === 'Please Select') {
+          continue;
+        }
+        const englishPart = cat.split('/')[0].trim();
+        const value = englishPart
+          .toLowerCase()
+          .replace(/[^a-z0-9\s-_]/g, '')
+          .trim()
+          .replace(/[\s-_]+/g, '_');
+        cat = { value, label: cat };
+      }
+
       const existing = await db
         .select()
         .from(categories)

@@ -59,8 +59,7 @@ provider:
     cors:
       allowedOrigins:
         - http://localhost:5173
-        - https://jtglcce-2026.panjikaran.in
-        - https://jtglcce-2026-demo.cyberica.in
+        - https://d3lnk974uo6n00.cloudfront.net
       allowedHeaders:
         - Content-Type
         - Authorization

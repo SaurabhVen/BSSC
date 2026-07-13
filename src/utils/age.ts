@@ -102,10 +102,8 @@ export function getBSSCAgeLimits(
   isGovtServant: boolean = false,
   isCommissionedOfficer: boolean = false
 ): AgeLimits {
-  const minAge = 21;
-
-  const catVal = (categoryValue || '').toLowerCase();
-  const genderLower = (gender || '').toLowerCase();
+  const catVal = (categoryValue || '').toLowerCase().trim();
+  const genderLower = (gender || '').toLowerCase().trim();
 
   const isScSt = [
     'sc',
@@ -120,40 +118,40 @@ export function getBSSCAgeLimits(
     'sauria_pahariya',
     'savar',
     'other',
+    '54',
   ].includes(catVal);
-  const isBc = ['bc1', 'bc2'].includes(catVal);
+  const isBc = ['bc1', 'bc2', 'bc-i', 'bc-ii', 'ebc', 'bc', '50', '51', '52', '53', 'ebc1'].includes(catVal);
 
-  let baseMax = 37; // Default for UR/EWS
+  let baseMax = 37; // Default UR/EWS Male
   if (isScSt) {
     baseMax = 42;
-  } else if (isBc) {
+  } else if (isBc || genderLower === 'transgender') {
     baseMax = 40;
-  } else if (genderLower === 'female' || genderLower === 'transgender') {
-    baseMax = 40;
-  } else {
-    baseMax = 37;
+  } else if (genderLower === 'female') {
+    baseMax = 40; // UR/EWS Female
   }
 
   let maxAge = baseMax;
 
-  // Apply relaxations (PwD relaxation takes precedence if both, or PwD is 10, Ex-Serviceman is 5)
+  // Apply relaxations
   if (isPwd) {
     maxAge = baseMax + 10;
   } else if (isExServiceman) {
-    const extraForScSt = isScSt ? 5 : 0;
-    maxAge = Math.min(baseMax + 3 + exServicemanYears + extraForScSt, 53);
+    if (isCommissionedOfficer) {
+      maxAge = Math.min(baseMax + 5, 53);
+    } else {
+      const extraForScSt = isScSt ? 5 : 0;
+      maxAge = Math.min(baseMax + 3 + exServicemanYears + extraForScSt, 53);
+    }
   } else if (isGovtServant) {
-    maxAge = baseMax + 5;
-  } else if (isCommissionedOfficer) {
     maxAge = baseMax + 5;
   }
 
-  return { minAge, maxAge };
+  return { minAge: 21, maxAge };
 }
 
 /**
  * Checks if a candidate is strictly within the age limits on the reference date.
- * If overage by even 1 day, returns false.
  */
 export function checkBSSCEligibility(
   dobInput: string | Date,
@@ -161,22 +159,14 @@ export function checkBSSCEligibility(
   maxAge: number,
   referenceDate?: string | Date
 ): boolean {
-  const dob = parseBSSCDate(dobInput);
-  if (isNaN(dob.getTime())) return false;
+  const age = calculateExactAge(dobInput, referenceDate);
+  if (age.years === 0 && age.months === 0 && age.days === 0) {
+    // Invalid date or birthdate matches refDate (underage)
+    return false;
+  }
 
-  const refDate = referenceDate ? new Date(referenceDate) : new Date('2025-08-01');
+  const isAtLeastMin = age.years > minAge || (age.years === minAge && age.months === 0 && age.days === 0);
+  const isAtMostMax = age.years < maxAge || (age.years === maxAge && age.months === 0 && age.days === 0);
 
-  // Earliest DOB allowed (for maxAge)
-  const earliestDob = new Date(refDate);
-  earliestDob.setFullYear(refDate.getFullYear() - maxAge);
-
-  // Latest DOB allowed (for minAge)
-  const latestDob = new Date(refDate);
-  latestDob.setFullYear(refDate.getFullYear() - minAge);
-
-  const dobTime = new Date(dob.getFullYear(), dob.getMonth(), dob.getDate()).getTime();
-  const earliestTime = new Date(earliestDob.getFullYear(), earliestDob.getMonth(), earliestDob.getDate()).getTime();
-  const latestTime = new Date(latestDob.getFullYear(), latestDob.getMonth(), latestDob.getDate()).getTime();
-
-  return dobTime >= earliestTime && dobTime <= latestTime;
+  return isAtLeastMin && isAtMostMax;
 }

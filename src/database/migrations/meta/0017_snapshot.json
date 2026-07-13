@@ -1,6 +1,6 @@
 {
-  "id": "39bd7c94-fb9e-4ef6-baf7-bf6d158bb694",
-  "prevId": "9ab6175b-e4a5-48e3-9cd5-c6f9c96ba26b",
+  "id": "bcf077eb-46e6-4aa0-a19c-7a9098d8f742",
+  "prevId": "f644cf2a-e9e2-4db3-9ffd-5e280f773eb8",
   "version": "6",
   "dialect": "postgresql",
   "tables": {
@@ -506,6 +506,93 @@
         },
         "email_verified": {
           "name": "email_verified",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "gender": {
+          "name": "gender",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "category": {
+          "name": "category",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "caste": {
+          "name": "caste",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "bihar_domicile": {
+          "name": "bihar_domicile",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "is_pwd": {
+          "name": "is_pwd",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "disability_type": {
+          "name": "disability_type",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pwd_40_percent": {
+          "name": "pwd_40_percent",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "is_ex_serviceman": {
+          "name": "is_ex_serviceman",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "is_ncc_cadet": {
+          "name": "is_ncc_cadet",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "is_bihar_govt_emp": {
+          "name": "is_bihar_govt_emp",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "is_contractual_emp": {
+          "name": "is_contractual_emp",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "bssc_attempts": {
+          "name": "bssc_attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "default": 1
+        },
+        "non_creamy_layer": {
+          "name": "non_creamy_layer",
           "type": "boolean",
           "primaryKey": false,
           "notNull": true,
@@ -2408,6 +2495,28 @@
           ]
         }
       }
+    },
+    "public.type_of_ex_officers": {
+      "name": "type_of_ex_officers",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
     },
     "public.users": {
       "name": "users",

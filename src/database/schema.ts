@@ -85,6 +85,22 @@ export const candidates = pgTable(
     alternateNumber: varchar('alternate_number', { length: 15 }),
     mobileVerified: boolean('mobile_verified').default(false).notNull(),
     emailVerified: boolean('email_verified').default(false).notNull(),
+    
+    // Custom BSSC Metadata columns
+    gender: varchar('gender', { length: 20 }),
+    category: varchar('category', { length: 30 }),
+    caste: varchar('caste', { length: 100 }),
+    biharDomicile: boolean('bihar_domicile').default(false).notNull(),
+    isPwd: boolean('is_pwd').default(false).notNull(),
+    disabilityType: varchar('disability_type', { length: 50 }),
+    pwd40Percent: boolean('pwd_40_percent').default(false).notNull(),
+    isExServiceman: boolean('is_ex_serviceman').default(false).notNull(),
+    isNccCadet: boolean('is_ncc_cadet').default(false).notNull(),
+    isBiharGovtEmp: boolean('is_bihar_govt_emp').default(false).notNull(),
+    isContractualEmp: boolean('is_contractual_emp').default(false).notNull(),
+    bsscAttempts: integer('bssc_attempts').default(1).notNull(),
+    nonCreamyLayer: boolean('non_creamy_layer').default(false).notNull(),
+
     createdAt: timestamp('created_at').defaultNow().notNull(),
     createdBy: uuid('created_by'),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
