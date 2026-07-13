@@ -7,6 +7,16 @@ import { v4 as uuidv4 } from 'uuid';
 import { generateRegistrationNumber } from '../../utils/crypto';
 import { calculateBSSCAge } from '../../utils/age';
 
+const mapCategoryValue = (val: string): string => {
+  const normalized = (val || '').toLowerCase().trim();
+  if (normalized.includes('extremely backward') || normalized.includes('ebc') || normalized.includes('अत्यंत')) return 'ebc1';
+  if (normalized.includes('backward class') || normalized.includes('bc') || normalized.includes('अनुसूची-2')) return 'bc2';
+  if (normalized.includes('scheduled caste') || normalized.includes('sc') || normalized.includes('अनुसूचित जाति')) return 'sc';
+  if (normalized.includes('scheduled tribe') || normalized.includes('st') || normalized.includes('अनुसूचित जनजाति')) return 'st';
+  if (normalized.includes('unreserved') || normalized.includes('general') || normalized.includes('ur') || normalized.includes('गैर')) return 'unreserved';
+  return normalized;
+};
+
 
 /**
  * AWS Lambda Cognito Post Confirmation Trigger Handler
@@ -63,21 +73,6 @@ export const handler = async (
             })
           );
           console.log(`[Trigger] Successfully updated registration_no and preferred_username for existing user in Cognito.`);
-
-          try {
-            await cognitoClient.send(
-              new AdminUpdateUserAttributesCommand({
-                UserPoolId: event.userPoolId,
-                Username: event.userName,
-                UserAttributes: [
-                  { Name: 'custom:registration_number', Value: candidate.registrationNumber },
-                ],
-              })
-            );
-            console.log(`[Trigger] Successfully updated custom:registration_number for existing user in Cognito.`);
-          } catch (innerErr) {
-            console.log(`[Trigger] Optional custom:registration_number attribute update for existing user skipped/failed: ${(innerErr as Error).message}`);
-          }
         } catch (err) {
           console.warn(
             '[Trigger] Updating registration attributes for existing user in Cognito failed (non-fatal):',
@@ -133,6 +128,19 @@ export const handler = async (
       }
     }
 
+    const isBiharDomicile = attributes['custom:bihar_domicile'] === 'YES';
+    const isPwd = attributes['custom:is_pwd'] === 'YES';
+    const isExsm = attributes['custom:ex_serviceman'] === 'YES';
+    const isBiharGovt = attributes['custom:bihar_govt_emp'] === 'YES';
+    const isContractual = attributes['custom:contractual_emp'] === 'YES';
+    const isNcc = attributes['custom:ncc_cadet'] === 'YES';
+    const nonCreamy = attributes['custom:non_creamy_layer'] === 'YES';
+    const pwd40 = attributes['custom:pwd_40_percent'] === 'YES';
+    
+    const parsedAttempts = parseInt(attributes['custom:bssc_attempts'] || '1', 10);
+    const attempts = isNaN(parsedAttempts) ? 1 : parsedAttempts;
+    const categoryCode = mapCategoryValue(attributes['custom:category'] || '');
+
     const candidate = await userRepository.createCandidate({
       id: uuidv4(),
       userId: user.id,
@@ -141,6 +149,21 @@ export const handler = async (
       mobileNumber: cleanedMobile,
       mobileVerified: true,
       emailVerified: true,
+
+      // Custom BSSC Metadata fields mapped from Cognito attributes
+      gender: attributes['gender'] || null,
+      category: categoryCode || null,
+      caste: attributes['custom:caste'] || null,
+      biharDomicile: isBiharDomicile,
+      isPwd: isPwd,
+      disabilityType: attributes['custom:disability_type'] || null,
+      pwd40Percent: pwd40,
+      isExServiceman: isExsm,
+      isNccCadet: isNcc,
+      isBiharGovtEmp: isBiharGovt,
+      isContractualEmp: isContractual,
+      bsscAttempts: attempts,
+      nonCreamyLayer: nonCreamy,
     });
 
     // 4.1 Create application draft
@@ -201,11 +224,11 @@ export const handler = async (
 
     // 4.3 Map Cognito attributes to Step 1 (Reservation Category)
     let categoryId: number | null = null;
-    const cognitoCategoryValue = (attributes['custom:category'] || '').toLowerCase();
+    const cognitoCategoryValue = mapCategoryValue(attributes['custom:category'] || '');
     const catRows = await db
       .select()
       .from(categories)
-      .where(eq(categories.catValue, cognitoCategoryValue === 'ur' ? 'unreserved' : cognitoCategoryValue))
+      .where(eq(categories.catValue, cognitoCategoryValue))
       .limit(1);
 
     if (catRows.length > 0) {
@@ -313,21 +336,6 @@ export const handler = async (
         })
       );
       console.log(`[Trigger] Successfully updated registration_no and preferred_username in Cognito.`);
-
-      try {
-        await cognitoClient.send(
-          new AdminUpdateUserAttributesCommand({
-            UserPoolId: event.userPoolId,
-            Username: event.userName,
-            UserAttributes: [
-              { Name: 'custom:registration_number', Value: registrationNumber },
-            ],
-          })
-        );
-        console.log(`[Trigger] Successfully updated custom:registration_number in Cognito.`);
-      } catch (innerErr) {
-        console.log(`[Trigger] Optional custom:registration_number attribute update skipped/failed: ${(innerErr as Error).message}`);
-      }
     } catch (err) {
       console.warn(
         '[Trigger] Updating registration attributes in Cognito failed (non-fatal):',
