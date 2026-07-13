@@ -114,7 +114,7 @@ export class ApplicationService {
     // Support BSSC flat educational details format by normalizing to JSSC qualifications array
     if ((stepNumber === 2 || stepNumber === 3) && data && typeof data === 'object' && !Array.isArray(data.qualifications)) {
       const qualifications: any[] = [];
-      const levels = ['tenth', 'twelfth', 'graduation', 'postGraduation'] as const;
+      const levels = ['tenth', 'twelfth', 'graduation' /*, 'postGraduation'*/] as const;
       for (const lvl of levels) {
         if (data[lvl] && typeof data[lvl] === 'object') {
           const q = data[lvl] as any;
@@ -288,10 +288,42 @@ export class ApplicationService {
       stepDataMap[row.stepNumber] = row.data;
     }
 
+    // Fetch all candidate docs once — used for step4, step5, and step6 URL resolution
+    const candidateDocs = await documentRepository.findByCandidateId(candidateId);
+    const docMap = new Map(candidateDocs.map((d) => [d.id, d]));
+
+    // Resolve step4 document UUIDs (photograph, signatureHindi, signatureEnglish) to presigned URLs
+    if (stepDataMap[4]) {
+      const step4 = { ...stepDataMap[4] };
+      for (const field of ['photograph', 'signatureHindi', 'signatureEnglish']) {
+        const uuid = step4[field];
+        if (typeof uuid === 'string' && uuid.trim() !== '') {
+          const doc = docMap.get(uuid);
+          if (doc) {
+            const signedUrl = await documentService.getPresignedUrl(doc.fileUrl);
+            step4[field] = signedUrl ?? uuid;
+          }
+        }
+      }
+      stepDataMap[4] = step4;
+    }
+
+    // Resolve step5 document UUID (livePhoto) to presigned URL
+    if (stepDataMap[5]) {
+      const step5 = { ...stepDataMap[5] };
+      const uuid = step5['livePhoto'];
+      if (typeof uuid === 'string' && uuid.trim() !== '') {
+        const doc = docMap.get(uuid);
+        if (doc) {
+          const signedUrl = await documentService.getPresignedUrl(doc.fileUrl);
+          step5['livePhoto'] = signedUrl ?? uuid;
+        }
+      }
+      stepDataMap[5] = step5;
+    }
+
     if (stepDataMap[6]) {
       const docsStep = { ...stepDataMap[6] };
-      const candidateDocs = await documentRepository.findByCandidateId(candidateId);
-      const docMap = new Map(candidateDocs.map((d) => [d.id, d]));
 
       for (const [key, value] of Object.entries(docsStep)) {
         if (typeof value === 'string' && value.trim() !== '') {
@@ -325,9 +357,9 @@ export class ApplicationService {
         step3: stepDataMap[3] ?? null,
         step4: stepDataMap[4] ?? null,
         step5: stepDataMap[5] ?? null,
-        step6: stepDataMap[6] ?? null,
-        step7: stepDataMap[7] ?? null,
-        step8: stepDataMap[8] ?? null,
+        // step6: stepDataMap[6] ?? null,  // Documents — abhi save nahi ho raha
+        // step7: stepDataMap[7] ?? null,  // Payment step=7 — ab step=2 pe shift ho gaya
+        // step8: stepDataMap[8] ?? null,  // Final declaration — use nahi ho raha
       },
     };
   }
@@ -539,7 +571,7 @@ export class ApplicationService {
         }
       } else {
         // 2. Support BSSC format (nested objects tenth, twelfth, graduation, postGraduation)
-        const levels = ['tenth', 'twelfth', 'graduation', 'postGraduation'] as const;
+        const levels = ['tenth', 'twelfth', 'graduation' /*, 'postGraduation'*/] as const;
         for (const lvl of levels) {
           if (sQuals[lvl] && typeof sQuals[lvl] === 'object') {
             const q = sQuals[lvl] as any;

@@ -134,12 +134,12 @@ export class PaymentService {
         step1Data?.isExServiceman === 'yes' ||
         step1Data?.isExServiceman === 'YES' ||
         step1Data?.isExServiceman === 1;
-      const isJharkhandDomicile =
-        step1Data?.isJharkhandDomicile === true ||
-        step1Data?.isJharkhandDomicile === 'true' ||
-        step1Data?.isJharkhandDomicile === 'yes' ||
-        step1Data?.isJharkhandDomicile === 'YES' ||
-        step1Data?.isJharkhandDomicile === 1;
+      const isBiharDomicile =
+        step1Data?.isBiharDomicile === true ||
+        step1Data?.isBiharDomicile === 'true' ||
+        step1Data?.isBiharDomicile === 'yes' ||
+        step1Data?.isBiharDomicile === 'YES' ||
+        step1Data?.isBiharDomicile === 1;
 
       let catValue = 'unreserved';
       if (step1Data?.mainCategory) {

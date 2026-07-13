@@ -222,7 +222,7 @@ export const handler = async (
     }
 
     const step1Data = {
-      isJharkhandDomicile: attributes['custom:bihar_domicile'] === 'YES',
+      isBiharDomicile: attributes['custom:bihar_domicile'] === 'YES',
       domicileCertificateNumber: null,
       domicileCertificateAuthority: null,
       domicileCertificateIssueDate: null,

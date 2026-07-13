@@ -86,7 +86,7 @@ export const step1Schema = z.object({
   sportsCertificateAuthority: z.string().nullable().optional(),
   sportsCertificateIssueDate: z.string().nullable().optional(),
 
-  isJharkhandDomicile: z.boolean().default(false).optional(),
+  isBiharDomicile: z.boolean().default(false).optional(),
   domicileCertificateNumber: z.string().nullable().optional(),
   domicileCertificateAuthority: z.string().nullable().optional(),
   domicileCertificateIssueDate: z.string().nullable().optional(),

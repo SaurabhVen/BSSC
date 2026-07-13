@@ -51,7 +51,7 @@ export async function generateApplicationHtml(data: PdfGenerationData): Promise<
   const category = reservationCategory.mainCategoryName || 'UR';
   const maritalStatus = personalInfo.maritalStatus ? personalInfo.maritalStatus.toUpperCase() : 'N/A';
   const spouseName = personalInfo.spouseName ? personalInfo.spouseName.toUpperCase() : 'N/A';
-  const domicile = reservationCategory.isJharkhandDomicile ? 'YES' : 'NO';
+  const domicile = reservationCategory.isBiharDomicile ? 'YES' : 'NO';
   const mobileNumber = personalInfo.mobileNumber || 'N/A';
   const emailAddress = personalInfo.emailId ? personalInfo.emailId.toLowerCase() : 'N/A';
   const aadharNumber = personalInfo.aadharNumber || personalInfo.identityNumber || 'N/A';

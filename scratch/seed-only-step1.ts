@@ -88,7 +88,7 @@ async function main() {
     };
 
     const step1Data = {
-      isJharkhandDomicile: false,
+      isBiharDomicile: false,
       domicileCertificateNumber: 'DOM12345',
       domicileCertificateAuthority: 'CO',
       domicileCertificateIssueDate: '01-01-2025',

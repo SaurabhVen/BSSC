@@ -66,7 +66,7 @@ endpoints = [
       },
       "reservationCategory": {
           "isLocallyResident": True,
-          "isJharkhandDomicile": True,
+          "isBiharDomicile": True,
           "domicileCertificateNumber": "DOM-BIH-2026-99282",
           "mainCategory": 1,
           "isPwd": False,
@@ -171,7 +171,7 @@ endpoints = [
       "isPwd": False,
       "isExServiceman": False,
       "isSportsQuota": False,
-      "isJharkhandDomicile": True,
+      "isBiharDomicile": True,
       "declaration": True
   }),
   ("POST", "/api/v1/application/{{applicationId}}/step/2", {

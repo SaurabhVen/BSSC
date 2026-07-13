@@ -106,7 +106,7 @@ async function main() {
     };
 
     const step1Data = {
-      isJharkhandDomicile: false,
+      isBiharDomicile: false,
       domicileCertificateNumber: null,
       domicileCertificateAuthority: null,
       domicileCertificateIssueDate: null,

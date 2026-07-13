@@ -105,7 +105,7 @@ async function main() {
         sportsCertificateNumber: null,
         sportsCertificateAuthority: null,
         sportsCertificateIssueDate: null,
-        isJharkhandDomicile: false,
+        isBiharDomicile: false,
         domicileCertificateNumber: "DOM12345",
         domicileCertificateAuthority: "CO",
         domicileCertificateIssueDate: "01-01-2025",

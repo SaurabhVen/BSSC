@@ -235,7 +235,7 @@ export const candidateStep1Schema = z.object({
     .object({
       isLocallyResident: z.union([z.boolean(), z.string()]),
       localDistrictId: z.number().int().optional(),
-      isJharkhandDomicile: z.boolean(),
+      isBiharDomicile: z.boolean(),
       domicileCertificateNumber: z.string().optional(),
       domicileCertificateAuthority: z.string().optional(),
       domicileCertificateIssueDate: z.string().optional().or(z.literal('')),
@@ -266,7 +266,7 @@ export const candidateStep1Schema = z.object({
       }),
     })
     .superRefine((data, ctx) => {
-      if (data.isJharkhandDomicile) {
+      if (data.isBiharDomicile) {
         if (!data.domicileCertificateNumber) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -364,7 +364,7 @@ export const candidateStep1Schema = z.object({
     .object({
       isLocallyResident: z.union([z.boolean(), z.string()]).default(false),
       localDistrictId: z.number().nullable().default(null),
-      isJharkhandDomicile: z.boolean().default(false),
+      isBiharDomicile: z.boolean().default(false),
       domicileCertificateNumber: z.string().nullable().default(''),
       domicileCertificateAuthority: z.string().nullable().default(''),
       domicileCertificateIssueDate: z.string().nullable().default(''),

@@ -20,11 +20,28 @@ package:
     - '!node_modules/ts-node/**'
     - '!node_modules/@types/**'
     - '!node_modules/.bin/**'
+    - '!node_modules/aws-sdk/**'
+    - '!node_modules/esbuild/**'
+    - '!node_modules/@esbuild/**'
+    - '!node_modules/@esbuild-kit/**'
+    - '!node_modules/serverless/**'
+    - '!node_modules/serverless-*/**'
+    - '!node_modules/java-invoke-local/**'
+    - '!node_modules/@babel/**'
+    - '!node_modules/rxjs/**'
+    - '!node_modules/es-abstract/**'
     - '!tests/**'
     - '!coverage/**'
     - '!.git/**'
     - '!.serverless/**'
     - '!.build/**'
+    - '!awscliv2.zip'
+    - '!*.pdf'
+    - '!*.postman_collection.json'
+    - '!*.txt'
+    - '!*.mmd'
+    - '!docs/**'
+    - '!scratch/**'
     
 
 provider:
@@ -193,12 +210,10 @@ functions:
 
   candidateStep5:
     handler: src/handlers/auth/candidateStep5.handler
-    memorySize: 1024
-    timeout: 29
     events:
       - httpApi:
           path: /api/v1/auth/candidate/step-5
-          method: PATCH
+          method: POST
 
 
   candidateStep6:

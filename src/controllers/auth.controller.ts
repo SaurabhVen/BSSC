@@ -30,6 +30,7 @@ import {
 } from '../validators/auth';
 import { applicationService } from '../services/application.service';
 import { documentService } from '../services/document.service';
+import { documentRepository } from '../repositories/common.repository';
 import { parseMultipart } from '../helpers/multipart';
 import {
   NotFoundError,
@@ -294,7 +295,7 @@ export class AuthController {
           spouseName: rawBody.spouseName || '',
         },
         reservationCategory: {
-          isJharkhandDomicile: rawBody.domicileOfBihar === 'YES' || rawBody.isJharkhandDomicile === true || rawBody.isJharkhandDomicile === 'true',
+          isBiharDomicile: rawBody.domicileOfBihar === 'YES' || rawBody.isBiharDomicile === true || rawBody.isBiharDomicile === 'true',
           domicileCertificateNumber: rawBody.domicileCertNo || null,
           domicileCertificateAuthority: rawBody.domicileAuthority || null,
           domicileCertificateIssueDate: rawBody.domicileIssueDate
@@ -449,14 +450,14 @@ export class AuthController {
       sportsCertificateAuthority: rc.isSportsQuota ? (rc.sportsCertificateAuthority ?? null) : null,
       sportsCertificateIssueDate: rc.isSportsQuota ? (rc.sportsCertificateIssueDate ?? null) : null,
 
-      isJharkhandDomicile: rc.isJharkhandDomicile,
-      domicileCertificateNumber: rc.isJharkhandDomicile
+      isBiharDomicile: rc.isBiharDomicile,
+      domicileCertificateNumber: rc.isBiharDomicile
         ? (rc.domicileCertificateNumber ?? null)
         : null,
-      domicileCertificateAuthority: rc.isJharkhandDomicile
+      domicileCertificateAuthority: rc.isBiharDomicile
         ? (rc.domicileCertificateAuthority ?? null)
         : null,
-      domicileCertificateIssueDate: rc.isJharkhandDomicile
+      domicileCertificateIssueDate: rc.isBiharDomicile
         ? (rc.domicileCertificateIssueDate ?? null)
         : null,
 
@@ -568,14 +569,14 @@ export class AuthController {
       sportsCertificateAuthority: rc.isSportsQuota ? (rc.sportsCertificateAuthority ?? null) : null,
       sportsCertificateIssueDate: rc.isSportsQuota ? (rc.sportsCertificateIssueDate ?? null) : null,
 
-      isJharkhandDomicile: rc.isJharkhandDomicile,
-      domicileCertificateNumber: rc.isJharkhandDomicile
+      isBiharDomicile: rc.isBiharDomicile,
+      domicileCertificateNumber: rc.isBiharDomicile
         ? (rc.domicileCertificateNumber ?? null)
         : null,
-      domicileCertificateAuthority: rc.isJharkhandDomicile
+      domicileCertificateAuthority: rc.isBiharDomicile
         ? (rc.domicileCertificateAuthority ?? null)
         : null,
-      domicileCertificateIssueDate: rc.isJharkhandDomicile
+      domicileCertificateIssueDate: rc.isBiharDomicile
         ? (rc.domicileCertificateIssueDate ?? null)
         : null,
 
@@ -1116,48 +1117,83 @@ export class AuthController {
       documentIds
     );
 
+    // Resolve document UUIDs to presigned URLs for response
+    const savedDataWithUrls: Record<string, string | null> = {};
+    for (const [field, docId] of Object.entries(documentIds)) {
+      if (docId) {
+        const docRecord = await documentRepository.findById(docId);
+        if (docRecord) {
+          const signedUrl = await documentService.getPresignedUrl(docRecord.fileUrl);
+          savedDataWithUrls[field] = signedUrl ?? docId;
+        } else {
+          savedDataWithUrls[field] = docId;
+        }
+      } else {
+        savedDataWithUrls[field] = null;
+      }
+    }
+
     return response.success(200, {
       message: 'Candidate photos and signatures saved successfully',
       data: {
         ...result,
-        savedData: documentIds,
+        savedData: savedDataWithUrls,
       },
     });
   }
 
-  // ── PATCH /auth/candidate/step-5 ───────────────────────────
+  // ── POST /auth/candidate/step-5 ───────────────────────────
 
   async candidateStep5(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
     const user = await authenticate(event);
     const candidate = await userRepository.findCandidateByUserId(user.userId);
     if (!candidate) throw new NotFoundError('Candidate profile not found');
 
-    const { body } = parseEvent(event);
-    let livePhotoUuid: string | null = null;
-
-    let livePhotoData = (body?.livePhoto || body?.livePhotoBase64) as string;
-    if (!livePhotoData) {
-      throw new ValidationError([{ field: 'livePhoto', message: 'Live photo (UUID or base64) is required' }]);
-    }
-
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (uuidRegex.test(livePhotoData)) {
-      livePhotoUuid = livePhotoData;
-    } else {
-      if (livePhotoData.includes(';base64,')) {
-        livePhotoData = livePhotoData.split(';base64,')[1];
+    let parsed: ReturnType<typeof parseMultipart>;
+    try {
+      parsed = parseMultipart(event);
+    } catch (err: any) {
+      if (err.message && err.message.includes('Unsupported Media Type')) {
+        throw new UnsupportedMediaTypeError(err.message);
       }
-      const fileBuffer = Buffer.from(livePhotoData, 'base64');
-      const uploadResult = await documentService.uploadDocument({
-        candidateId: candidate.id,
-        documentType: 'live_photo',
-        fileName: 'live_photo.jpg',
-        mimeType: 'image/jpeg',
-        fileContent: fileBuffer,
-        fileSize: fileBuffer.length,
-      });
-      livePhotoUuid = uploadResult.documentId;
+      throw new ValidationError([], err.message || 'Invalid multipart/form-data request body');
     }
+
+    const { files } = parsed;
+    const livePhotoFile = files['livePhoto'];
+
+    if (!livePhotoFile) {
+      throw new ValidationError([{ field: 'livePhoto', message: 'Live photo file is required' }]);
+    }
+
+    // Validate mime type
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+    if (!allowedTypes.includes(livePhotoFile.mimetype)) {
+      throw new ValidationError([{
+        field: 'livePhoto',
+        message: `Invalid file type. Allowed types: ${allowedTypes.join(', ')}`,
+      }]);
+    }
+
+    // Validate file size (max 5 MB for live photo)
+    const maxSize = 5 * 1024 * 1024;
+    if (livePhotoFile.data.length > maxSize) {
+      throw new ValidationError([{
+        field: 'livePhoto',
+        message: 'File size exceeds limit. Maximum allowed: 5 MB',
+      }]);
+    }
+
+    // Upload the live photo
+    const uploadResult = await documentService.uploadDocument({
+      candidateId: candidate.id,
+      documentType: 'live_photo',
+      fileName: livePhotoFile.filename,
+      mimeType: livePhotoFile.mimetype,
+      fileContent: livePhotoFile.data,
+      fileSize: livePhotoFile.data.length,
+    });
+    const livePhotoUuid = uploadResult.documentId;
 
     const draft = await applicationService.getOrCreateDraft(candidate.id);
     const result = await applicationService.saveStep(
@@ -1167,11 +1203,21 @@ export class AuthController {
       { livePhoto: livePhotoUuid }
     );
 
+    // Resolve livePhoto UUID to presigned URL for response
+    let livePhotoUrl: string | null = livePhotoUuid;
+    if (livePhotoUuid) {
+      const docRecord = await documentRepository.findById(livePhotoUuid);
+      if (docRecord) {
+        const signedUrl = await documentService.getPresignedUrl(docRecord.fileUrl);
+        livePhotoUrl = signedUrl ?? livePhotoUuid;
+      }
+    }
+
     return response.success(200, {
       message: 'Candidate live photo saved successfully',
       data: {
         ...result,
-        savedData: { livePhoto: livePhotoUuid },
+        savedData: { livePhoto: livePhotoUrl },
       },
     });
   }
@@ -1249,7 +1295,7 @@ export class AuthController {
     // 1. Fetch Reservation & Domicile details (Step 2 / stepNumber = 1)
     let isPwd = false;
     let isSportsQuota = false;
-    let isJharkhandDomicile = false;
+    let isBiharDomicile = false;
     let isReserved = false;
     let isEWS = false;
 
@@ -1268,7 +1314,7 @@ export class AuthController {
       const rc = step1Row[0].data as any;
       isPwd = rc.isPwd === true;
       isSportsQuota = rc.isSportsQuota === true;
-      isJharkhandDomicile = rc.isJharkhandDomicile === true;
+      isBiharDomicile = rc.isBiharDomicile === true;
 
       const catId = rc.mainCategory;
       const cat = await db.select().from(categories).where(eq(categories.catId, catId)).limit(1);

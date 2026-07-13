@@ -99,7 +99,7 @@ async function main() {
     };
 
     const step1Data = {
-      isJharkhandDomicile: true, // Bihar domicile maps here
+      isBiharDomicile: true, // Bihar domicile maps here
       domicileCertificateNumber: 'BRCCO/2024/13884314',
       domicileCertificateAuthority: 'RO',
       domicileCertificateIssueDate: '28-10-2024',

@@ -1318,7 +1318,7 @@ components:
         sportsAchievement:
           type: string
           example: ''
-        isJharkhandDomicile:
+        isBiharDomicile:
           type: string
           enum:
           - 'yes'

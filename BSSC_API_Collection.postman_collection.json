@@ -628,7 +628,7 @@
                         },
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"personalInfo\": {\n        \"fullName\": \"John Doe\",\n        \"fathersName\": \"Richard Doe\",\n        \"motherName\": \"Jane Doe\",\n        \"dob\": \"01-01-1990\",\n        \"age\": 30,\n        \"gender\": \"male\",\n        \"nationality\": \"Indian\",\n        \"aadharNumber\": \"123456789012\",\n        \"identificationMark1\": \"A mole on right cheek\",\n        \"mobileNumber\": \"9876543210\",\n        \"emailId\": \"candidate@example.com\",\n        \"permanentAddress\": {\n            \"street\": \"123 Main St\",\n            \"post\": \"Central Post Office\",\n            \"state\": \"Bihar\",\n            \"district\": \"Patna\",\n            \"pincode\": \"800001\",\n            \"cityOrVillage\": \"Patna\"\n        },\n        \"sameAsPermanent\": true\n    },\n    \"reservationCategory\": {\n        \"isLocallyResident\": true,\n        \"isJharkhandDomicile\": true,\n        \"domicileCertificateNumber\": \"DOM-BIH-2026-99282\",\n        \"mainCategory\": 1,\n        \"isPwd\": false,\n        \"isExServiceman\": false,\n        \"isSportsQuota\": false,\n        \"declaration\": true\n    }\n}",
+                            "raw": "{\n    \"personalInfo\": {\n        \"fullName\": \"John Doe\",\n        \"fathersName\": \"Richard Doe\",\n        \"motherName\": \"Jane Doe\",\n        \"dob\": \"01-01-1990\",\n        \"age\": 30,\n        \"gender\": \"male\",\n        \"nationality\": \"Indian\",\n        \"aadharNumber\": \"123456789012\",\n        \"identificationMark1\": \"A mole on right cheek\",\n        \"mobileNumber\": \"9876543210\",\n        \"emailId\": \"candidate@example.com\",\n        \"permanentAddress\": {\n            \"street\": \"123 Main St\",\n            \"post\": \"Central Post Office\",\n            \"state\": \"Bihar\",\n            \"district\": \"Patna\",\n            \"pincode\": \"800001\",\n            \"cityOrVillage\": \"Patna\"\n        },\n        \"sameAsPermanent\": true\n    },\n    \"reservationCategory\": {\n        \"isLocallyResident\": true,\n        \"isBiharDomicile\": true,\n        \"domicileCertificateNumber\": \"DOM-BIH-2026-99282\",\n        \"mainCategory\": 1,\n        \"isPwd\": false,\n        \"isExServiceman\": false,\n        \"isSportsQuota\": false,\n        \"declaration\": true\n    }\n}",
                             "options": {
                                 "raw": {
                                     "language": "json"
@@ -1289,7 +1289,7 @@
                         },
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n    \"mainCategory\": 1,\n    \"subCategory\": 0,\n    \"isPwd\": false,\n    \"isExServiceman\": false,\n    \"isSportsQuota\": false,\n    \"isJharkhandDomicile\": true,\n    \"declaration\": true\n}",
+                            "raw": "{\n    \"mainCategory\": 1,\n    \"subCategory\": 0,\n    \"isPwd\": false,\n    \"isExServiceman\": false,\n    \"isSportsQuota\": false,\n    \"isBiharDomicile\": true,\n    \"declaration\": true\n}",
                             "options": {
                                 "raw": {
                                     "language": "json"
