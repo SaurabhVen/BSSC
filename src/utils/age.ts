@@ -165,7 +165,7 @@ export function checkBSSCEligibility(
     return false;
   }
 
-  const isAtLeastMin = age.years > minAge || (age.years === minAge && age.months === 0 && age.days === 0);
+  const isAtLeastMin = age.years >= minAge;
   const isAtMostMax = age.years < maxAge || (age.years === maxAge && age.months === 0 && age.days === 0);
 
   return isAtLeastMin && isAtMostMax;

@@ -263,7 +263,7 @@ export class PaymentService {
 
     if (amount > 0 && !config.MOCK_PAYMENT) {
       try {
-        const rcptId = `rcpt_${input.applicationId.substring(0, 20).replace(/-/g, '')}`;
+        const rcptId = `rcpt_${input.applicationId.substring(0, 20).replace(/-/g, '')}_${Date.now()}`;
         const gateway = process.env.PAYMENT_GATEWAY || 'getepay';
 
         if (gateway === 'getepay') {
@@ -308,15 +308,15 @@ export class PaymentService {
 
       // const appRecord = await applicationRepository.findById(input.applicationId);
       // if (appRecord) {
-      //   const completedSteps = Array.from(new Set([...appRecord.completedSteps, 7]));
+      //   const completedSteps = Array.from(new Set([...appRecord.completedSteps, 2]));
       //   await applicationRepository.updateCurrentStep(
       //     appRecord.id,
-      //     Math.max(appRecord.currentStep, 8),
+      //     Math.max(appRecord.currentStep, 3),
       //     completedSteps
       //   );
 
-      //   // Save the step 7 data for frontend consistency
-      //   await applicationRepository.upsertStepData(input.applicationId, 7, {
+      //   // Save the step 2 data for frontend consistency
+      //   await applicationRepository.upsertStepData(input.applicationId, 2, {
       //     paymentOrderId,
       //     amount: 0,
       //     paymentStatus: 'completed',
@@ -366,15 +366,15 @@ export class PaymentService {
 
     const appRecord = await applicationRepository.findById(payment.applicationId);
     if (appRecord) {
-      const completedSteps = Array.from(new Set([...appRecord.completedSteps, 7]));
+      const completedSteps = Array.from(new Set([...appRecord.completedSteps, 2]));
       await applicationRepository.updateCurrentStep(
         appRecord.id,
-        Math.max(appRecord.currentStep, 8),
+        Math.max(appRecord.currentStep, 3),
         completedSteps
       );
 
-      // Save the step 7 data
-      await applicationRepository.upsertStepData(payment.applicationId, 7, {
+      // Save the step 2 data
+      await applicationRepository.upsertStepData(payment.applicationId, 2, {
         paymentOrderId,
         amount: 0,
         paymentStatus: 'completed',
@@ -418,6 +418,10 @@ export class PaymentService {
 
     const gateway = process.env.PAYMENT_GATEWAY || 'getepay';
 
+    let isSuccess = true;
+    let failureReason = '';
+    let apiResponse = input.gatewayResponse || (input as unknown as Record<string, unknown>);
+
     if (gateway === 'getepay') {
       if (input.gatewayResponse && (input.gatewayResponse.txnStatus === 'SUCCESS' || input.gatewayResponse.paymentStatus === 'SUCCESS')) {
         transactionId = input.gatewayResponse.getepayTxnId || input.getepayPaymentId || orderId;
@@ -427,18 +431,52 @@ export class PaymentService {
         const pId = input.getepayPaymentId || input.paymentOrderId || orderId;
         try {
           const getepayRes = await GetepayAdapter.verifyPayment(pId);
+          apiResponse = getepayRes;
           if (getepayRes.txnStatus !== 'SUCCESS' && getepayRes.paymentStatus !== 'SUCCESS') {
-            if (!config.MOCK_PAYMENT) throw new AppError(`Getepay payment not successful: ${getepayRes.txnStatus || getepayRes.paymentStatus}`, 400);
+            if (!config.MOCK_PAYMENT) {
+              isSuccess = false;
+              failureReason = `Getepay payment not successful: ${getepayRes.txnStatus || getepayRes.paymentStatus}`;
+            }
           }
           transactionId = getepayRes.getepayTxnId || pId;
           paymentMode = 'getepay';
           bankName = 'Getepay Gateway';
         } catch (err: any) {
-          if (!config.MOCK_PAYMENT) throw new AppError(`Getepay verification failed: ${err.message}`, 400);
+          if (!config.MOCK_PAYMENT) {
+            isSuccess = false;
+            failureReason = `Getepay verification failed: ${err.message}`;
+            if (err.response?.data) {
+              apiResponse = err.response.data;
+            }
+          }
         }
       }
     } else {
       transactionId = input.transactionId || `TXN${Date.now()}`;
+    }
+
+    if (!isSuccess) {
+      await paymentRepository.updateStatus(payment.id, {
+        status: 'failed',
+        transactionId,
+        paymentMode,
+        bankName,
+        gatewayResponse: apiResponse,
+        payJson: input.payJson,
+      });
+
+      // Update step data
+      await applicationRepository.upsertStepData(payment.applicationId, 2, {
+        paymentOrderId: payment.paymentOrderId,
+        transactionId,
+        amount: parseFloat(payment.amount),
+        paymentStatus: 'failed',
+        paymentMode,
+        bankName,
+        paymentDate: new Date().toISOString(),
+      });
+
+      throw new AppError(failureReason, 400);
     }
 
     const status = 'completed';
@@ -448,7 +486,7 @@ export class PaymentService {
       transactionId,
       paymentMode,
       bankName,
-      gatewayResponse: input.gatewayResponse || (input as unknown as Record<string, unknown>),
+      gatewayResponse: apiResponse,
       payJson: input.payJson,
     });
 
@@ -458,14 +496,14 @@ export class PaymentService {
     const appRecord = await applicationRepository.findById(payment.applicationId);
 
     if (appRecord) {
-      const completedSteps = Array.from(new Set([...appRecord.completedSteps, 7]));
+      const completedSteps = Array.from(new Set([...appRecord.completedSteps, 2]));
       await applicationRepository.updateCurrentStep(
         appRecord.id,
-        Math.max(appRecord.currentStep, 8),
+        Math.max(appRecord.currentStep, 3),
         completedSteps
       );
 
-      await applicationRepository.upsertStepData(payment.applicationId, 7, {
+      await applicationRepository.upsertStepData(payment.applicationId, 2, {
         paymentOrderId: payment.paymentOrderId,
         transactionId: updatedPayment.transactionId,
         amount: parseFloat(payment.amount),

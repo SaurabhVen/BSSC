@@ -254,13 +254,13 @@ export class PaymentRepository {
   async findByRcptId(rcptId: string): Promise<Payment | null> {
     try {
       const db = getDb();
-      const partialId = rcptId.replace('rcpt_', '');
-      
+      const partialId = rcptId.replace('rcpt_', '').split('_')[0];
+
       const allPending = await db
         .select()
         .from(payments)
         .where(eq(payments.status, 'pending'));
-        
+
       for (const p of allPending) {
         const appPrefix = p.applicationId.substring(0, 20).replace(/-/g, '');
         if (appPrefix === partialId) {

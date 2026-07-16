@@ -8,6 +8,7 @@ import {
   applicationStepData,
   jobQualifications,
   categories,
+  applications,
 } from '../database/schema';
 import { calculateBSSCAge, getBSSCAgeLimits, calculateExactAge, checkBSSCEligibility } from '../utils/age';
 import { eq, inArray } from 'drizzle-orm';
@@ -44,6 +45,13 @@ export class PostController {
       }
 
       const db = getDb();
+      const appRecord = await db
+        .select()
+        .from(applications)
+        .where(eq(applications.id, applicationId))
+        .limit(1);
+      const applicationObj = appRecord[0];
+
       const allStepData = await db
         .select()
         .from(applicationStepData)
@@ -99,11 +107,14 @@ export class PostController {
 
         // Check if candidate qualified on or before 2022-08-01
         let qualifiedPre2022 = false;
-        const qualifications = step2Data?.qualifications;
-        if (Array.isArray(qualifications)) {
-          const grad = qualifications.find((q: any) => q.level === 'graduation');
-          if (grad && grad.passingYear) {
-            qualifiedPre2022 = Number(grad.passingYear) <= 2022;
+        if (step2Data) {
+          if (Array.isArray(step2Data.qualifications)) {
+            const grad = step2Data.qualifications.find((q: any) => q.level === 'graduation');
+            if (grad && grad.passingYear) {
+              qualifiedPre2022 = Number(grad.passingYear) <= 2022;
+            }
+          } else if (step2Data.graduation && step2Data.graduation.passingYear) {
+            qualifiedPre2022 = Number(step2Data.graduation.passingYear) <= 2022;
           }
         }
 
@@ -117,8 +128,13 @@ export class PostController {
           isCommissionedOfficer
         );
 
+        // Reference date for ex-serviceman check is time of application (submissionDate or current date)
+        const refDateForMax = isExServiceman
+          ? (applicationObj?.submissionDate ? new Date(applicationObj.submissionDate) : new Date())
+          : new Date('2025-08-01');
+
         const isMinAgeEligible = checkBSSCEligibility(dobStr, limits.minAge, 150, '2025-08-01');
-        const isMaxAgeEligibleBase = checkBSSCEligibility(dobStr, 0, limits.maxAge, '2025-08-01');
+        const isMaxAgeEligibleBase = checkBSSCEligibility(dobStr, 0, limits.maxAge, refDateForMax);
         const isMaxAgeEligibleCarryForward = checkBSSCEligibility(dobStr, 0, limits.maxAge, '2022-08-01') && qualifiedPre2022;
 
         if (!isMinAgeEligible || (!isMaxAgeEligibleBase && !isMaxAgeEligibleCarryForward)) {

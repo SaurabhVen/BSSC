@@ -1,7 +1,7 @@
 import { applicationRepository } from '../repositories/application.repository';
 import { userRepository } from '../repositories/user.repository';
 import { getDb } from '../database/drizzle';
-import { calculateBSSCAge } from '../utils/age';
+import { calculateBSSCAge, getBSSCAgeLimits, checkBSSCEligibility } from '../utils/age';
 import { eq, and, inArray } from 'drizzle-orm';
 import { generateApplicationHtml } from '../utils/pdf';
 import {
@@ -15,6 +15,7 @@ import {
   categories,
   districts,
   finalSubmissions,
+  users,
 } from '../database/schema';
 import { documentRepository } from '../repositories/common.repository';
 import { documentService } from './document.service';
@@ -24,6 +25,85 @@ import { validate } from '../middleware/validate';
 import { generateRandomToken } from '../utils/crypto';
 import type { ApplicationDraft, ApplicationStepData } from '../types';
 import type { Application, ApplicationStepDatum } from '../database/schema';
+
+const parseServiceDate = (dateStr: any): Date | null => {
+  if (!dateStr) return null;
+  const parsed = new Date(dateStr);
+  if (!isNaN(parsed.getTime())) return parsed;
+  if (typeof dateStr === 'string' && dateStr.includes('-')) {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        return new Date(dateStr);
+      } else {
+        return new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+      }
+    }
+  }
+  return null;
+};
+
+const formatToDDMMYYYY = (dateInput: any): any => {
+  if (dateInput === null || dateInput === undefined) return null;
+
+  if (dateInput instanceof Date) {
+    if (isNaN(dateInput.getTime())) return null;
+    const day = String(dateInput.getDate()).padStart(2, '0');
+    const month = String(dateInput.getMonth() + 1).padStart(2, '0');
+    const year = dateInput.getFullYear();
+    return `${day}-${month}-${year}`;
+  }
+
+  if (typeof dateInput === 'string') {
+    const trimmed = dateInput.trim();
+    if (!trimmed) return null;
+
+    if (/^\d{2}-\d{2}-\d{4}$/.test(trimmed)) {
+      return trimmed;
+    }
+
+    const matchYMD = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (matchYMD) {
+      return `${matchYMD[3]}-${matchYMD[2]}-${matchYMD[1]}`;
+    }
+
+    const parsed = new Date(trimmed);
+    if (!isNaN(parsed.getTime())) {
+      const day = String(parsed.getDate()).padStart(2, '0');
+      const month = String(parsed.getMonth() + 1).padStart(2, '0');
+      const year = parsed.getFullYear();
+      return `${day}-${month}-${year}`;
+    }
+  }
+
+  return dateInput;
+};
+
+const normalizeStepDataDates = (data: any): void => {
+  if (!data || typeof data !== 'object') return;
+
+  const dateKeys = [
+    'dateOfBirth', 'dob',
+    'domicileCertificateIssueDate', 'domicileIssueDate',
+    'categoryCertificateIssueDate', 'categoryIssueDate',
+    'pwdCertificateIssueDate', 'disabilityIssueDate',
+    'sportsCertificateIssueDate', 'sportsIssueDate',
+    'serviceFromDate', 'serviceToDate',
+    'contractualFromDate', 'contractualToDate',
+    'debarredFromDate', 'debarredToDate',
+    'certIssueDate'
+  ];
+
+  for (const key of Object.keys(data)) {
+    if (dateKeys.includes(key)) {
+      if (typeof data[key] === 'string' || data[key] instanceof Date) {
+        data[key] = formatToDDMMYYYY(data[key]);
+      }
+    } else if (data[key] && typeof data[key] === 'object') {
+      normalizeStepDataDates(data[key]);
+    }
+  }
+};
 
 export class ApplicationService {
   // ── Get or Create Draft ───────────────────────────────────────
@@ -46,7 +126,7 @@ export class ApplicationService {
     for (const row of stepDataRows) {
       stepDataMap[row.stepNumber] = row.data;
     }
-    await this.enrichStepData(stepDataMap);
+    await this.enrichStepData(stepDataMap, candidateId);
     return this.buildDraftResponse(application, stepDataMap);
   }
 
@@ -68,9 +148,9 @@ export class ApplicationService {
         step3: stepDataMap[3] ?? null,
         step4: stepDataMap[4] ?? null,
         step5: stepDataMap[5] ?? null,
-        step6: stepDataMap[6] ?? null,
-        step7: stepDataMap[7] ?? null,
-        step8: stepDataMap[8] ?? null,
+        // step6: stepDataMap[6] ?? null,
+        // step7: stepDataMap[7] ?? null,
+        // step8: stepDataMap[8] ?? null,
       },
     };
   }
@@ -129,29 +209,32 @@ export class ApplicationService {
           } else if (lvl === 'graduation') {
             dbLevel = 'graduation';
             degree = q.subject || 'Graduation';
-          } else if (lvl === 'postGraduation') {
-            dbLevel = 'post_graduation';
-            degree = q.subject || 'Post Graduation';
           }
 
-          qualifications.push({
-            level: dbLevel,
-            degree: degree,
-            boardUniversity: q.boardUniversity || 'N/A',
-            totalMarks: q.totalMarks ? String(q.totalMarks) : '0',
-            obtainedMarks: q.obtainedMarks || q.marksObtained || '0',
-            marksObtained: q.obtainedMarks || q.marksObtained || '0',
-            percentage: q.percentage ? String(q.percentage) : '0',
-            specialization: q.subject || null,
-            passingYear: q.certIssueDate ? String(q.certIssueDate).split('-')[0] : null,
-            certNumber: q.certNumber || '',
-            certIssueDate: q.certIssueDate || null,
-          });
+          const obtained = q.obtainedMarks || q.marksObtained;
+          const total = q.totalMarks;
+          const percentageVal = (obtained && total && Number(total) > 0)
+            ? String(((Number(obtained) / Number(total)) * 100).toFixed(2))
+            : (q.percentage ? String(q.percentage) : '0');
+
+          //   qualifications.push({
+          //     level: dbLevel,
+          //     degree: degree,
+          //     boardUniversity: q.boardUniversity || 'N/A',
+          //     totalMarks: total ? String(total) : '0',
+          //     obtainedMarks: obtained || '0',
+          //     marksObtained: obtained || '0',
+          //     percentage: percentageVal,
+          //     specialization: q.subject || null,
+          //     passingYear: q.certIssueDate ? String(q.certIssueDate).split('-')[0] : null,
+          //     certNumber: q.certNumber || '',
+          //     certIssueDate: q.certIssueDate || null,
+          //   });
         }
       }
-      if (qualifications.length > 0) {
-        (data as any).qualifications = qualifications;
-      }
+      // if (qualifications.length > 0) {
+      //   (data as any).qualifications = qualifications;
+      // }
     }
 
     const schema = STEP_SCHEMAS[stepNumber as StepNumber];
@@ -203,12 +286,12 @@ export class ApplicationService {
         409
       );
 
-    const requiredSteps = [0, 1, 2, 3, 4, 5, 6, 7];
+    const requiredSteps = [0, 1, 2, 3, 4, 5];
     let missingSteps = requiredSteps.filter((step) => !application.completedSteps.includes(step));
 
     // Allow submission if payment is already completed (for 0 amount bypass or successful payments)
-    if (missingSteps.includes(7) && application.status === 'payment_completed') {
-      missingSteps = missingSteps.filter((step) => step !== 7);
+    if (missingSteps.includes(2) && application.status === 'payment_completed') {
+      missingSteps = missingSteps.filter((step) => step !== 2);
     }
 
     if (missingSteps.length > 0) {
@@ -218,8 +301,10 @@ export class ApplicationService {
       );
     }
 
-    const referenceNumber = `BSSC${Date.now().toString(36).toUpperCase()}`;
-    return applicationRepository.submit(applicationId, referenceNumber);
+    await this.unifiedFinalSubmit(applicationId, candidateId);
+    const updated = await applicationRepository.findById(applicationId);
+    if (!updated) throw new NotFoundError('Application not found after submission');
+    return updated;
   }
 
   // ── Get Application Status ────────────────────────────────────
@@ -251,14 +336,17 @@ export class ApplicationService {
     const stepDataRows = await applicationRepository.getAllStepData(applicationId);
     const candidate = await userRepository.findCandidateById(candidateId);
 
+    const stepData = stepDataRows.reduce<Record<string, unknown>>((acc, row) => {
+      acc[`step_${row.stepNumber}`] = row.data;
+      return acc;
+    }, {});
+    normalizeStepDataDates(stepData);
+
     return {
       applicationReferenceNumber: application.applicationReferenceNumber,
       submissionDate: application.submissionDate,
       candidateDetails: candidate,
-      stepData: stepDataRows.reduce<Record<string, unknown>>((acc, row) => {
-        acc[`step_${row.stepNumber}`] = row.data;
-        return acc;
-      }, {}),
+      stepData,
     };
   }
 
@@ -322,23 +410,23 @@ export class ApplicationService {
       stepDataMap[5] = step5;
     }
 
-    if (stepDataMap[6]) {
-      const docsStep = { ...stepDataMap[6] };
+    // if (stepDataMap[6]) {
+    //   const docsStep = { ...stepDataMap[6] };
 
-      for (const [key, value] of Object.entries(docsStep)) {
-        if (typeof value === 'string' && value.trim() !== '') {
-          const doc = docMap.get(value);
-          if (doc) {
-            const signedUrl = await documentService.getPresignedUrl(doc.fileUrl);
-            // signedUrl is null when the stored fileUrl is a corrupted s3:// placeholder
-            docsStep[key] = signedUrl ?? null;
-          }
-        }
-      }
-      stepDataMap[6] = docsStep;
-    }
+    //   for (const [key, value] of Object.entries(docsStep)) {
+    //     if (typeof value === 'string' && value.trim() !== '') {
+    //       const doc = docMap.get(value);
+    //       if (doc) {
+    //         const signedUrl = await documentService.getPresignedUrl(doc.fileUrl);
+    //         // signedUrl is null when the stored fileUrl is a corrupted s3:// placeholder
+    //         docsStep[key] = signedUrl ?? null;
+    //       }
+    //     }
+    //   }
+    //   stepDataMap[6] = docsStep;
+    // }
 
-    await this.enrichStepData(stepDataMap);
+    await this.enrichStepData(stepDataMap, candidateId);
 
     return {
       applicationId: application.id,
@@ -365,11 +453,285 @@ export class ApplicationService {
   }
 
   private async enrichStepData(
-    stepDataMap: Record<number, Record<string, unknown>>
+    stepDataMap: Record<number, Record<string, unknown>>,
+    candidateId?: string
   ): Promise<void> {
     const db = getDb();
     if (!db || typeof db.select !== 'function') {
       return;
+    }
+
+    // Fetch candidate and user details from DB to build step0 dynamically if it is missing
+    if (!stepDataMap[0] && candidateId) {
+      try {
+        const candidateRows = await db
+          .select()
+          .from(candidates)
+          .where(eq(candidates.id, candidateId))
+          .limit(1);
+        const candidate = candidateRows[0];
+
+        if (candidate) {
+          const dbUserRows = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, candidate.userId))
+            .limit(1);
+          const dbUser = dbUserRows[0];
+
+          // Fetch category list to map string-based categories/castes to database bigserial catIds
+          const categoriesList = await db
+            .select({
+              catId: categories.catId,
+              catValue: categories.catValue,
+            })
+            .from(categories);
+          const catValueToIdMap = new Map(
+            categoriesList
+              .filter((c) => c.catValue)
+              .map((c) => [c.catValue!.toLowerCase().trim(), c.catId])
+          );
+
+          const catVal = candidate.category ? candidate.category.toLowerCase().trim() : '';
+          const parsedCat = parseInt(catVal, 10);
+          const mainCategory = !isNaN(parsedCat) ? parsedCat : (catValueToIdMap.get(catVal) || null);
+
+          const casteVal = candidate.caste ? candidate.caste.toLowerCase().trim() : '';
+          const parsedCaste = parseInt(casteVal, 10);
+          const subCategory = !isNaN(parsedCaste) ? parsedCaste : (catValueToIdMap.get(casteVal) || null);
+
+          const dobFormatted = candidate.dateOfBirth
+            ? new Date(candidate.dateOfBirth).toISOString().split('T')[0].split('-').reverse().join('-')
+            : '';
+
+          stepDataMap[0] = {
+            fullName: dbUser?.fullName || '',
+            emailId: dbUser?.email || '',
+            mobileNumber: candidate.mobileNumber || '',
+            dateOfBirth: dobFormatted,
+            gender: candidate.gender || 'MALE',
+            identityType: 'aadhaar',
+            identityNumber: '',
+
+            isBiharDomicile: candidate.biharDomicile === true,
+            domicileCertificateNumber: candidate.domicileCertificateNumber,
+            domicileCertificateAuthority: candidate.domicileCertificateAuthority,
+            domicileCertificateIssueDate: candidate.domicileCertificateIssueDate ? new Date(candidate.domicileCertificateIssueDate).toISOString().split('T')[0] : null,
+
+            mainCategory: mainCategory,
+            subCategory: subCategory,
+            categoryCertificateNumber: candidate.categoryCertificateNumber,
+            categoryCertificateAuthority: candidate.categoryCertificateAuthority,
+            categoryCertificateIssueDate: candidate.categoryCertificateIssueDate ? new Date(candidate.categoryCertificateIssueDate).toISOString().split('T')[0] : null,
+
+            isPwd: candidate.isPwd === true,
+            pwdType: candidate.disabilityType,
+            pwd40Percent: candidate.pwd40Percent === true ? 'YES' : 'NO',
+            pwdCertificateNumber: candidate.pwdCertificateNumber,
+            pwdCertificateAuthority: candidate.pwdCertificateAuthority,
+            pwdCertificateIssueDate: candidate.pwdCertificateIssueDate ? new Date(candidate.pwdCertificateIssueDate).toISOString().split('T')[0] : null,
+
+            isExServiceman: candidate.isExServiceman === true,
+            exServicemanYears: 0,
+            servicePeriod: candidate.servicePeriod || '',
+            biharGovtEmp: candidate.isBiharGovtEmp === true ? 'YES' : 'NO',
+            bsscAttempts: candidate.bsscAttempts ? String(candidate.bsscAttempts) : '0',
+            contractualEmp: candidate.isContractualEmp === true ? 'YES' : 'NO',
+            postName: candidate.postName || '',
+            hasAgreement: candidate.hasAgreement === true ? 'YES' : 'NO',
+            contractualPeriod: candidate.contractualPeriod || '',
+            organizationName: candidate.organizationName || '',
+            hasPostExperience: candidate.hasPostExperience === true ? 'YES' : 'NO',
+            disTypePersist: candidate.disTypePersist || '',
+            isScribeRequired: candidate.isScribeRequired === true ? 'YES' : 'NO',
+            nonCreamyLayer: candidate.nonCreamyLayer === true ? 'YES' : 'NO',
+            sportsLevel: null,
+            sportsAchievement: null,
+            sportsCertificateNumber: null,
+            sportsCertificateAuthority: null,
+            sportsCertificateIssueDate: null,
+            isSportsQuota: false
+          };
+        }
+      } catch (err) {
+        console.error('Failed to dynamically build step0 from candidate details in enrichStepData:', err);
+      }
+    }
+
+    // Reconstruct stepDataMap[1] from stepDataMap[0] to ensure all expected flat BSSC fields are present
+    if (stepDataMap[0]) {
+      const s0 = stepDataMap[0] as any;
+      const hasAadhar = s0.identityType === 'aadhaar' || s0.hasAadharCard === 'YES' || s0.hasAadharCard === true || s0.aadharCardNumber || s0.identityNumber ? true : false;
+
+      const perm = s0.address?.permanent || {};
+      const corr = s0.address?.correspondence || {};
+
+      let ageOk = true;
+      let ageMsg = 'Age is within eligible limits';
+      let maxAgeVal = 37;
+      const dobStr = s0.dateOfBirth || s0.dob || (s0.personalInfo && s0.personalInfo.dob);
+      if (dobStr) {
+        let dobDate: Date | null = null;
+        if (typeof dobStr === 'string' && dobStr.includes('-')) {
+          const parts = dobStr.split('-');
+          if (parts[0].length === 2) {
+            dobDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+          } else {
+            dobDate = new Date(dobStr);
+          }
+        } else {
+          dobDate = new Date(dobStr);
+        }
+
+        if (dobDate && !isNaN(dobDate.getTime())) {
+          const cat = s0.category || s0.categoryId || (s0.reservationCategory && s0.reservationCategory.mainCategory ? String(s0.reservationCategory.mainCategory) : 'ur');
+          const gender = s0.gender || (s0.personalInfo && s0.personalInfo.gender) || 'male';
+          const isPwd = s0.isPwd === 'YES' || s0.isPwd === true || s0.disability === 'YES' || s0.disability === true;
+          const isExServiceman = s0.isExServiceman === 'YES' || s0.isExServiceman === true || s0.exServiceman === 'YES' || s0.exServiceman === true;
+          const exServicemanYears = s0.exServicemanYears ? Number(s0.exServicemanYears) : 0;
+          const isGovtServant = s0.biharGovtEmp === 'YES' || s0.biharGovtEmp === true || s0.isBiharGovt === 'YES' || s0.isBiharGovt === true || s0.biharGovtEmployee === 'YES' || s0.biharGovtEmployee === true;
+
+          const limits = getBSSCAgeLimits(String(cat), gender, isPwd, isExServiceman, exServicemanYears, isGovtServant);
+          maxAgeVal = limits.maxAge;
+
+          // Check if candidate qualified on or before 2022-08-01 for carry-forward check
+          let qualifiedPre2022 = false;
+          const step2 = stepDataMap[2] as any;
+          if (step2) {
+            if (Array.isArray(step2.qualifications)) {
+              const grad = step2.qualifications.find((q: any) => q.level === 'graduation');
+              if (grad && grad.passingYear) {
+                qualifiedPre2022 = Number(grad.passingYear) <= 2022;
+              }
+            } else if (step2.graduation && step2.graduation.passingYear) {
+              qualifiedPre2022 = Number(step2.graduation.passingYear) <= 2022;
+            }
+          }
+
+          // Reference date for ex-serviceman check is time of application (submissionDate or current date)
+          let refDateForMax = new Date('2025-08-01');
+          if (isExServiceman) {
+            refDateForMax = new Date();
+            if (candidateId) {
+              const appsList = await db
+                .select({ submissionDate: applications.submissionDate })
+                .from(applications)
+                .where(eq(applications.candidateId, candidateId))
+                .limit(1);
+              if (appsList.length > 0 && appsList[0].submissionDate) {
+                refDateForMax = new Date(appsList[0].submissionDate);
+              }
+            }
+          }
+
+          const isMinAgeEligible = checkBSSCEligibility(dobDate, limits.minAge, 150, '2025-08-01');
+          const isMaxAgeEligibleBase = checkBSSCEligibility(dobDate, 0, limits.maxAge, refDateForMax);
+          const isMaxAgeEligibleCarryForward = checkBSSCEligibility(dobDate, 0, limits.maxAge, '2022-08-01') && qualifiedPre2022;
+
+          const ok = isMinAgeEligible && (isMaxAgeEligibleBase || isMaxAgeEligibleCarryForward);
+          if (!ok) {
+            ageOk = false;
+            if (!isMinAgeEligible) {
+              ageMsg = `Candidate must be at least ${limits.minAge} years old as of 01-08-2025.`;
+            } else {
+              ageMsg = `Candidate exceeds the maximum age limit of ${limits.maxAge} years.`;
+            }
+          }
+        }
+      }
+
+      stepDataMap[1] = {
+        applicationId: s0.applicationId || '',
+        fullName: s0.fullName || (s0.personalInfo && s0.personalInfo.fullName) || '',
+        fatherName: s0.fatherName || s0.fathersName || (s0.personalInfo && (s0.personalInfo.fatherName || s0.personalInfo.fathersName)) || '',
+        motherName: s0.motherName || (s0.personalInfo && s0.personalInfo.motherName) || '',
+        gender: (s0.gender || (s0.personalInfo && s0.personalInfo.gender) || 'MALE').toUpperCase(),
+        dateOfBirth: s0.dateOfBirth || s0.dob || (s0.personalInfo && s0.personalInfo.dob) || '',
+        nationality: s0.nationality || (s0.personalInfo && s0.personalInfo.nationality) || 'Indian',
+        nationalityId: s0.nationalityId || '1',
+        otherNationality: s0.otherNationality || '',
+        emailId: s0.emailId || (s0.personalInfo && s0.personalInfo.emailId) || '',
+        mobileNo: s0.mobileNo || s0.mobileNumber || (s0.personalInfo && s0.personalInfo.mobileNumber) || '',
+        confirmMobileNo: s0.confirmMobileNo || s0.mobileNo || s0.mobileNumber || (s0.personalInfo && s0.personalInfo.mobileNumber) || '',
+        identificationMarkEn: s0.identificationMarkEn || s0.identificationMark1 || (s0.personalInfo && s0.personalInfo.identificationMark1) || '',
+        identificationMarkEn2: s0.identificationMarkEn2 || s0.identificationMark2 || (s0.personalInfo && s0.personalInfo.identificationMark2) || '',
+        isMarried: s0.isMarried || (s0.maritalStatus === 'unmarried' || s0.personalInfo?.maritalStatus === 'unmarried' ? 'NO' : 'YES') || 'NO',
+        spouseName: s0.spouseName || (s0.personalInfo && s0.personalInfo.spouseName) || '',
+        domicileOfBihar: (s0.isBiharDomicile === true || s0.isBiharDomicile === 'YES' || s0.domicileOfBihar === 'YES' || s0.domicileOfBihar === true) ? 'YES' : 'NO',
+        domicileCertNo: s0.domicileCertNo || s0.domicileCertificateNumber || '',
+        domicileIssueDate: s0.domicileIssueDate || s0.domicileCertificateIssueDate || '',
+        domicileAuthority: s0.domicileAuthority || s0.domicileCertificateAuthority || '',
+        category: s0.category || '',
+        categoryId: String(s0.categoryId || s0.mainCategory || ''),
+        caste: s0.caste || '',
+        casteId: String(s0.casteId || s0.subCategory || ''),
+        isNonCreamyLayer: (s0.nonCreamyLayer === 'YES' || s0.nonCreamyLayer === true) ? 'YES' : 'NO',
+        categoryCertNo: s0.categoryCertNo || s0.categoryCertificateNumber || '',
+        categoryIssueDate: s0.categoryIssueDate || s0.categoryCertificateIssueDate || '',
+        categoryAuthority: s0.categoryAuthority || s0.categoryCertificateAuthority || '',
+        categoryAuthorityOther: s0.categoryAuthorityOther || '',
+        disability: (s0.isPwd === true || s0.isPwd === 'YES' || s0.disability === 'YES' || s0.disability === true) ? 'YES' : 'NO',
+        natureOfDisability: s0.natureOfDisability || s0.disabilityType || s0.pwdType || '',
+        natureOfDisabilityType: s0.natureOfDisabilityType || s0.disTypePersist || '',
+        disabilityPercent: s0.disabilityPercent || String(s0.pwdPercentage || ''),
+        isMin40PercentPwD: (s0.pwd40Percent === 'YES' || s0.pwd40Percent === true || s0.isMin40PercentPwD === 'YES' || s0.isMin40PercentPwD === true) ? 'YES' : 'NO',
+        disabilityCertNo: s0.disabilityCertNo || s0.pwdCertificateNumber || '',
+        disabilityIssueDate: s0.disabilityIssueDate || s0.pwdCertificateIssueDate || '',
+        disabilityAuthority: s0.disabilityAuthority || s0.pwdCertificateAuthority || '',
+        disabilityAuthorityOther: s0.disabilityAuthorityOther || '',
+        isScribeRequired: (s0.isScribeRequired === 'YES' || s0.isScribeRequired === true) ? 'YES' : 'NO',
+        exServiceman: (s0.isExServiceman === true || s0.isExServiceman === 'YES' || s0.exServiceman === 'YES' || s0.exServiceman === true) ? 'YES' : 'NO',
+        officerType: String(s0.officerType || s0.typeOfExOfficer || ''),
+        serviceFromDate: s0.serviceFromDate || '',
+        serviceToDate: s0.serviceToDate || '',
+        wardOfFreedomFighter: (s0.wardOfFreedomFighter === 'YES' || s0.wardOfFreedomFighter === true || s0.isFreedomFighter === 'YES' || s0.isFreedomFighter === true) ? 'YES' : 'NO',
+        freedomFighterCertNo: s0.freedomFighterCertNo || '',
+        freedomFighterAuthority: s0.freedomFighterAuthority || '',
+        biharGovtEmployee: (s0.biharGovtEmployee === 'YES' || s0.biharGovtEmployee === true || s0.biharGovtEmp === 'YES' || s0.biharGovtEmp === true) ? 'YES' : 'NO',
+        numberOfAttempts: String(s0.numberOfAttempts || s0.bsscAttempts || '0'),
+        contractualEmployee: (s0.contractualEmployee === 'YES' || s0.contractualEmployee === true || s0.contractualEmp === 'YES' || s0.contractualEmp === true) ? 'YES' : 'NO',
+        organizationName: s0.organizationName || '',
+        hasPostExperience: (s0.hasPostExperience === 'YES' || s0.hasPostExperience === true) ? 'YES' : 'NO',
+        nameOfPost: s0.nameOfPost || s0.postName || '',
+        agreementCircular: s0.agreementCircular || (s0.hasAgreement === 'YES' || s0.hasAgreement === true ? 'YES' : 'NO'),
+        departmentName: s0.departmentName || '',
+        officeOrderNo: s0.officeOrderNo || '',
+        contractualFromDate: s0.contractualFromDate || '',
+        contractualToDate: s0.contractualToDate || '',
+        isDebarred: (s0.isDebarred === 'YES' || s0.isDebarred === true) ? 'YES' : 'NO',
+        debarredFromDate: s0.debarredFromDate || '',
+        debarredToDate: s0.debarredToDate || '',
+        debarmentReason: s0.debarmentReason || '',
+        hasAadharCard: hasAadhar ? 'YES' : 'NO',
+        aadharCardNumber: s0.aadharCardNumber || s0.identityNumber || '',
+        typeOfPhotoIdProof: s0.typeOfPhotoIdProof || s0.identityType || 'aadhaar',
+        idProofNo: s0.idProofNo || s0.identityNumber || '',
+
+        permVillage: s0.permVillage || perm.street || perm.cityOrVillage || perm.city || '',
+        permPoliceStation: s0.permPoliceStation || '',
+        permPostOffice: s0.permPostOffice || perm.post || '',
+        permDistrict: s0.permDistrict || perm.district || '',
+        permDistrictId: s0.permDistrictId || '',
+        permState: s0.permState || perm.state || '',
+        permStateId: s0.permStateId || '',
+        permPinCode: s0.permPinCode || perm.pincode || '',
+
+        corrVillage: s0.corrVillage || corr.street || corr.cityOrVillage || corr.city || '',
+        corrPoliceStation: s0.corrPoliceStation || '',
+        corrPostOffice: s0.corrPostOffice || corr.post || '',
+        corrDistrict: s0.corrDistrict || corr.district || '',
+        corrDistrictId: s0.corrDistrictId || '',
+        corrState: s0.corrState || corr.state || '',
+        corrStateId: s0.corrStateId || '',
+        corrPinCode: s0.corrPinCode || corr.pincode || '',
+
+        sameAsPermanent: s0.sameAsPermanent === true || corr.sameAsPermanent === true,
+        ageEligibility: {
+          ok: ageOk,
+          message: ageMsg,
+          effectiveMaxAge: maxAgeVal
+        }
+      };
     }
 
     // 1. Resolve reservationCategory category IDs to names (Step 1)
@@ -377,10 +739,18 @@ export class ApplicationService {
       const reservationCategory = { ...stepDataMap[1] };
 
       let catId: number | null = null;
-      if (typeof reservationCategory.mainCategoryId === 'number') {
+      if (typeof reservationCategory.categoryId === 'number') {
+        catId = reservationCategory.categoryId;
+      } else if (typeof reservationCategory.mainCategoryId === 'number') {
         catId = reservationCategory.mainCategoryId;
       } else if (typeof reservationCategory.mainCategory === 'number') {
         catId = reservationCategory.mainCategory;
+      } else if (
+        typeof reservationCategory.categoryId === 'string' &&
+        reservationCategory.categoryId !== '' &&
+        !isNaN(Number(reservationCategory.categoryId))
+      ) {
+        catId = Number(reservationCategory.categoryId);
       } else if (
         typeof reservationCategory.mainCategory === 'string' &&
         reservationCategory.mainCategory !== '' &&
@@ -396,10 +766,18 @@ export class ApplicationService {
       }
 
       let subCatId: number | null = null;
-      if (typeof reservationCategory.subCategoryId === 'number') {
+      if (typeof reservationCategory.casteId === 'number') {
+        subCatId = reservationCategory.casteId;
+      } else if (typeof reservationCategory.subCategoryId === 'number') {
         subCatId = reservationCategory.subCategoryId;
       } else if (typeof reservationCategory.subCategory === 'number') {
         subCatId = reservationCategory.subCategory;
+      } else if (
+        typeof reservationCategory.casteId === 'string' &&
+        reservationCategory.casteId !== '' &&
+        !isNaN(Number(reservationCategory.casteId))
+      ) {
+        subCatId = Number(reservationCategory.casteId);
       } else if (
         typeof reservationCategory.subCategory === 'string' &&
         reservationCategory.subCategory !== '' &&
@@ -506,6 +884,16 @@ export class ApplicationService {
         }
       }
     }
+
+    // Delete postGraduation from educational details (step 2 or 3) as it is not needed
+    if (stepDataMap[2]) {
+      delete stepDataMap[2].postGraduation;
+    }
+    if (stepDataMap[3]) {
+      delete stepDataMap[3].postGraduation;
+    }
+
+    normalizeStepDataDates(stepDataMap);
   }
   async finalSubmitLegacy(applicationId: string, candidateId: string): Promise<any> {
     const db = getDb();
@@ -521,18 +909,129 @@ export class ApplicationService {
     // Process Step 0 -> Candidates table
     if (stepDataMap[0]) {
       const s0 = stepDataMap[0];
+
+      let dobStr = s0.dateOfBirth || s0.dob || (s0.personalInfo && s0.personalInfo.dob);
+      let dobDate: Date | null = null;
+      if (dobStr) {
+        if (typeof dobStr === 'string' && dobStr.includes('-')) {
+          const parts = dobStr.split('-');
+          if (parts[0].length === 2) {
+            dobDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+          } else {
+            dobDate = new Date(dobStr);
+          }
+        } else {
+          dobDate = new Date(dobStr);
+        }
+      }
+
       await db
         .update(candidates)
         .set({
-          alternateNumber: s0.alternateNumber || null,
-          mobileNumber: s0.mobileNumber || null,
-          dateOfBirth: s0.dateOfBirth
-            ? new Date(
-              s0.dateOfBirth.includes('-') && s0.dateOfBirth.split('-')[0].length === 2
-                ? s0.dateOfBirth.split('-').reverse().join('-')
-                : s0.dateOfBirth
-            )
-            : null,
+          alternateNumber: s0.alternateNumber || s0.alternateNo || (s0.personalInfo && s0.personalInfo.alternateNumber) || null,
+          mobileNumber: s0.mobileNumber || s0.mobileNo || (s0.personalInfo && s0.personalInfo.mobileNumber) || null,
+          dateOfBirth: dobDate,
+          gender: s0.gender || (s0.personalInfo && s0.personalInfo.gender) || null,
+          category: s0.category || s0.categoryId || (s0.reservationCategory && s0.reservationCategory.mainCategory ? String(s0.reservationCategory.mainCategory) : null) || null,
+          caste: s0.caste || s0.casteId || null,
+          biharDomicile: s0.isBiharDomicile === 'YES' || s0.isBiharDomicile === true || s0.domicileOfBihar === 'YES' || s0.domicileOfBihar === true || s0.biharDomicile === 'YES' || s0.biharDomicile === true || (s0.reservationCategory && (s0.reservationCategory.isBiharDomicile === true || s0.reservationCategory.isBiharDomicile === 'YES')),
+          isPwd: s0.isPwd === 'YES' || s0.isPwd === true || s0.disability === 'YES' || s0.disability === true || (s0.reservationCategory && (s0.reservationCategory.isPwd === true || s0.reservationCategory.isPwd === 'YES')),
+          disabilityType: s0.disabilityType || s0.pwdType || s0.natureOfDisability || (s0.reservationCategory && s0.reservationCategory.pwdType ? String(s0.reservationCategory.pwdType) : null) || null,
+          pwd40Percent: s0.pwd40Percent === 'YES' || s0.pwd40Percent === true || s0.pwd40Percent === 'yes' || s0.isMin40PercentPwD === 'YES' || s0.isMin40PercentPwD === true || s0.disabilityPercent === 'YES' || (s0.reservationCategory && (s0.reservationCategory.pwdPercentage !== undefined && s0.reservationCategory.pwdPercentage >= 40)),
+          isExServiceman: s0.isExServiceman === 'YES' || s0.isExServiceman === true || s0.isExsm === 'YES' || s0.isExsm === true || s0.exServiceman === 'YES' || s0.exServiceman === true || (s0.reservationCategory && (s0.reservationCategory.isExServiceman === true || s0.reservationCategory.isExServiceman === 'YES')),
+          isBiharGovtEmp: s0.biharGovtEmp === 'YES' || s0.biharGovtEmp === true || s0.isBiharGovt === 'YES' || s0.isBiharGovt === true || s0.biharGovtEmployee === 'YES' || s0.biharGovtEmployee === true,
+          isContractualEmp: s0.contractualEmp === 'YES' || s0.contractualEmp === true || s0.isContractual === 'YES' || s0.isContractual === true || s0.contractualEmployee === 'YES' || s0.contractualEmployee === true,
+          bsscAttempts: s0.numberOfAttempts ? parseInt(String(s0.numberOfAttempts), 10) || 0 : (s0.bsscAttempts ? parseInt(String(s0.bsscAttempts), 10) || 1 : 1),
+          nonCreamyLayer: s0.nonCreamyLayer === 'YES' || s0.nonCreamyLayer === true || s0.isNonCreamyLayer === 'YES' || s0.isNonCreamyLayer === true,
+          servicePeriod: s0.servicePeriod || null,
+          postName: s0.postName || s0.nameOfPost || null,
+          hasAgreement: s0.hasAgreement === 'YES' || s0.hasAgreement === true || s0.hasAgreement === 'yes' || s0.agreementCircular === 'YES' || s0.agreementCircular === true,
+          contractualPeriod: s0.contractualPeriod || null,
+
+          // Certificate columns
+          domicileCertificateNumber: s0.domicileCertificateNumber || s0.domicileCertNo || (s0.reservationCategory && s0.reservationCategory.domicileCertificateNumber) || null,
+          domicileCertificateAuthority: s0.domicileCertificateAuthority || s0.domicileAuthority || (s0.reservationCategory && s0.reservationCategory.domicileCertificateAuthority) || null,
+          domicileCertificateIssueDate: parseServiceDate(s0.domicileCertificateIssueDate || s0.domicileIssueDate || (s0.reservationCategory && s0.reservationCategory.domicileCertificateIssueDate)),
+
+          categoryCertificateNumber: s0.categoryCertificateNumber || s0.categoryCertNo || (s0.reservationCategory && s0.reservationCategory.categoryCertificateNumber) || null,
+          categoryCertificateAuthority: s0.categoryCertificateAuthority || s0.categoryAuthority || (s0.reservationCategory && s0.reservationCategory.categoryCertificateAuthority) || null,
+          categoryCertificateIssueDate: parseServiceDate(s0.categoryCertificateIssueDate || s0.categoryIssueDate || (s0.reservationCategory && s0.reservationCategory.categoryCertificateIssueDate)),
+
+          pwdCertificateNumber: s0.pwdCertificateNumber || s0.disabilityCertNo || (s0.reservationCategory && s0.reservationCategory.pwdCertificateNumber) || null,
+          pwdCertificateAuthority: s0.pwdCertificateAuthority || s0.disabilityAuthority || (s0.reservationCategory && s0.reservationCategory.pwdCertificateAuthority) || null,
+          pwdCertificateIssueDate: parseServiceDate(s0.pwdCertificateIssueDate || s0.disabilityIssueDate || (s0.reservationCategory && s0.reservationCategory.pwdCertificateIssueDate)),
+
+          disTypePersist: s0.disTypePersist || s0.natureOfDisabilityType || null,
+          isScribeRequired: s0.isScribeRequired === 'YES' || s0.isScribeRequired === true || s0.isScribeRequired === 'yes',
+
+          organizationName: s0.organizationName || null,
+          hasPostExperience: s0.hasPostExperience === 'YES' || s0.hasPostExperience === true || s0.hasPostExperience === 'yes',
+
+          updatedAt: new Date(),
+        })
+        .where(eq(candidates.id, candidateId));
+    }
+
+    // Process Step 1 -> Candidates table (for BSSC flat payload and extra details)
+    if (stepDataMap[1]) {
+      const s1 = stepDataMap[1];
+      let dobStr = s1.dateOfBirth || s1.dob || (s1.personalInfo && s1.personalInfo.dob);
+      let dobDate: Date | null = null;
+      if (dobStr) {
+        if (typeof dobStr === 'string' && dobStr.includes('-')) {
+          const parts = dobStr.split('-');
+          if (parts[0].length === 2) {
+            dobDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+          } else {
+            dobDate = new Date(dobStr);
+          }
+        } else {
+          dobDate = new Date(dobStr);
+        }
+      }
+
+      await db
+        .update(candidates)
+        .set({
+          alternateNumber: s1.alternateNumber || s1.alternateNo || (s1.personalInfo && s1.personalInfo.alternateNumber) || null,
+          mobileNumber: s1.mobileNumber || s1.mobileNo || (s1.personalInfo && s1.personalInfo.mobileNumber) || null,
+          dateOfBirth: dobDate,
+          gender: s1.gender || (s1.personalInfo && s1.personalInfo.gender) || null,
+          category: s1.category || s1.categoryId || (s1.reservationCategory && s1.reservationCategory.mainCategory ? String(s1.reservationCategory.mainCategory) : null) || null,
+          caste: s1.caste || s1.casteId || null,
+          biharDomicile: s1.isBiharDomicile === 'YES' || s1.isBiharDomicile === true || s1.domicileOfBihar === 'YES' || s1.domicileOfBihar === true || s1.biharDomicile === 'YES' || s1.biharDomicile === true || (s1.reservationCategory && (s1.reservationCategory.isBiharDomicile === true || s1.reservationCategory.isBiharDomicile === 'YES')),
+          isPwd: s1.isPwd === 'YES' || s1.isPwd === true || s1.disability === 'YES' || s1.disability === true || (s1.reservationCategory && (s1.reservationCategory.isPwd === true || s1.reservationCategory.isPwd === 'YES')),
+          disabilityType: s1.disabilityType || s1.pwdType || s1.natureOfDisability || (s1.reservationCategory && s1.reservationCategory.pwdType ? String(s1.reservationCategory.pwdType) : null) || null,
+          pwd40Percent: s1.pwd40Percent === 'YES' || s1.pwd40Percent === true || s1.pwd40Percent === 'yes' || s1.isMin40PercentPwD === 'YES' || s1.isMin40PercentPwD === true || s1.disabilityPercent === 'YES' || (s1.reservationCategory && (s1.reservationCategory.pwdPercentage !== undefined && s1.reservationCategory.pwdPercentage >= 40)),
+          isExServiceman: s1.isExServiceman === 'YES' || s1.isExServiceman === true || s1.isExsm === 'YES' || s1.isExsm === true || s1.exServiceman === 'YES' || s1.exServiceman === true || (s1.reservationCategory && (s1.reservationCategory.isExServiceman === true || s1.reservationCategory.isExServiceman === 'YES')),
+          isBiharGovtEmp: s1.biharGovtEmp === 'YES' || s1.biharGovtEmp === true || s1.isBiharGovt === 'YES' || s1.isBiharGovt === true || s1.biharGovtEmployee === 'YES' || s1.biharGovtEmployee === true,
+          isContractualEmp: s1.contractualEmp === 'YES' || s1.contractualEmp === true || s1.isContractual === 'YES' || s1.isContractual === true || s1.contractualEmployee === 'YES' || s1.contractualEmployee === true,
+          bsscAttempts: s1.numberOfAttempts ? parseInt(String(s1.numberOfAttempts), 10) || 0 : (s1.bsscAttempts ? parseInt(String(s1.bsscAttempts), 10) || 1 : 1),
+          nonCreamyLayer: s1.nonCreamyLayer === 'YES' || s1.nonCreamyLayer === true || s1.isNonCreamyLayer === 'YES' || s1.isNonCreamyLayer === true,
+          servicePeriod: s1.servicePeriod || null,
+          postName: s1.postName || s1.nameOfPost || null,
+          hasAgreement: s1.hasAgreement === 'YES' || s1.hasAgreement === true || s1.hasAgreement === 'yes' || s1.agreementCircular === 'YES' || s1.agreementCircular === true,
+          contractualPeriod: s1.contractualPeriod || null,
+
+          // Certificate columns
+          domicileCertificateNumber: s1.domicileCertificateNumber || s1.domicileCertNo || (s1.reservationCategory && s1.reservationCategory.domicileCertificateNumber) || null,
+          domicileCertificateAuthority: s1.domicileCertificateAuthority || s1.domicileAuthority || (s1.reservationCategory && s1.reservationCategory.domicileCertificateAuthority) || null,
+          domicileCertificateIssueDate: parseServiceDate(s1.domicileCertificateIssueDate || s1.domicileIssueDate || (s1.reservationCategory && s1.reservationCategory.domicileCertificateIssueDate)),
+
+          categoryCertificateNumber: s1.categoryCertificateNumber || s1.categoryCertNo || (s1.reservationCategory && s1.reservationCategory.categoryCertificateNumber) || null,
+          categoryCertificateAuthority: s1.categoryCertificateAuthority || s1.categoryAuthority || (s1.reservationCategory && s1.reservationCategory.categoryCertificateAuthority) || null,
+          categoryCertificateIssueDate: parseServiceDate(s1.categoryCertificateIssueDate || s1.categoryIssueDate || (s1.reservationCategory && s1.reservationCategory.categoryCertificateIssueDate)),
+
+          pwdCertificateNumber: s1.pwdCertificateNumber || s1.disabilityCertNo || (s1.reservationCategory && s1.reservationCategory.pwdCertificateNumber) || null,
+          pwdCertificateAuthority: s1.pwdCertificateAuthority || s1.disabilityAuthority || (s1.reservationCategory && s1.reservationCategory.pwdCertificateAuthority) || null,
+          pwdCertificateIssueDate: parseServiceDate(s1.pwdCertificateIssueDate || s1.disabilityIssueDate || (s1.reservationCategory && s1.reservationCategory.pwdCertificateIssueDate)),
+
+          disTypePersist: s1.disTypePersist || s1.natureOfDisabilityType || null,
+          isScribeRequired: s1.isScribeRequired === 'YES' || s1.isScribeRequired === true || s1.isScribeRequired === 'yes',
+
+          organizationName: s1.organizationName || null,
+          hasPostExperience: s1.hasPostExperience === 'YES' || s1.hasPostExperience === true || s1.hasPostExperience === 'yes',
+
           updatedAt: new Date(),
         })
         .where(eq(candidates.id, candidateId));
@@ -557,13 +1056,19 @@ export class ApplicationService {
       // 1. Support JSSC format (array of qualifications)
       if (Array.isArray(sQuals.qualifications)) {
         for (const q of sQuals.qualifications) {
+          const obtained = q.marksObtained || q.obtainedMarks;
+          const total = q.totalMarks;
+          const percentageVal = (obtained && total && Number(total) > 0)
+            ? String(((Number(obtained) / Number(total)) * 100).toFixed(2))
+            : (q.percentage ? String(parseFloat(String(q.percentage))) : null);
+
           parsedQualifications.push({
             level: q.level || 'unknown',
             degree: q.degree || null,
             boardUniversity: q.boardUniversity || null,
-            totalMarks: q.totalMarks ? parseInt(String(q.totalMarks)) : null,
-            marksObtained: q.marksObtained ? parseInt(String(q.marksObtained)) : null,
-            percentage: q.percentage ? String(parseFloat(String(q.percentage))) : null,
+            totalMarks: total ? parseInt(String(total)) : null,
+            marksObtained: obtained ? parseInt(String(obtained)) : null,
+            percentage: percentageVal,
             specialization: q.specialization || null,
             passingYear: q.passingYear || null,
             jobQualificationId: q.jobQualificationId || null,
@@ -591,13 +1096,19 @@ export class ApplicationService {
               degree = q.subject || 'Post Graduation';
             }
 
+            const obtained = q.obtainedMarks || q.marksObtained;
+            const total = q.totalMarks;
+            const percentageVal = (obtained && total && Number(total) > 0)
+              ? String(((Number(obtained) / Number(total)) * 100).toFixed(2))
+              : (q.percentage ? String(parseFloat(String(q.percentage))) : null);
+
             parsedQualifications.push({
               level: dbLevel,
               degree: degree,
               boardUniversity: q.boardUniversity || null,
-              totalMarks: q.totalMarks ? parseInt(String(q.totalMarks)) : null,
-              marksObtained: q.obtainedMarks ? parseInt(String(q.obtainedMarks)) : null,
-              percentage: q.percentage ? String(parseFloat(String(q.percentage))) : null,
+              totalMarks: total ? parseInt(String(total)) : null,
+              marksObtained: obtained ? parseInt(String(obtained)) : null,
+              percentage: percentageVal,
               specialization: q.subject || null,
               passingYear: q.certIssueDate ? String(q.certIssueDate).split('-')[0] : null,
               jobQualificationId: null,
@@ -678,7 +1189,7 @@ export class ApplicationService {
         tenthMarksheet: 'tenthMarksheet',
         twelfthMarksheet: 'twelfthMarksheet',
         graduationMarksheet: 'graduationMarksheet',
-        postGraduationCertificate: 'postGraduationCertificate',
+        // postGraduationCertificate: 'postGraduationCertificate',
       };
 
       for (const [key, docType] of Object.entries(docMapping)) {

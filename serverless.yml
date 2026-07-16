@@ -91,6 +91,12 @@ provider:
     RAZORPAY_SECRET: ${env:RAZORPAY_SECRET, 'rzp_test_mock_secret'}
     GETEPAY_RETURN_URL: ${env:GETEPAY_RETURN_URL, 'http://localhost:3000/api/v1/payment/gateway/return'}
     FRONTEND_URL: ${env:FRONTEND_URL, 'http://localhost:5173'}
+    GETEPAY_MID: ${env:GETEPAY_MID, '1401317'}
+    GETEPAY_TERMINAL_ID: ${env:GETEPAY_TERMINAL_ID, 'getepay.merchant1124894@axisbank'}
+    GETEPAY_KEY: ${env:GETEPAY_KEY, 'Iu7qyZORZ2ONsxdYvqKkyJIS8XP1uMQKe3cr+pkcfoQ='}
+    GETEPAY_IV: ${env:GETEPAY_IV, 'IosadgLAo1VYToxCg79uQg=='}
+    GETEPAY_URL: ${env:GETEPAY_URL, 'https://portal.getepay.in:8443/getepayPortal/pg/generateInvoice'}
+    GETEPAY_REQUERY_URL: ${env:GETEPAY_REQUERY_URL, 'https://portal.getepay.in:8443/getepayPortal/pg/invoiceStatus'}
 
   iam:
     role:

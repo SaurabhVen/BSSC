@@ -9,6 +9,7 @@ import { eq } from 'drizzle-orm';
 import { DatabaseError } from '../errors/AppError';
 
 
+
 export class PublicController {
   async getAgeLimits(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
     try {
@@ -78,8 +79,13 @@ export class PublicController {
 
       const exactAge = calculateExactAge(parsedDob, '2025-08-01');
 
+      // Reference date for ex-serviceman check is time of application (current date)
+      const refDateForMax = (isExServiceman === true || String(isExServiceman) === 'true')
+        ? new Date()
+        : new Date('2025-08-01');
+
       const isMinAgeEligible = checkBSSCEligibility(parsedDob, limits.minAge, 150, '2025-08-01');
-      const isMaxAgeEligibleBase = checkBSSCEligibility(parsedDob, 0, limits.maxAge, '2025-08-01');
+      const isMaxAgeEligibleBase = checkBSSCEligibility(parsedDob, 0, limits.maxAge, refDateForMax);
       const isMaxAgeEligibleCarryForward = checkBSSCEligibility(parsedDob, 0, limits.maxAge, '2022-08-01') && qualifiedPre2022;
 
       let isEligible = true;

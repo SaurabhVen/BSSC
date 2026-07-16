@@ -1,8 +1,8 @@
 import type { PostConfirmationTriggerEvent, Context } from 'aws-lambda';
 import { userRepository } from '../../repositories/user.repository';
 import { getDb } from '../../database/drizzle';
-import { roles, documents, applications, applicationStepData, categories } from '../../database/schema';
-import { eq } from 'drizzle-orm';
+import { roles, documents, applications, applicationStepData, categories, candidates } from '../../database/schema';
+import { eq, and } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { generateRegistrationNumber } from '../../utils/crypto';
 import { calculateBSSCAge } from '../../utils/age';
@@ -15,6 +15,22 @@ const mapCategoryValue = (val: string): string => {
   if (normalized.includes('scheduled tribe') || normalized.includes('st') || normalized.includes('अनुसूचित जनजाति')) return 'st';
   if (normalized.includes('unreserved') || normalized.includes('general') || normalized.includes('ur') || normalized.includes('गैर')) return 'unreserved';
   return normalized;
+};
+
+const parseDateString = (dateStr: string | undefined): Date | null => {
+  if (!dateStr) return null;
+  const parsedDate = new Date(dateStr);
+  if (!isNaN(parsedDate.getTime())) {
+    return parsedDate;
+  }
+  if (dateStr.match(/^\d{2}-\d{2}-\d{4}$/)) {
+    const parts = dateStr.split('-');
+    const newDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
+    if (!isNaN(newDate.getTime())) {
+      return newDate;
+    }
+  }
+  return null;
 };
 
 
@@ -133,9 +149,9 @@ export const handler = async (
     const isExsm = attributes['custom:ex_serviceman'] === 'YES';
     const isBiharGovt = attributes['custom:bihar_govt_emp'] === 'YES';
     const isContractual = attributes['custom:contractual_emp'] === 'YES';
-    const isNcc = attributes['custom:ncc_cadet'] === 'YES';
     const nonCreamy = attributes['custom:non_creamy_layer'] === 'YES';
     const pwd40 = attributes['custom:pwd_40_percent'] === 'YES';
+    const hasAgreement = attributes['custom:has_agreement'] === 'YES';
     
     const parsedAttempts = parseInt(attributes['custom:bssc_attempts'] || '1', 10);
     const attempts = isNaN(parsedAttempts) ? 1 : parsedAttempts;
@@ -159,11 +175,32 @@ export const handler = async (
       disabilityType: attributes['custom:disability_type'] || null,
       pwd40Percent: pwd40,
       isExServiceman: isExsm,
-      isNccCadet: isNcc,
       isBiharGovtEmp: isBiharGovt,
       isContractualEmp: isContractual,
       bsscAttempts: attempts,
       nonCreamyLayer: nonCreamy,
+      servicePeriod: attributes['custom:service_period'] || null,
+      postName: attributes['custom:post_name'] || null,
+      hasAgreement: hasAgreement,
+      contractualPeriod: attributes['custom:contractual_period'] || null,
+
+      domicileCertificateNumber: attributes['custom:domicile_cert_no'] || null,
+      domicileCertificateAuthority: attributes['custom:domicile_authority'] || null,
+      domicileCertificateIssueDate: parseDateString(attributes['custom:domicile_issue_date']),
+
+      categoryCertificateNumber: attributes['custom:category_cert_no'] || null,
+      categoryCertificateAuthority: attributes['custom:cat_cert_auth'] || null,
+      categoryCertificateIssueDate: parseDateString(attributes['custom:cat_cert_issue_dt']),
+
+      pwdCertificateNumber: attributes['custom:disability_cert_no'] || null,
+      pwdCertificateAuthority: attributes['custom:dis_cert_auth'] || attributes['custom:dis_cert_auth_oth'] || null,
+      pwdCertificateIssueDate: parseDateString(attributes['custom:dis_cert_issue_dt']),
+
+      disTypePersist: attributes['custom:dis_type_persist'] || null,
+      isScribeRequired: attributes['custom:is_scribe_required'] === 'YES',
+
+      organizationName: attributes['custom:organization_name'] || null,
+      hasPostExperience: attributes['custom:has_post_experience'] === 'YES',
     });
 
     // 4.1 Create application draft
@@ -246,26 +283,27 @@ export const handler = async (
 
     const step1Data = {
       isBiharDomicile: attributes['custom:bihar_domicile'] === 'YES',
-      domicileCertificateNumber: null,
-      domicileCertificateAuthority: null,
-      domicileCertificateIssueDate: null,
+      domicileCertificateNumber: attributes['custom:domicile_cert_no'] || null,
+      domicileCertificateAuthority: attributes['custom:domicile_authority'] || null,
+      domicileCertificateIssueDate: attributes['custom:domicile_issue_date'] || null,
 
       mainCategory: categoryId,
       subCategory: null,
       subSubCategoryId: null,
-      categoryCertificateNumber: null,
-      categoryCertificateAuthority: null,
-      categoryCertificateIssueDate: null,
+      categoryCertificateNumber: attributes['custom:category_cert_no'] || null,
+      categoryCertificateAuthority: attributes['custom:cat_cert_auth'] || null,
+      categoryCertificateIssueDate: attributes['custom:cat_cert_issue_dt'] || null,
 
       isPwd: attributes['custom:is_pwd'] === 'YES',
-      pwdType: null,
-      pwdPercentage: null,
-      pwdCertificateNumber: null,
-      pwdCertificateAuthority: null,
-      pwdCertificateIssueDate: null,
+      pwdType: attributes['custom:disability_type'] || null,
+      pwdPercentage: attributes['custom:pwd_percentage'] || null,
+      pwdCertificateNumber: attributes['custom:disability_cert_no'] || null,
+      pwdCertificateAuthority: attributes['custom:dis_cert_auth'] || attributes['custom:dis_cert_auth_oth'] || null,
+      pwdCertificateIssueDate: attributes['custom:dis_cert_issue_dt'] || null,
 
       isExServiceman: attributes['custom:ex_serviceman'] === 'YES',
-      exServicemanYears: null,
+      exServicemanYears: attributes['custom:ex_serviceman_years'] || null,
+      typeOfExOfficer: attributes['custom:officer_type'] ? parseInt(attributes['custom:officer_type'], 10) : null,
 
       isSportsQuota: false,
       sportsLevel: null,
@@ -283,12 +321,18 @@ export const handler = async (
       biharGovtEmp: attributes['custom:bihar_govt_emp'] || 'NO',
       bsscAttempts: attributes['custom:bssc_attempts'] || '1',
       contractualEmp: attributes['custom:contractual_emp'] || 'NO',
-      nccCadet: attributes['custom:ncc_cadet'] || 'NO',
       nonCreamyLayer: attributes['custom:non_creamy_layer'] || 'NO',
       pwd40Percent: attributes['custom:pwd_40_percent'] || 'NO',
       contractualPeriod: attributes['custom:contractual_period'] || 'NO',
       postName: attributes['custom:post_name'] || '',
       hasAgreement: attributes['custom:has_agreement'] || 'NO',
+      servicePeriod: attributes['custom:service_period'] || '',
+      
+      // Additional Cognito fields
+      disTypePersist: attributes['custom:dis_type_persist'] || '',
+      isScribeRequired: attributes['custom:is_scribe_required'] || '',
+      organizationName: attributes['custom:organization_name'] || '',
+      hasPostExperience: attributes['custom:has_post_experience'] || '',
     };
 
     // 4.4 Save step data (combining both Step 0 and Step 1 data into Step 0)

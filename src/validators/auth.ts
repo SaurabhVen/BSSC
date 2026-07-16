@@ -116,13 +116,17 @@ export const candidateRegisterSchema = z
       ex_serviceman: z.string().optional(),
       is_pwd: z.string().optional(),
       mobile_no: z.string().optional(),
-      ncc_cadet: z.string().optional(),
       non_creamy_layer: z.string().optional(),
       pwd_40_percent: z.string().optional(),
       contractual_period: z.string().optional(),
       post_name: z.string().optional(),
       has_agreement: z.string().optional(),
       gender: z.string().optional(),
+      service_period: z.string().optional(),
+      dis_type_persist: z.string().optional(),
+      is_scribe_required: z.string().optional(),
+      organization_name: z.string().optional(),
+      has_post_experience: z.string().optional(),
     })
   );
 

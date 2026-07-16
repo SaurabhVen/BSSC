@@ -351,12 +351,16 @@ export class AuthService {
       'ex_serviceman',
       'is_pwd',
       'mobile_no',
-      'ncc_cadet',
       'non_creamy_layer',
       'pwd_40_percent',
       'contractual_period',
       'post_name',
       'has_agreement',
+      'service_period',
+      'dis_type_persist',
+      'is_scribe_required',
+      'organization_name',
+      'has_post_experience',
     ];
 
     for (const key of customKeys) {
@@ -401,6 +405,30 @@ export class AuthService {
     });
 
     const registrationNumber = generateRegistrationNumber('BSSC');
+
+    const isBiharDomicile = input.bihar_domicile === 'YES';
+    const isPwd = input.is_pwd === 'YES';
+    const isExsm = input.ex_serviceman === 'YES';
+    const isBiharGovt = input.bihar_govt_emp === 'YES';
+    const isContractual = input.contractual_emp === 'YES';
+    const nonCreamy = input.non_creamy_layer === 'YES';
+    const pwd40 = input.pwd_40_percent === 'YES';
+    const hasAgreement = input.has_agreement === 'YES';
+
+    const parsedAttempts = parseInt(input.bssc_attempts || '1', 10);
+    const attempts = isNaN(parsedAttempts) ? 1 : parsedAttempts;
+
+    const mapCategoryValue = (val: string): string => {
+      const normalized = (val || '').toLowerCase().trim();
+      if (normalized.includes('extremely backward') || normalized.includes('ebc') || normalized.includes('अत्यंत')) return 'ebc1';
+      if (normalized.includes('backward class') || normalized.includes('bc') || normalized.includes('अनुसूची-2')) return 'bc2';
+      if (normalized.includes('scheduled caste') || normalized.includes('sc') || normalized.includes('अनुसूचित जाति')) return 'sc';
+      if (normalized.includes('scheduled tribe') || normalized.includes('st') || normalized.includes('अनुसूचित जनजाति')) return 'st';
+      if (normalized.includes('unreserved') || normalized.includes('general') || normalized.includes('ur') || normalized.includes('गैर')) return 'unreserved';
+      return normalized;
+    };
+    const categoryCode = mapCategoryValue(input.category || '');
+
     const candidate = await userRepository.createCandidate({
       userId: user.id,
       registrationNumber,
@@ -408,6 +436,28 @@ export class AuthService {
       mobileNumber: input.mobileNumber,
       mobileVerified: true,
       emailVerified: true,
+
+      // Custom BSSC Metadata fields mapped from candidate registration input
+      gender: input.gender || null,
+      category: categoryCode || null,
+      caste: input.caste || null,
+      biharDomicile: isBiharDomicile,
+      isPwd: isPwd,
+      disabilityType: input.disability_type || null,
+      pwd40Percent: pwd40,
+      isExServiceman: isExsm,
+      isBiharGovtEmp: isBiharGovt,
+      isContractualEmp: isContractual,
+      bsscAttempts: attempts,
+      nonCreamyLayer: nonCreamy,
+      postName: input.post_name || null,
+      hasAgreement: hasAgreement,
+      contractualPeriod: input.contractual_period || null,
+      servicePeriod: input.service_period || null,
+      disTypePersist: input.dis_type_persist || null,
+      isScribeRequired: input.is_scribe_required === 'YES',
+      organizationName: input.organization_name || null,
+      hasPostExperience: input.has_post_experience === 'YES',
     });
 
     try {

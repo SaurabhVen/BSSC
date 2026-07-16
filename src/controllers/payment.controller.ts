@@ -107,8 +107,8 @@ export class PaymentController {
 
     if (!paymentOrderId) throw new AppError('Payment order ID is required', 400);
 
-    const baseUrl = process.env.FRONTEND_URL || 'https://jtglcce-2026-demo.cyberica.in';
-    const frontendUrl = `${baseUrl}/dashboard/my-applications?txn=${paymentOrderId}`;
+    const baseUrl = process.env.FRONTEND_URL || 'https://d3lnk974uo6n00.cloudfront.net';
+    const frontendUrl = `${baseUrl}/application?txn=${paymentOrderId}`;
 
     try {
       await paymentService.completeFreePayment(paymentOrderId);

@@ -46,7 +46,7 @@ export class GetepayAdapter {
     return decrypted;
   }
   private static getReturnUrl() {
-    const configuredUrl = process.env.GETEPAY_RETURN_URL || config.GETEPAY_RETURN_URL || 'http://localhost:3000/api/v1/payment/gateway/return';
+    const configuredUrl = process.env.GETEPAY_RETURN_URL || config.GETEPAY_RETURN_URL || 'https://pay1.getepay.in:8443/getepayPortal/pg/generateInvoice';
     if (configuredUrl.includes('/api/v1/payment/gateway/return')) {
       return configuredUrl;
     }

@@ -85,21 +85,42 @@ export const candidates = pgTable(
     alternateNumber: varchar('alternate_number', { length: 15 }),
     mobileVerified: boolean('mobile_verified').default(false).notNull(),
     emailVerified: boolean('email_verified').default(false).notNull(),
-    
+
     // Custom BSSC Metadata columns
     gender: varchar('gender', { length: 20 }),
-    category: varchar('category', { length: 30 }),
+    category: varchar('category', { length: 100 }),
     caste: varchar('caste', { length: 100 }),
     biharDomicile: boolean('bihar_domicile').default(false).notNull(),
     isPwd: boolean('is_pwd').default(false).notNull(),
     disabilityType: varchar('disability_type', { length: 50 }),
     pwd40Percent: boolean('pwd_40_percent').default(false).notNull(),
     isExServiceman: boolean('is_ex_serviceman').default(false).notNull(),
-    isNccCadet: boolean('is_ncc_cadet').default(false).notNull(),
     isBiharGovtEmp: boolean('is_bihar_govt_emp').default(false).notNull(),
     isContractualEmp: boolean('is_contractual_emp').default(false).notNull(),
     bsscAttempts: integer('bssc_attempts').default(1).notNull(),
     nonCreamyLayer: boolean('non_creamy_layer').default(false).notNull(),
+    servicePeriod: varchar('service_period', { length: 100 }),
+    postName: varchar('post_name', { length: 100 }),
+    hasAgreement: boolean('has_agreement').default(false).notNull(),
+    contractualPeriod: varchar('contractual_period', { length: 100 }),
+
+    domicileCertificateNumber: varchar('domicile_certificate_number', { length: 100 }),
+    domicileCertificateAuthority: varchar('domicile_certificate_authority', { length: 100 }),
+    domicileCertificateIssueDate: timestamp('domicile_certificate_issue_date'),
+
+    categoryCertificateNumber: varchar('category_certificate_number', { length: 100 }),
+    categoryCertificateAuthority: varchar('category_certificate_authority', { length: 100 }),
+    categoryCertificateIssueDate: timestamp('category_certificate_issue_date'),
+
+    pwdCertificateNumber: varchar('pwd_certificate_number', { length: 100 }),
+    pwdCertificateAuthority: varchar('pwd_certificate_authority', { length: 100 }),
+    pwdCertificateIssueDate: timestamp('pwd_certificate_issue_date'),
+
+    disTypePersist: varchar('dis_type_persist', { length: 50 }),
+    isScribeRequired: boolean('is_scribe_required').default(false).notNull(),
+
+    organizationName: varchar('organization_name', { length: 200 }),
+    hasPostExperience: boolean('has_post_experience').default(false).notNull(),
 
     createdAt: timestamp('created_at').defaultNow().notNull(),
     createdBy: uuid('created_by'),
@@ -122,11 +143,11 @@ export const applications = pgTable(
     candidateId: uuid('candidate_id')
       .notNull()
       .references(() => candidates.id),
-    status: varchar('status', { length: 30 }).default('draft').notNull(),
+    status: varchar('status', { length: 50 }).default('draft').notNull(),
     currentStep: integer('current_step').default(0).notNull(),
     completedSteps: jsonb('completed_steps').$type<number[]>().default([]).notNull(),
     isSubmitted: boolean('is_submitted').default(false).notNull(),
-    applicationReferenceNumber: varchar('application_reference_number', { length: 30 }),
+    applicationReferenceNumber: varchar('application_reference_number', { length: 50 }),
     submissionDate: timestamp('submission_date'),
     createdAt: timestamp('created_at').defaultNow().notNull(),
     createdBy: uuid('created_by'),
@@ -216,7 +237,7 @@ export const payments = pgTable(
     amount: numeric('amount', { precision: 10, scale: 2 }).notNull(),
     currency: varchar('currency', { length: 3 }).default('INR').notNull(),
     transactionId: varchar('transaction_id', { length: 100 }),
-    status: varchar('status', { length: 30 }).default('pending').notNull(),
+    status: varchar('status', { length: 50 }).default('pending').notNull(),
     paymentMode: varchar('payment_mode', { length: 50 }),
     bankName: varchar('bank_name', { length: 100 }),
     paymentUrl: text('payment_url'),
@@ -539,6 +560,33 @@ export const typeOfExOfficers = pgTable('type_of_ex_officers', {
   name: varchar('name', { length: 255 }).notNull(),
 });
 
+
+// post payment schema
+
+export const paidCandidates = pgTable("paid_candidates", {
+  regId: bigint("RegId", { mode: "number" }).primaryKey(),
+
+  fullName: varchar("Full_NameV", { length: 100 }),
+  fatherName: varchar("Father_NameV", { length: 100 }),
+  motherName: varchar("Mother_NameV", { length: 100 }),
+
+  primaryCategory: varchar("Primary_CategoryV", { length: 5 }),
+
+  sbOrder: varchar("SB_orderV", { length: 30 }),
+  sbTransId: varchar("SB_transidV", { length: 30 }),
+  sbStatus: varchar("SB_statusV", { length: 30 }),
+  sbAmount: varchar("SB_amtV", { length: 10 }),
+  sbTransactionDate: varchar("SB_tnsDateV", { length: 40 }),
+  sbPayIp: varchar("SB_pay_IPV", { length: 30 }),
+
+  icOrder: varchar("IC_orderV", { length: 50 }),
+  icTransId: varchar("IC_transidV", { length: 100 }),
+  icStatus: varchar("IC_statusV", { length: 15 }),
+  icAmount: varchar("IC_amtV", { length: 8 }),
+  icTransactionDate: varchar("IC_tnsDateV", { length: 30 }),
+  icPayIp: varchar("IC_pay_IPV", { length: 30 }),
+});
+
 export type Role = typeof roles.$inferSelect;
 export type NewRole = typeof roles.$inferInsert;
 
@@ -619,3 +667,5 @@ export type NewPaymentRefund = typeof paymentRefunds.$inferInsert;
 
 export type TypeOfExOfficer = typeof typeOfExOfficers.$inferSelect;
 export type NewTypeOfExOfficer = typeof typeOfExOfficers.$inferInsert;
+
+export type PaidCandidate = typeof paidCandidates.$inferSelect;
