@@ -1,9 +1,11 @@
 import { describe, test, expect, jest, beforeEach } from '@jest/globals';
-import { notificationController } from '../../src/controllers/notification.controller';
-import { notificationService } from '../../src/services/notification.service';
+// Updated import paths to remove 'src/'
+import { notificationController } from '../../controllers/notification.controller';
+import { notificationService } from '../../services/notification.service';
 import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 
-jest.mock('../../src/services/notification.service', () => {
+// Updated mock paths to remove 'src/'
+jest.mock('../../services/notification.service', () => {
   return {
     notificationService: {
       renderRegistrationSuccessEmail: jest.fn().mockReturnValue({ subject: 'Reg Sub', body: 'Reg Body' }),
