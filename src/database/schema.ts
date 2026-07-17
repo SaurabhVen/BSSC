@@ -45,11 +45,6 @@ export const users = pgTable(
       .notNull()
       .references(() => roles.id),
 
-    // NEW: Cognito Sub ID
-    cognitoSubId: uuid('cognito_sub_id').unique(),
-    // or if you want strict UUID validation:
-    // cognitoSubId: uuid('cognito_sub_id').unique().notNull(),
-
     isActive: boolean('is_active').default(true).notNull(),
     lastLoginAt: timestamp('last_login_at'),
 
@@ -63,9 +58,6 @@ export const users = pgTable(
   },
   (table) => ({
     emailIdx: uniqueIndex('users_email_idx').on(table.email),
-
-    // NEW INDEX (important for Cognito lookup)
-    cognitoSubIdx: uniqueIndex('users_cognito_sub_idx').on(table.cognitoSubId),
   })
 );
 
@@ -86,7 +78,27 @@ export const candidates = pgTable(
     mobileVerified: boolean('mobile_verified').default(false).notNull(),
     emailVerified: boolean('email_verified').default(false).notNull(),
 
-    // Custom BSSC Metadata columns
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    createdBy: uuid('created_by'),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+    updatedBy: uuid('updated_by'),
+    version: integer('version').default(1).notNull(),
+  },
+  (table) => ({
+    userIdIdx: index('candidates_user_id_idx').on(table.userId),
+    regNoIdx: uniqueIndex('candidates_reg_no_idx').on(table.registrationNumber),
+  })
+);
+
+export const candidateMetadata = pgTable(
+  'candidate_metadata',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    candidateId: uuid('candidate_id')
+      .notNull()
+      .references(() => candidates.id, { onDelete: 'cascade' })
+      .unique(),
+
     gender: varchar('gender', { length: 20 }),
     category: varchar('category', { length: 100 }),
     caste: varchar('caste', { length: 100 }),
@@ -126,11 +138,9 @@ export const candidates = pgTable(
     createdBy: uuid('created_by'),
     updatedAt: timestamp('updated_at').defaultNow().notNull(),
     updatedBy: uuid('updated_by'),
-    version: integer('version').default(1).notNull(),
   },
   (table) => ({
-    userIdIdx: index('candidates_user_id_idx').on(table.userId),
-    regNoIdx: uniqueIndex('candidates_reg_no_idx').on(table.registrationNumber),
+    candidateIdIdx: index('candidate_metadata_candidate_id_idx').on(table.candidateId),
   })
 );
 
@@ -577,14 +587,14 @@ export const paidCandidates = pgTable("paid_candidates", {
   sbStatus: varchar("SB_statusV", { length: 30 }),
   sbAmount: varchar("SB_amtV", { length: 10 }),
   sbTransactionDate: varchar("SB_tnsDateV", { length: 40 }),
-  sbPayIp: varchar("SB_pay_IPV", { length: 30 }),
+  sbPayIp: varchar("SB_pay_IP", { length: 30 }),
 
   icOrder: varchar("IC_orderV", { length: 50 }),
   icTransId: varchar("IC_transidV", { length: 100 }),
   icStatus: varchar("IC_statusV", { length: 15 }),
   icAmount: varchar("IC_amtV", { length: 8 }),
   icTransactionDate: varchar("IC_tnsDateV", { length: 30 }),
-  icPayIp: varchar("IC_pay_IPV", { length: 30 }),
+  icPayIp: varchar("IC_pay_IP", { length: 30 }),
 });
 
 export type Role = typeof roles.$inferSelect;
@@ -593,8 +603,15 @@ export type NewRole = typeof roles.$inferInsert;
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 
-export type Candidate = typeof candidates.$inferSelect;
-export type NewCandidate = typeof candidates.$inferInsert;
+export type CandidateCore = typeof candidates.$inferSelect;
+export type NewCandidateCore = typeof candidates.$inferInsert;
+
+export type CandidateMetadata = typeof candidateMetadata.$inferSelect;
+export type NewCandidateMetadata = typeof candidateMetadata.$inferInsert;
+
+export type Candidate = CandidateCore & Partial<Omit<CandidateMetadata, 'id' | 'candidateId' | 'createdAt' | 'createdBy' | 'updatedAt' | 'updatedBy'>>;
+
+export type NewCandidate = NewCandidateCore & Partial<Omit<NewCandidateMetadata, 'id' | 'candidateId' | 'createdAt' | 'createdBy' | 'updatedAt' | 'updatedBy'>>;
 
 export type Application = typeof applications.$inferSelect;
 export type NewApplication = typeof applications.$inferInsert;

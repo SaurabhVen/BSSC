@@ -26,10 +26,31 @@ export const authenticate = async (event: APIGatewayProxyEventV2): Promise<Authe
   console.log('Decoded JWT payload:', decoded);
 
   let userId = decoded.sub;
-  let email = decoded.email;
+  let email = decoded.email || (decoded.username && decoded.username.includes('@') ? decoded.username : undefined);
 
-  if (userRepository && typeof userRepository.findByCognitoSubId === 'function') {
-    const dbUser = await userRepository.findByCognitoSubId(decoded.sub);
+  if (!email && token) {
+    const { getUserByAccessToken } = await import('../utils/cognito');
+    try {
+      const cognitoUser = await getUserByAccessToken(token);
+      if (cognitoUser && cognitoUser.Attributes) {
+        const emailAttr = cognitoUser.Attributes.find((attr: any) => attr.Name === 'email');
+        if (emailAttr?.Value) {
+          email = emailAttr.Value;
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching email fallback from Cognito:', err);
+    }
+  }
+
+  if (!email) {
+    throw new UnauthorizedError(
+      'Could not verify your email address. Please make sure you are using a valid session.'
+    );
+  }
+
+  if (userRepository && typeof userRepository.findByEmail === 'function') {
+    const dbUser = await userRepository.findByEmail(email);
     if (!dbUser) {
       throw new UnauthorizedError(
         'We could not find an account with these details. Please register a new account or check your information.'

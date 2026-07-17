@@ -64,10 +64,10 @@ export const handler = async (
 
   try {
     // 1. Check if user already exists locally in PostgreSQL database
-    const existingUser = await userRepository.findByCognitoSubId(userSub);
+    const existingUser = await userRepository.findByEmail(email);
     if (existingUser) {
-      console.log(`User ${email} already exists in DB with Cognito Sub ID: ${userSub}`);
-
+      console.log(`User ${email} already exists in DB`);
+// ... (omitted unchanged lines for existingUser handle)
       const candidate = await userRepository.findCandidateByUserId(existingUser.id);
       if (candidate && candidate.registrationNumber) {
         console.log(`[Trigger] Existing candidate registration number is ${candidate.registrationNumber}. Updating Cognito custom attributes...`);
@@ -128,7 +128,6 @@ export const handler = async (
       passwordHash: 'COGNITO_CONFIRMED_USER', // Federated or Cognito-validated user indicator
       fullName,
       roleId,
-      cognitoSubId: userSub,
       isActive: true,
     });
 

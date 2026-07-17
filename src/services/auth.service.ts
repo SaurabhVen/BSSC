@@ -217,7 +217,6 @@ export class AuthService {
       passwordHash,
       fullName: input.fullName,
       roleId: targetRoleId,
-      cognitoSubId: cognitoSub,
     });
 
     if (roleName === 'candidate') {
@@ -401,7 +400,6 @@ export class AuthService {
       passwordHash,
       fullName: input.fullName,
       roleId: candidateRoleId,
-      cognitoSubId: cognitoSub,
     });
 
     const registrationNumber = generateRegistrationNumber('BSSC');

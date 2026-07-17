@@ -741,3 +741,11 @@ functions:
           path: /api/v1/public/type-of-ex-officer
           method: GET
 
+  getPaidCandidate:
+    handler: src/handlers/public/getPaidCandidate.handler
+    events:
+      - httpApi:
+          path: /api/v1/paid-candidates
+          method: POST
+
+

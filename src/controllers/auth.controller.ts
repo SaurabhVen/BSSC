@@ -542,54 +542,47 @@ export class AuthController {
         ...mappedReservation
       }
     );
+    // Update candidates table with all parsed candidate details using repository
+    await userRepository.updateCandidate(candidate.id, {
+      dateOfBirth: dobDate,
+      mobileNumber: input.personalInfo.mobileNumber,
+      alternateNumber: input.personalInfo.alternateNumber || null,
+      gender: input.personalInfo.gender,
+      category: mappedReservation.mainCategory ? String(mappedReservation.mainCategory) : null,
+      caste: (rawBody as any).caste || null,
+      biharDomicile: mappedReservation.isBiharDomicile === 'YES' || mappedReservation.isBiharDomicile === true || mappedReservation.isBiharDomicile === 'true',
+      isPwd: mappedReservation.isPwd === 'YES' || mappedReservation.isPwd === true || mappedReservation.isPwd === 'true',
+      disabilityType: (rawBody as any).disabilityType || (rawBody as any).disability_type || null,
+      pwd40Percent: mappedReservation.pwd40Percent === 'YES' || mappedReservation.pwd40Percent === true || mappedReservation.pwd40Percent === 'true',
+      isExServiceman: mappedReservation.isExServiceman === 'YES' || mappedReservation.isExServiceman === true || mappedReservation.isExServiceman === 'true',
+      isBiharGovtEmp: mappedReservation.biharGovtEmp === 'YES' || mappedReservation.biharGovtEmp === true || mappedReservation.biharGovtEmp === 'true',
+      isContractualEmp: mappedReservation.contractualEmp === 'YES' || mappedReservation.contractualEmp === true || mappedReservation.contractualEmp === 'true',
+      bsscAttempts: mappedReservation.bsscAttempts ? parseInt(String(mappedReservation.bsscAttempts), 10) || 0 : 0,
+      nonCreamyLayer: mappedReservation.nonCreamyLayer === 'YES' || mappedReservation.nonCreamyLayer === true || mappedReservation.nonCreamyLayer === 'true',
+      servicePeriod: (rawBody as any).servicePeriod || (rawBody as any).service_period || null,
+      postName: (rawBody as any).postName || (rawBody as any).post_name || null,
+      hasAgreement: mappedReservation.hasAgreement === 'YES' || mappedReservation.hasAgreement === true || mappedReservation.hasAgreement === 'true',
+      contractualPeriod: (rawBody as any).contractualPeriod || (rawBody as any).contractual_period || null,
 
-    // Update candidates table with all parsed candidate details
-    const db = getDb();
-    await db
-      .update(candidates)
-      .set({
-        dateOfBirth: dobDate,
-        mobileNumber: input.personalInfo.mobileNumber,
-        alternateNumber: input.personalInfo.alternateNumber || null,
-        gender: input.personalInfo.gender,
-        category: mappedReservation.mainCategory ? String(mappedReservation.mainCategory) : null,
-        caste: (rawBody as any).caste || null,
-        biharDomicile: mappedReservation.isBiharDomicile === 'YES' || mappedReservation.isBiharDomicile === true || mappedReservation.isBiharDomicile === 'true',
-        isPwd: mappedReservation.isPwd === 'YES' || mappedReservation.isPwd === true || mappedReservation.isPwd === 'true',
-        disabilityType: (rawBody as any).disabilityType || (rawBody as any).disability_type || null,
-        pwd40Percent: mappedReservation.pwd40Percent === 'YES' || mappedReservation.pwd40Percent === true || mappedReservation.pwd40Percent === 'true',
-        isExServiceman: mappedReservation.isExServiceman === 'YES' || mappedReservation.isExServiceman === true || mappedReservation.isExServiceman === 'true',
-        isBiharGovtEmp: mappedReservation.biharGovtEmp === 'YES' || mappedReservation.biharGovtEmp === true || mappedReservation.biharGovtEmp === 'true',
-        isContractualEmp: mappedReservation.contractualEmp === 'YES' || mappedReservation.contractualEmp === true || mappedReservation.contractualEmp === 'true',
-        bsscAttempts: mappedReservation.bsscAttempts ? parseInt(String(mappedReservation.bsscAttempts), 10) || 0 : 0,
-        nonCreamyLayer: mappedReservation.nonCreamyLayer === 'YES' || mappedReservation.nonCreamyLayer === true || mappedReservation.nonCreamyLayer === 'true',
-        servicePeriod: (rawBody as any).servicePeriod || (rawBody as any).service_period || null,
-        postName: (rawBody as any).postName || (rawBody as any).post_name || null,
-        hasAgreement: mappedReservation.hasAgreement === 'YES' || mappedReservation.hasAgreement === true || mappedReservation.hasAgreement === 'true',
-        contractualPeriod: (rawBody as any).contractualPeriod || (rawBody as any).contractual_period || null,
+      // Certificate Details columns
+      domicileCertificateNumber: mappedReservation.domicileCertificateNumber || null,
+      domicileCertificateAuthority: mappedReservation.domicileCertificateAuthority || null,
+      domicileCertificateIssueDate: parseControllerDate(mappedReservation.domicileCertificateIssueDate),
 
-        // Certificate Details columns
-        domicileCertificateNumber: mappedReservation.domicileCertificateNumber || null,
-        domicileCertificateAuthority: mappedReservation.domicileCertificateAuthority || null,
-        domicileCertificateIssueDate: parseControllerDate(mappedReservation.domicileCertificateIssueDate),
+      categoryCertificateNumber: mappedReservation.categoryCertificateNumber || null,
+      categoryCertificateAuthority: mappedReservation.categoryCertificateAuthority || null,
+      categoryCertificateIssueDate: parseControllerDate(mappedReservation.categoryCertificateIssueDate),
 
-        categoryCertificateNumber: mappedReservation.categoryCertificateNumber || null,
-        categoryCertificateAuthority: mappedReservation.categoryCertificateAuthority || null,
-        categoryCertificateIssueDate: parseControllerDate(mappedReservation.categoryCertificateIssueDate),
+      pwdCertificateNumber: mappedReservation.pwdCertificateNumber || null,
+      pwdCertificateAuthority: mappedReservation.pwdCertificateAuthority || null,
+      pwdCertificateIssueDate: parseControllerDate(mappedReservation.pwdCertificateIssueDate),
 
-        pwdCertificateNumber: mappedReservation.pwdCertificateNumber || null,
-        pwdCertificateAuthority: mappedReservation.pwdCertificateAuthority || null,
-        pwdCertificateIssueDate: parseControllerDate(mappedReservation.pwdCertificateIssueDate),
+      disTypePersist: (rawBody as any).disTypePersist || (rawBody as any).dis_type_persist || null,
+      isScribeRequired: (rawBody as any).isScribeRequired === 'YES' || (rawBody as any).isScribeRequired === true || (rawBody as any).is_scribe_required === 'YES',
 
-        disTypePersist: (rawBody as any).disTypePersist || (rawBody as any).dis_type_persist || null,
-        isScribeRequired: (rawBody as any).isScribeRequired === 'YES' || (rawBody as any).isScribeRequired === true || (rawBody as any).is_scribe_required === 'YES',
-
-        organizationName: (rawBody as any).organizationName || (rawBody as any).organization_name || null,
-        hasPostExperience: (rawBody as any).hasPostExperience === 'YES' || (rawBody as any).hasPostExperience === true || (rawBody as any).has_post_experience === 'YES',
-
-        updatedAt: new Date(),
-      })
-      .where(eq(candidates.id, candidate.id));
+      organizationName: (rawBody as any).organizationName || (rawBody as any).organization_name || null,
+      hasPostExperience: (rawBody as any).hasPostExperience === 'YES' || (rawBody as any).hasPostExperience === true || (rawBody as any).has_post_experience === 'YES',
+    });
 
     return response.success(200, {
       message: 'Candidate personal and reservation details (Step 1) saved successfully',

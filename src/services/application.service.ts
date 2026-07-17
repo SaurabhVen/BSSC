@@ -464,12 +464,7 @@ export class ApplicationService {
     // Fetch candidate and user details from DB to build step0 dynamically if it is missing
     if (!stepDataMap[0] && candidateId) {
       try {
-        const candidateRows = await db
-          .select()
-          .from(candidates)
-          .where(eq(candidates.id, candidateId))
-          .limit(1);
-        const candidate = candidateRows[0];
+        const candidate = await userRepository.findCandidateById(candidateId);
 
         if (candidate) {
           const dbUserRows = await db
@@ -925,51 +920,46 @@ export class ApplicationService {
         }
       }
 
-      await db
-        .update(candidates)
-        .set({
-          alternateNumber: s0.alternateNumber || s0.alternateNo || (s0.personalInfo && s0.personalInfo.alternateNumber) || null,
-          mobileNumber: s0.mobileNumber || s0.mobileNo || (s0.personalInfo && s0.personalInfo.mobileNumber) || null,
-          dateOfBirth: dobDate,
-          gender: s0.gender || (s0.personalInfo && s0.personalInfo.gender) || null,
-          category: s0.category || s0.categoryId || (s0.reservationCategory && s0.reservationCategory.mainCategory ? String(s0.reservationCategory.mainCategory) : null) || null,
-          caste: s0.caste || s0.casteId || null,
-          biharDomicile: s0.isBiharDomicile === 'YES' || s0.isBiharDomicile === true || s0.domicileOfBihar === 'YES' || s0.domicileOfBihar === true || s0.biharDomicile === 'YES' || s0.biharDomicile === true || (s0.reservationCategory && (s0.reservationCategory.isBiharDomicile === true || s0.reservationCategory.isBiharDomicile === 'YES')),
-          isPwd: s0.isPwd === 'YES' || s0.isPwd === true || s0.disability === 'YES' || s0.disability === true || (s0.reservationCategory && (s0.reservationCategory.isPwd === true || s0.reservationCategory.isPwd === 'YES')),
-          disabilityType: s0.disabilityType || s0.pwdType || s0.natureOfDisability || (s0.reservationCategory && s0.reservationCategory.pwdType ? String(s0.reservationCategory.pwdType) : null) || null,
-          pwd40Percent: s0.pwd40Percent === 'YES' || s0.pwd40Percent === true || s0.pwd40Percent === 'yes' || s0.isMin40PercentPwD === 'YES' || s0.isMin40PercentPwD === true || s0.disabilityPercent === 'YES' || (s0.reservationCategory && (s0.reservationCategory.pwdPercentage !== undefined && s0.reservationCategory.pwdPercentage >= 40)),
-          isExServiceman: s0.isExServiceman === 'YES' || s0.isExServiceman === true || s0.isExsm === 'YES' || s0.isExsm === true || s0.exServiceman === 'YES' || s0.exServiceman === true || (s0.reservationCategory && (s0.reservationCategory.isExServiceman === true || s0.reservationCategory.isExServiceman === 'YES')),
-          isBiharGovtEmp: s0.biharGovtEmp === 'YES' || s0.biharGovtEmp === true || s0.isBiharGovt === 'YES' || s0.isBiharGovt === true || s0.biharGovtEmployee === 'YES' || s0.biharGovtEmployee === true,
-          isContractualEmp: s0.contractualEmp === 'YES' || s0.contractualEmp === true || s0.isContractual === 'YES' || s0.isContractual === true || s0.contractualEmployee === 'YES' || s0.contractualEmployee === true,
-          bsscAttempts: s0.numberOfAttempts ? parseInt(String(s0.numberOfAttempts), 10) || 0 : (s0.bsscAttempts ? parseInt(String(s0.bsscAttempts), 10) || 1 : 1),
-          nonCreamyLayer: s0.nonCreamyLayer === 'YES' || s0.nonCreamyLayer === true || s0.isNonCreamyLayer === 'YES' || s0.isNonCreamyLayer === true,
-          servicePeriod: s0.servicePeriod || null,
-          postName: s0.postName || s0.nameOfPost || null,
-          hasAgreement: s0.hasAgreement === 'YES' || s0.hasAgreement === true || s0.hasAgreement === 'yes' || s0.agreementCircular === 'YES' || s0.agreementCircular === true,
-          contractualPeriod: s0.contractualPeriod || null,
+      await userRepository.updateCandidate(candidateId, {
+        alternateNumber: s0.alternateNumber || s0.alternateNo || (s0.personalInfo && s0.personalInfo.alternateNumber) || null,
+        mobileNumber: s0.mobileNumber || s0.mobileNo || (s0.personalInfo && s0.personalInfo.mobileNumber) || null,
+        dateOfBirth: dobDate,
+        gender: s0.gender || (s0.personalInfo && s0.personalInfo.gender) || null,
+        category: s0.category || s0.categoryId || (s0.reservationCategory && s0.reservationCategory.mainCategory ? String(s0.reservationCategory.mainCategory) : null) || null,
+        caste: s0.caste || s0.casteId || null,
+        biharDomicile: s0.isBiharDomicile === 'YES' || s0.isBiharDomicile === true || s0.domicileOfBihar === 'YES' || s0.domicileOfBihar === true || s0.biharDomicile === 'YES' || s0.biharDomicile === true || (s0.reservationCategory && (s0.reservationCategory.isBiharDomicile === true || s0.reservationCategory.isBiharDomicile === 'YES')),
+        isPwd: s0.isPwd === 'YES' || s0.isPwd === true || s0.disability === 'YES' || s0.disability === true || (s0.reservationCategory && (s0.reservationCategory.isPwd === true || s0.reservationCategory.isPwd === 'YES')),
+        disabilityType: s0.disabilityType || s0.pwdType || s0.natureOfDisability || (s0.reservationCategory && s0.reservationCategory.pwdType ? String(s0.reservationCategory.pwdType) : null) || null,
+        pwd40Percent: s0.pwd40Percent === 'YES' || s0.pwd40Percent === true || s0.pwd40Percent === 'yes' || s0.isMin40PercentPwD === 'YES' || s0.isMin40PercentPwD === true || s0.disabilityPercent === 'YES' || (s0.reservationCategory && (s0.reservationCategory.pwdPercentage !== undefined && s0.reservationCategory.pwdPercentage >= 40)),
+        isExServiceman: s0.isExServiceman === 'YES' || s0.isExServiceman === true || s0.isExsm === 'YES' || s0.isExsm === true || s0.exServiceman === 'YES' || s0.exServiceman === true || (s0.reservationCategory && (s0.reservationCategory.isExServiceman === true || s0.reservationCategory.isExServiceman === 'YES')),
+        isBiharGovtEmp: s0.biharGovtEmp === 'YES' || s0.biharGovtEmp === true || s0.isBiharGovt === 'YES' || s0.isBiharGovt === true || s0.biharGovtEmployee === 'YES' || s0.biharGovtEmployee === true,
+        isContractualEmp: s0.contractualEmp === 'YES' || s0.contractualEmp === true || s0.isContractual === 'YES' || s0.isContractual === true || s0.contractualEmployee === 'YES' || s0.contractualEmployee === true,
+        bsscAttempts: s0.numberOfAttempts ? parseInt(String(s0.numberOfAttempts), 10) || 0 : (s0.bsscAttempts ? parseInt(String(s0.bsscAttempts), 10) || 1 : 1),
+        nonCreamyLayer: s0.nonCreamyLayer === 'YES' || s0.nonCreamyLayer === true || s0.isNonCreamyLayer === 'YES' || s0.isNonCreamyLayer === true,
+        servicePeriod: s0.servicePeriod || null,
+        postName: s0.postName || s0.nameOfPost || null,
+        hasAgreement: s0.hasAgreement === 'YES' || s0.hasAgreement === true || s0.hasAgreement === 'yes' || s0.agreementCircular === 'YES' || s0.agreementCircular === true,
+        contractualPeriod: s0.contractualPeriod || null,
 
-          // Certificate columns
-          domicileCertificateNumber: s0.domicileCertificateNumber || s0.domicileCertNo || (s0.reservationCategory && s0.reservationCategory.domicileCertificateNumber) || null,
-          domicileCertificateAuthority: s0.domicileCertificateAuthority || s0.domicileAuthority || (s0.reservationCategory && s0.reservationCategory.domicileCertificateAuthority) || null,
-          domicileCertificateIssueDate: parseServiceDate(s0.domicileCertificateIssueDate || s0.domicileIssueDate || (s0.reservationCategory && s0.reservationCategory.domicileCertificateIssueDate)),
+        // Certificate columns
+        domicileCertificateNumber: s0.domicileCertificateNumber || s0.domicileCertNo || (s0.reservationCategory && s0.reservationCategory.domicileCertificateNumber) || null,
+        domicileCertificateAuthority: s0.domicileCertificateAuthority || s0.domicileAuthority || (s0.reservationCategory && s0.reservationCategory.domicileCertificateAuthority) || null,
+        domicileCertificateIssueDate: parseServiceDate(s0.domicileCertificateIssueDate || s0.domicileIssueDate || (s0.reservationCategory && s0.reservationCategory.domicileCertificateIssueDate)),
 
-          categoryCertificateNumber: s0.categoryCertificateNumber || s0.categoryCertNo || (s0.reservationCategory && s0.reservationCategory.categoryCertificateNumber) || null,
-          categoryCertificateAuthority: s0.categoryCertificateAuthority || s0.categoryAuthority || (s0.reservationCategory && s0.reservationCategory.categoryCertificateAuthority) || null,
-          categoryCertificateIssueDate: parseServiceDate(s0.categoryCertificateIssueDate || s0.categoryIssueDate || (s0.reservationCategory && s0.reservationCategory.categoryCertificateIssueDate)),
+        categoryCertificateNumber: s0.categoryCertificateNumber || s0.categoryCertNo || (s0.reservationCategory && s0.reservationCategory.categoryCertificateNumber) || null,
+        categoryCertificateAuthority: s0.categoryCertificateAuthority || s0.categoryAuthority || (s0.reservationCategory && s0.reservationCategory.categoryCertificateAuthority) || null,
+        categoryCertificateIssueDate: parseServiceDate(s0.categoryCertificateIssueDate || s0.categoryIssueDate || (s0.reservationCategory && s0.reservationCategory.categoryCertificateIssueDate)),
 
-          pwdCertificateNumber: s0.pwdCertificateNumber || s0.disabilityCertNo || (s0.reservationCategory && s0.reservationCategory.pwdCertificateNumber) || null,
-          pwdCertificateAuthority: s0.pwdCertificateAuthority || s0.disabilityAuthority || (s0.reservationCategory && s0.reservationCategory.pwdCertificateAuthority) || null,
-          pwdCertificateIssueDate: parseServiceDate(s0.pwdCertificateIssueDate || s0.disabilityIssueDate || (s0.reservationCategory && s0.reservationCategory.pwdCertificateIssueDate)),
+        pwdCertificateNumber: s0.pwdCertificateNumber || s0.disabilityCertNo || (s0.reservationCategory && s0.reservationCategory.pwdCertificateNumber) || null,
+        pwdCertificateAuthority: s0.pwdCertificateAuthority || s0.disabilityAuthority || (s0.reservationCategory && s0.reservationCategory.pwdCertificateAuthority) || null,
+        pwdCertificateIssueDate: parseServiceDate(s0.pwdCertificateIssueDate || s0.disabilityIssueDate || (s0.reservationCategory && s0.reservationCategory.pwdCertificateIssueDate)),
 
-          disTypePersist: s0.disTypePersist || s0.natureOfDisabilityType || null,
-          isScribeRequired: s0.isScribeRequired === 'YES' || s0.isScribeRequired === true || s0.isScribeRequired === 'yes',
+        disTypePersist: s0.disTypePersist || s0.natureOfDisabilityType || null,
+        isScribeRequired: s0.isScribeRequired === 'YES' || s0.isScribeRequired === true || s0.isScribeRequired === 'yes',
 
-          organizationName: s0.organizationName || null,
-          hasPostExperience: s0.hasPostExperience === 'YES' || s0.hasPostExperience === true || s0.hasPostExperience === 'yes',
-
-          updatedAt: new Date(),
-        })
-        .where(eq(candidates.id, candidateId));
+        organizationName: s0.organizationName || null,
+        hasPostExperience: s0.hasPostExperience === 'YES' || s0.hasPostExperience === true || s0.hasPostExperience === 'yes',
+      });
     }
 
     // Process Step 1 -> Candidates table (for BSSC flat payload and extra details)
@@ -990,51 +980,46 @@ export class ApplicationService {
         }
       }
 
-      await db
-        .update(candidates)
-        .set({
-          alternateNumber: s1.alternateNumber || s1.alternateNo || (s1.personalInfo && s1.personalInfo.alternateNumber) || null,
-          mobileNumber: s1.mobileNumber || s1.mobileNo || (s1.personalInfo && s1.personalInfo.mobileNumber) || null,
-          dateOfBirth: dobDate,
-          gender: s1.gender || (s1.personalInfo && s1.personalInfo.gender) || null,
-          category: s1.category || s1.categoryId || (s1.reservationCategory && s1.reservationCategory.mainCategory ? String(s1.reservationCategory.mainCategory) : null) || null,
-          caste: s1.caste || s1.casteId || null,
-          biharDomicile: s1.isBiharDomicile === 'YES' || s1.isBiharDomicile === true || s1.domicileOfBihar === 'YES' || s1.domicileOfBihar === true || s1.biharDomicile === 'YES' || s1.biharDomicile === true || (s1.reservationCategory && (s1.reservationCategory.isBiharDomicile === true || s1.reservationCategory.isBiharDomicile === 'YES')),
-          isPwd: s1.isPwd === 'YES' || s1.isPwd === true || s1.disability === 'YES' || s1.disability === true || (s1.reservationCategory && (s1.reservationCategory.isPwd === true || s1.reservationCategory.isPwd === 'YES')),
-          disabilityType: s1.disabilityType || s1.pwdType || s1.natureOfDisability || (s1.reservationCategory && s1.reservationCategory.pwdType ? String(s1.reservationCategory.pwdType) : null) || null,
-          pwd40Percent: s1.pwd40Percent === 'YES' || s1.pwd40Percent === true || s1.pwd40Percent === 'yes' || s1.isMin40PercentPwD === 'YES' || s1.isMin40PercentPwD === true || s1.disabilityPercent === 'YES' || (s1.reservationCategory && (s1.reservationCategory.pwdPercentage !== undefined && s1.reservationCategory.pwdPercentage >= 40)),
-          isExServiceman: s1.isExServiceman === 'YES' || s1.isExServiceman === true || s1.isExsm === 'YES' || s1.isExsm === true || s1.exServiceman === 'YES' || s1.exServiceman === true || (s1.reservationCategory && (s1.reservationCategory.isExServiceman === true || s1.reservationCategory.isExServiceman === 'YES')),
-          isBiharGovtEmp: s1.biharGovtEmp === 'YES' || s1.biharGovtEmp === true || s1.isBiharGovt === 'YES' || s1.isBiharGovt === true || s1.biharGovtEmployee === 'YES' || s1.biharGovtEmployee === true,
-          isContractualEmp: s1.contractualEmp === 'YES' || s1.contractualEmp === true || s1.isContractual === 'YES' || s1.isContractual === true || s1.contractualEmployee === 'YES' || s1.contractualEmployee === true,
-          bsscAttempts: s1.numberOfAttempts ? parseInt(String(s1.numberOfAttempts), 10) || 0 : (s1.bsscAttempts ? parseInt(String(s1.bsscAttempts), 10) || 1 : 1),
-          nonCreamyLayer: s1.nonCreamyLayer === 'YES' || s1.nonCreamyLayer === true || s1.isNonCreamyLayer === 'YES' || s1.isNonCreamyLayer === true,
-          servicePeriod: s1.servicePeriod || null,
-          postName: s1.postName || s1.nameOfPost || null,
-          hasAgreement: s1.hasAgreement === 'YES' || s1.hasAgreement === true || s1.hasAgreement === 'yes' || s1.agreementCircular === 'YES' || s1.agreementCircular === true,
-          contractualPeriod: s1.contractualPeriod || null,
+      await userRepository.updateCandidate(candidateId, {
+        alternateNumber: s1.alternateNumber || s1.alternateNo || (s1.personalInfo && s1.personalInfo.alternateNumber) || null,
+        mobileNumber: s1.mobileNumber || s1.mobileNo || (s1.personalInfo && s1.personalInfo.mobileNumber) || null,
+        dateOfBirth: dobDate,
+        gender: s1.gender || (s1.personalInfo && s1.personalInfo.gender) || null,
+        category: s1.category || s1.categoryId || (s1.reservationCategory && s1.reservationCategory.mainCategory ? String(s1.reservationCategory.mainCategory) : null) || null,
+        caste: s1.caste || s1.casteId || null,
+        biharDomicile: s1.isBiharDomicile === 'YES' || s1.isBiharDomicile === true || s1.domicileOfBihar === 'YES' || s1.domicileOfBihar === true || s1.biharDomicile === 'YES' || s1.biharDomicile === true || (s1.reservationCategory && (s1.reservationCategory.isBiharDomicile === true || s1.reservationCategory.isBiharDomicile === 'YES')),
+        isPwd: s1.isPwd === 'YES' || s1.isPwd === true || s1.disability === 'YES' || s1.disability === true || (s1.reservationCategory && (s1.reservationCategory.isPwd === true || s1.reservationCategory.isPwd === 'YES')),
+        disabilityType: s1.disabilityType || s1.pwdType || s1.natureOfDisability || (s1.reservationCategory && s1.reservationCategory.pwdType ? String(s1.reservationCategory.pwdType) : null) || null,
+        pwd40Percent: s1.pwd40Percent === 'YES' || s1.pwd40Percent === true || s1.pwd40Percent === 'yes' || s1.isMin40PercentPwD === 'YES' || s1.isMin40PercentPwD === true || s1.disabilityPercent === 'YES' || (s1.reservationCategory && (s1.reservationCategory.pwdPercentage !== undefined && s1.reservationCategory.pwdPercentage >= 40)),
+        isExServiceman: s1.isExServiceman === 'YES' || s1.isExServiceman === true || s1.isExsm === 'YES' || s1.isExsm === true || s1.exServiceman === 'YES' || s1.exServiceman === true || (s1.reservationCategory && (s1.reservationCategory.isExServiceman === true || s1.reservationCategory.isExServiceman === 'YES')),
+        isBiharGovtEmp: s1.biharGovtEmp === 'YES' || s1.biharGovtEmp === true || s1.isBiharGovt === 'YES' || s1.isBiharGovt === true || s1.biharGovtEmployee === 'YES' || s1.biharGovtEmployee === true,
+        isContractualEmp: s1.contractualEmp === 'YES' || s1.contractualEmp === true || s1.isContractual === 'YES' || s1.isContractual === true || s1.contractualEmployee === 'YES' || s1.contractualEmployee === true,
+        bsscAttempts: s1.numberOfAttempts ? parseInt(String(s1.numberOfAttempts), 10) || 0 : (s1.bsscAttempts ? parseInt(String(s1.bsscAttempts), 10) || 1 : 1),
+        nonCreamyLayer: s1.nonCreamyLayer === 'YES' || s1.nonCreamyLayer === true || s1.isNonCreamyLayer === 'YES' || s1.isNonCreamyLayer === true,
+        servicePeriod: s1.servicePeriod || null,
+        postName: s1.postName || s1.nameOfPost || null,
+        hasAgreement: s1.hasAgreement === 'YES' || s1.hasAgreement === true || s1.hasAgreement === 'yes' || s1.agreementCircular === 'YES' || s1.agreementCircular === true,
+        contractualPeriod: s1.contractualPeriod || null,
 
-          // Certificate columns
-          domicileCertificateNumber: s1.domicileCertificateNumber || s1.domicileCertNo || (s1.reservationCategory && s1.reservationCategory.domicileCertificateNumber) || null,
-          domicileCertificateAuthority: s1.domicileCertificateAuthority || s1.domicileAuthority || (s1.reservationCategory && s1.reservationCategory.domicileCertificateAuthority) || null,
-          domicileCertificateIssueDate: parseServiceDate(s1.domicileCertificateIssueDate || s1.domicileIssueDate || (s1.reservationCategory && s1.reservationCategory.domicileCertificateIssueDate)),
+        // Certificate columns
+        domicileCertificateNumber: s1.domicileCertificateNumber || s1.domicileCertNo || (s1.reservationCategory && s1.reservationCategory.domicileCertificateNumber) || null,
+        domicileCertificateAuthority: s1.domicileCertificateAuthority || s1.domicileAuthority || (s1.reservationCategory && s1.reservationCategory.domicileCertificateAuthority) || null,
+        domicileCertificateIssueDate: parseServiceDate(s1.domicileCertificateIssueDate || s1.domicileIssueDate || (s1.reservationCategory && s1.reservationCategory.domicileCertificateIssueDate)),
 
-          categoryCertificateNumber: s1.categoryCertificateNumber || s1.categoryCertNo || (s1.reservationCategory && s1.reservationCategory.categoryCertificateNumber) || null,
-          categoryCertificateAuthority: s1.categoryCertificateAuthority || s1.categoryAuthority || (s1.reservationCategory && s1.reservationCategory.categoryCertificateAuthority) || null,
-          categoryCertificateIssueDate: parseServiceDate(s1.categoryCertificateIssueDate || s1.categoryIssueDate || (s1.reservationCategory && s1.reservationCategory.categoryCertificateIssueDate)),
+        categoryCertificateNumber: s1.categoryCertificateNumber || s1.categoryCertNo || (s1.reservationCategory && s1.reservationCategory.categoryCertificateNumber) || null,
+        categoryCertificateAuthority: s1.categoryCertificateAuthority || s1.categoryAuthority || (s1.reservationCategory && s1.reservationCategory.categoryCertificateAuthority) || null,
+        categoryCertificateIssueDate: parseServiceDate(s1.categoryCertificateIssueDate || s1.categoryIssueDate || (s1.reservationCategory && s1.reservationCategory.categoryCertificateIssueDate)),
 
-          pwdCertificateNumber: s1.pwdCertificateNumber || s1.disabilityCertNo || (s1.reservationCategory && s1.reservationCategory.pwdCertificateNumber) || null,
-          pwdCertificateAuthority: s1.pwdCertificateAuthority || s1.disabilityAuthority || (s1.reservationCategory && s1.reservationCategory.pwdCertificateAuthority) || null,
-          pwdCertificateIssueDate: parseServiceDate(s1.pwdCertificateIssueDate || s1.disabilityIssueDate || (s1.reservationCategory && s1.reservationCategory.pwdCertificateIssueDate)),
+        pwdCertificateNumber: s1.pwdCertificateNumber || s1.disabilityCertNo || (s1.reservationCategory && s1.reservationCategory.pwdCertificateNumber) || null,
+        pwdCertificateAuthority: s1.pwdCertificateAuthority || s1.disabilityAuthority || (s1.reservationCategory && s1.reservationCategory.pwdCertificateAuthority) || null,
+        pwdCertificateIssueDate: parseServiceDate(s1.pwdCertificateIssueDate || s1.disabilityIssueDate || (s1.reservationCategory && s1.reservationCategory.pwdCertificateIssueDate)),
 
-          disTypePersist: s1.disTypePersist || s1.natureOfDisabilityType || null,
-          isScribeRequired: s1.isScribeRequired === 'YES' || s1.isScribeRequired === true || s1.isScribeRequired === 'yes',
+        disTypePersist: s1.disTypePersist || s1.natureOfDisabilityType || null,
+        isScribeRequired: s1.isScribeRequired === 'YES' || s1.isScribeRequired === true || s1.isScribeRequired === 'yes',
 
-          organizationName: s1.organizationName || null,
-          hasPostExperience: s1.hasPostExperience === 'YES' || s1.hasPostExperience === true || s1.hasPostExperience === 'yes',
-
-          updatedAt: new Date(),
-        })
-        .where(eq(candidates.id, candidateId));
+        organizationName: s1.organizationName || null,
+        hasPostExperience: s1.hasPostExperience === 'YES' || s1.hasPostExperience === true || s1.hasPostExperience === 'yes',
+      });
     }
 
     // Determine whether this application is using BSSC step numbers (educational details in step 3) or JSSC step numbers (educational details in step 2)
