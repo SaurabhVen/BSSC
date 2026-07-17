@@ -1,103 +1,51 @@
-name: CI/CD Pipeline
+name: Deploy Frontend to AWS (Multi-Environment)
 
 on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
+      - deploy/2026-07-08
 
 jobs:
-  lint-and-test:
-    name: Lint, Test & Validate Migrations
-    runs-on: ubuntu-latest
-    
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_USER: ${{ secrets.DB_USER }}
-          POSTGRES_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          POSTGRES_DB: ${{ secrets.DB_NAME }}
-        ports:
-          - 5432:5432
-        # Set health checks to wait for postgres to start
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-
-      - name: Install Dependencies
-        run: npm ci
-
-      - name: Lint Code
-        run: npm run lint
-
-      - name: Run Migrations Check
-        env:
-          DATABASE_URL: postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@localhost:5432/${{ secrets.DB_NAME }}
-        run: |
-          npm run db:generate
-          npm run db:migrate
-
-      - name: Run Tests
-        env:
-          DATABASE_URL: postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@localhost:5432/${{ secrets.DB_NAME }}
-          JWT_SECRET: test-jwt-secret-key-1234567890123456
-          MOCK_COGNITO: true
-          MOCK_S3: true
-          MOCK_PAYMENT: true
-          MOCK_SMS_EMAIL: true
-        run: npm test
-
   deploy:
-    name: Deploy to AWS
-    needs: lint-and-test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: 24
+          cache: 'npm'
 
-      - name: Install Dependencies
-        run: npm ci
+      - name: Install dependencies and compile
+        run: |
+          npm install
+          npm run build
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-region: us-east-2
 
-      - name: Deploy Serverless Service
-        run: npx serverless deploy --stage prod
-        env:
-          DATABASE_URL: postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@${{ secrets.DB_HOST }}:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}?sslmode=require
-          COGNITO_USER_POOL_ID: ${{ secrets.COGNITO_USER_POOL_ID }}
-          COGNITO_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
-          COGNITO_CLIENT_SECRET: ${{ secrets.COGNITO_CLIENT_SECRET }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          S3_BUCKET: ${{ secrets.S3_BUCKET }}
-          RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
-          RAZORPAY_SECRET: ${{ secrets.RAZORPAY_SECRET }}
-          MOCK_COGNITO: 'false'
-          MOCK_S3: 'false'
-          MOCK_PAYMENT: 'false'
-          MOCK_SMS_EMAIL: 'false'
+      # --- DEV DEPLOYMENT (Now targeting deploy/2026-07-08) ---
+      - name: Deploy to Dev S3
+        if: github.ref == 'refs/heads/deploy/2026-07-08'
+        run: aws s3 sync ./dist s3://${{ vars.DEV_S3_BUCKET }} --delete
+
+      - name: Invalidate Dev CloudFront Cache
+        if: github.ref == 'refs/heads/deploy/2026-07-08'
+        run: aws cloudfront create-invalidation --distribution-id ${{ vars.DEV_CLOUDFRONT_ID }} --paths "/*"
+
+      # --- PRODUCTION DEPLOYMENT ---
+      - name: Deploy to Production S3
+        if: github.ref == 'refs/heads/main'
+        run: aws s3 sync ./dist s3://${{ vars.PROD_S3_BUCKET }} --delete
+
+      - name: Invalidate Production CloudFront Cache
+        if: github.ref == 'refs/heads/main'
+        run: aws cloudfront create-invalidation --distribution-id ${{ vars.PROD_CLOUDFRONT_ID }} --paths "/*"
