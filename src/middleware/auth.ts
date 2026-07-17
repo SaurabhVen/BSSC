@@ -26,11 +26,15 @@ export const authenticate = async (event: APIGatewayProxyEventV2): Promise<Authe
   console.log('Decoded JWT payload:', decoded);
 
   
-  let userId = decoded.sub;
   let email = decoded.email;
+  if (!email) {
+    throw new UnauthorizedError('Invalid token: email claim is missing.');
+  }
 
-  if (userRepository && typeof userRepository.findById === 'function') {
-    const dbUser = await userRepository.findById(decoded.sub);
+  let userId = '';
+
+  if (userRepository && typeof userRepository.findByEmail === 'function') {
+    const dbUser = await userRepository.findByEmail(email);
     if (!dbUser) {
       throw new UnauthorizedError(
         'We could not find an account with these details. Please register a new account or check your information.'

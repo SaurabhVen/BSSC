@@ -121,9 +121,9 @@ export const handler = async (
       roleId = inserted[0].id;
     }
 
-    // 3. Create user locally, using Cognito sub ID as the primary key id
+    // 3. Create user locally, generating a local UUID as the primary key
     const user = await userRepository.create({
-      id: userSub,
+      id: uuidv4(),
       email: email.toLowerCase().trim(),
       passwordHash: 'COGNITO_CONFIRMED_USER', // Federated or Cognito-validated user indicator
       fullName,

@@ -208,6 +208,7 @@ export class UserRepository {
         return {
           ...core,
           ...meta,
+          id: core.id,
         } as unknown as Candidate;
       });
       return result;

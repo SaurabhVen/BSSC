@@ -1,4 +1,5 @@
 import { userRepository } from '../repositories/user.repository';
+import { v4 as uuidv4 } from 'uuid';
 import { captchaRepository, otpRepository } from '../repositories/common.repository';
 import {
   compareHash,
@@ -37,7 +38,6 @@ import type {
 import type { User, Candidate } from '../database/schema';
 import config from '../config';
 
-import { getUserByCognitoSubId } from './../utils/cognito';
 import { log } from 'console';
 export interface LoginResult {
   user: Omit<User, 'passwordHash'>;
@@ -209,10 +209,10 @@ export class AuthService {
       }
     }
 
-    // 2. Create user locally using the Cognito sub as DB primary key
+    // 2. Create user locally using a locally generated UUID as the primary key
     const passwordHash = await generateHash(input.password);
     const user = await userRepository.create({
-      id: cognitoSub,
+      id: uuidv4(),
       email: input.email,
       passwordHash,
       fullName: input.fullName,
@@ -395,7 +395,7 @@ export class AuthService {
 
     const passwordHash = await generateHash(input.password);
     const user = await userRepository.create({
-      id: cognitoSub,
+      id: uuidv4(),
       email: input.email,
       passwordHash,
       fullName: input.fullName,
