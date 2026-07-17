@@ -4,7 +4,7 @@
   "description": "Enterprise-grade serverless backend for BSSC Portal (TypeScript)",
   "main": "dist/handlers/auth.js",
   "scripts": {
-    "build": "tsc --build",
+    "build": "tsc",
     "dev": "serverless offline start --host 0.0.0.0 --httpPort 3000",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "ts-node src/database/migrate.ts",
