@@ -579,14 +579,31 @@ export class ApplicationService {
         }
 
         if (dobDate && !isNaN(dobDate.getTime())) {
-          const cat = s0.category || s0.categoryId || (s0.reservationCategory && s0.reservationCategory.mainCategory ? String(s0.reservationCategory.mainCategory) : 'ur');
+          const rawCat = s0.mainCategory || s0.category || s0.categoryId || (s0.reservationCategory && s0.reservationCategory.mainCategory ? String(s0.reservationCategory.mainCategory) : 'unreserved');
+          let catValue = 'unreserved';
+          if (rawCat) {
+            const cleanCat = String(rawCat).trim();
+            if (isNaN(Number(cleanCat))) {
+              catValue = cleanCat;
+            } else {
+              const catRecord = await db
+                .select()
+                .from(categories)
+                .where(eq(categories.catId, Number(cleanCat)))
+                .limit(1);
+              if (catRecord.length > 0) {
+                catValue = catRecord[0].catValue || 'unreserved';
+              }
+            }
+          }
+
           const gender = s0.gender || (s0.personalInfo && s0.personalInfo.gender) || 'male';
           const isPwd = s0.isPwd === 'YES' || s0.isPwd === true || s0.disability === 'YES' || s0.disability === true;
           const isExServiceman = s0.isExServiceman === 'YES' || s0.isExServiceman === true || s0.exServiceman === 'YES' || s0.exServiceman === true;
           const exServicemanYears = s0.exServicemanYears ? Number(s0.exServicemanYears) : 0;
           const isGovtServant = s0.biharGovtEmp === 'YES' || s0.biharGovtEmp === true || s0.isBiharGovt === 'YES' || s0.isBiharGovt === true || s0.biharGovtEmployee === 'YES' || s0.biharGovtEmployee === true;
 
-          const limits = getBSSCAgeLimits(String(cat), gender, isPwd, isExServiceman, exServicemanYears, isGovtServant);
+          const limits = getBSSCAgeLimits(catValue, gender, isPwd, isExServiceman, exServicemanYears, isGovtServant);
           maxAgeVal = limits.maxAge;
 
           // Check if candidate qualified on or before 2022-08-01 for carry-forward check
@@ -905,10 +922,11 @@ export class ApplicationService {
     if (stepDataMap[0]) {
       const s0 = stepDataMap[0];
 
-      let dobStr = s0.dateOfBirth || s0.dob || (s0.personalInfo && s0.personalInfo.dob);
+      const dobStr = s0.dateOfBirth || s0.dob || (s0.personalInfo && s0.personalInfo.dob);
       let dobDate: Date | null = null;
       if (dobStr) {
         if (typeof dobStr === 'string' && dobStr.includes('-')) {
+          
           const parts = dobStr.split('-');
           if (parts[0].length === 2) {
             dobDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
@@ -925,7 +943,7 @@ export class ApplicationService {
         mobileNumber: s0.mobileNumber || s0.mobileNo || (s0.personalInfo && s0.personalInfo.mobileNumber) || null,
         dateOfBirth: dobDate,
         gender: s0.gender || (s0.personalInfo && s0.personalInfo.gender) || null,
-        category: s0.category || s0.categoryId || (s0.reservationCategory && s0.reservationCategory.mainCategory ? String(s0.reservationCategory.mainCategory) : null) || null,
+        category: s0.category || s0.categoryId || s0.mainCategory || (s0.reservationCategory && s0.reservationCategory.mainCategory ? String(s0.reservationCategory.mainCategory) : null) || null,
         caste: s0.caste || s0.casteId || null,
         biharDomicile: s0.isBiharDomicile === 'YES' || s0.isBiharDomicile === true || s0.domicileOfBihar === 'YES' || s0.domicileOfBihar === true || s0.biharDomicile === 'YES' || s0.biharDomicile === true || (s0.reservationCategory && (s0.reservationCategory.isBiharDomicile === true || s0.reservationCategory.isBiharDomicile === 'YES')),
         isPwd: s0.isPwd === 'YES' || s0.isPwd === true || s0.disability === 'YES' || s0.disability === true || (s0.reservationCategory && (s0.reservationCategory.isPwd === true || s0.reservationCategory.isPwd === 'YES')),
@@ -965,7 +983,7 @@ export class ApplicationService {
     // Process Step 1 -> Candidates table (for BSSC flat payload and extra details)
     if (stepDataMap[1]) {
       const s1 = stepDataMap[1];
-      let dobStr = s1.dateOfBirth || s1.dob || (s1.personalInfo && s1.personalInfo.dob);
+      const dobStr = s1.dateOfBirth || s1.dob || (s1.personalInfo && s1.personalInfo.dob);
       let dobDate: Date | null = null;
       if (dobStr) {
         if (typeof dobStr === 'string' && dobStr.includes('-')) {
@@ -985,7 +1003,7 @@ export class ApplicationService {
         mobileNumber: s1.mobileNumber || s1.mobileNo || (s1.personalInfo && s1.personalInfo.mobileNumber) || null,
         dateOfBirth: dobDate,
         gender: s1.gender || (s1.personalInfo && s1.personalInfo.gender) || null,
-        category: s1.category || s1.categoryId || (s1.reservationCategory && s1.reservationCategory.mainCategory ? String(s1.reservationCategory.mainCategory) : null) || null,
+        category: s1.category || s1.categoryId || s1.mainCategory || (s1.reservationCategory && s1.reservationCategory.mainCategory ? String(s1.reservationCategory.mainCategory) : null) || null,
         caste: s1.caste || s1.casteId || null,
         biharDomicile: s1.isBiharDomicile === 'YES' || s1.isBiharDomicile === true || s1.domicileOfBihar === 'YES' || s1.domicileOfBihar === true || s1.biharDomicile === 'YES' || s1.biharDomicile === true || (s1.reservationCategory && (s1.reservationCategory.isBiharDomicile === true || s1.reservationCategory.isBiharDomicile === 'YES')),
         isPwd: s1.isPwd === 'YES' || s1.isPwd === true || s1.disability === 'YES' || s1.disability === true || (s1.reservationCategory && (s1.reservationCategory.isPwd === true || s1.reservationCategory.isPwd === 'YES')),

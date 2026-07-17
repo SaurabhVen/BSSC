@@ -15,6 +15,7 @@ import {
   ListUsersCommand,
   ListUserPoolsCommand,
   AdminSetUserPasswordCommand,
+  GetUserCommand,
 } from '@aws-sdk/client-cognito-identity-provider';
 import jwt from 'jsonwebtoken';
 import jwksRsa from 'jwks-rsa';
@@ -434,6 +435,7 @@ export const cognitoAdminUpdateUserAttributes = async (
 export interface JwtPayload {
   sub: string;
   email: string;
+  username?: string;
   'cognito:groups'?: string[];
   iat?: number;
   exp?: number;
@@ -716,6 +718,52 @@ export const getCognitoUserByEmail = async (email: string): Promise<Record<strin
     return userData;
   } catch (error) {
     console.error('Error in getCognitoUserByEmail:', error);
+    return null;
+  }
+};
+
+export const getUserByAccessToken = async (
+  accessToken: string
+): Promise<Record<string, any> | null> => {
+  if (config.MOCK_COGNITO) {
+    return {
+      username: 'mock-user',
+      Attributes: [
+        { Name: 'sub', Value: 'mock-sub' },
+        { Name: 'email', Value: 'mock-candidate@example.com' },
+      ],
+    };
+  }
+
+  try {
+    const response = await cognitoClient.send(
+      new GetUserCommand({
+        AccessToken: accessToken,
+      })
+    );
+
+    const attributes = response.UserAttributes;
+    if (!attributes) {
+      return null;
+    }
+
+    const userData: Record<string, any> = {
+      username: response.Username || '',
+      Attributes: attributes,
+    };
+
+    for (const attr of attributes) {
+      if (attr.Name && attr.Value !== undefined) {
+        let val: any = attr.Value;
+        if (val === 'true') val = true;
+        else if (val === 'false') val = false;
+        userData[attr.Name] = val;
+      }
+    }
+
+    return userData;
+  } catch (error) {
+    console.error('Error in getUserByAccessToken:', error);
     return null;
   }
 };

@@ -386,13 +386,32 @@ export class AuthController {
       throw new ValidationError([], 'Candidate must be at least 21 years old as of 01-08-2025');
     }
 
+    let catValue = 'unreserved';
+    if (input.reservationCategory?.mainCategory) {
+      const db = getDb();
+      const catRecord = await db
+        .select()
+        .from(categories)
+        .where(eq(categories.catId, input.reservationCategory.mainCategory))
+        .limit(1);
+      if (catRecord.length > 0) {
+        catValue = catRecord[0].catValue || 'unreserved';
+      }
+    }
+
+    const isGovtServant =
+      input.reservationCategory?.biharGovtEmp === 'YES' ||
+      input.reservationCategory?.biharGovtEmp === true ||
+      input.reservationCategory?.biharGovtEmp === 'true' ||
+      candidate.isBiharGovtEmp === true;
+
     const limits = getBSSCAgeLimits(
-      String(input.reservationCategory?.mainCategory || '1'),
+      catValue,
       input.personalInfo.gender || 'Male',
       input.reservationCategory?.isPwd === true,
       input.reservationCategory?.isExServiceman === true,
       Number(input.reservationCategory?.exServicemanYears || 0),
-      candidate.isBiharGovtEmp === true,
+      isGovtServant,
       false // candidates table does not have isCommissionedOfficer column
     );
 
@@ -503,7 +522,7 @@ export class AuthController {
       declaration: rc.declaration,
 
       // Additional BSSC properties from flat body/rawBody
-      biharGovtEmp: (rawBody as any).biharGovtEmployee || (rawBody as any).biharGovtEmp || 'NO',
+      biharGovtEmp: rc.biharGovtEmp || (rawBody as any).biharGovtEmployee || (rawBody as any).biharGovtEmp || 'NO',
       bsscAttempts: (rawBody as any).numberOfAttempts || (rawBody as any).bsscAttempts || '0',
       contractualEmp: (rawBody as any).contractualEmployee || (rawBody as any).contractualEmp || 'NO',
       nonCreamyLayer: (rawBody as any).isNonCreamyLayer || (rawBody as any).nonCreamyLayer || 'NO',

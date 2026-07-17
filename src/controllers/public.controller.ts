@@ -1,4 +1,5 @@
 import type { APIGatewayProxyEventV2 } from 'aws-lambda';
+import axios from 'axios';
 import { response } from '../helpers/response';
 import { parseEvent } from '../helpers/request';
 import { getBSSCAgeLimits, calculateExactAge, checkBSSCEligibility } from '../utils/age';
@@ -170,6 +171,23 @@ export class PublicController {
       });
     } catch (err) {
       throw new DatabaseError('Failed to fetch ex-officer types', err as Error);
+    }
+  }
+
+  async getIpAddress(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
+    try {
+      const { data } = await axios.get('https://checkip.amazonaws.com');
+      const publicIp = typeof data === 'string' ? data.trim() : '';
+
+      return response.success(200, {
+        message: 'IP address retrieved successfully',
+        data: {
+          ip: publicIp
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching IP address:', error);
+      return response.error(500, { message: 'Failed to retrieve IP address' });
     }
   }
 

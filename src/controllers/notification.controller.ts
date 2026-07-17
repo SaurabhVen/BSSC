@@ -15,19 +15,21 @@ export class NotificationController {
     let emailBody = '';
 
     switch (input.templateType) {
-      case 'registrationSuccess':
+      case 'registrationSuccess': {
         const reg = notificationService.renderRegistrationSuccessEmail(input.details);
         subject = reg.subject;
         emailBody = reg.body;
         break;
+      }
 
-      case 'submissionSuccess':
+      case 'submissionSuccess': {
         const sub = notificationService.renderSubmissionSuccessEmail(input.details);
         subject = sub.subject;
         emailBody = sub.body;
         break;
+      }
 
-      case 'emailOtp':
+      case 'emailOtp': {
         const otp = notificationService.renderEmailOtpEmail(
           input.details.otp,
           input.details.examName
@@ -35,6 +37,7 @@ export class NotificationController {
         subject = otp.subject;
         emailBody = otp.body;
         break;
+      }
     }
 
     await notificationService.sendEmail(input.email, subject, emailBody);

@@ -55,6 +55,11 @@ provider:
   timeout: 29
   logRetentionInDays: 14
   versionFunctions: false
+  vpc:
+    securityGroupIds:
+      - sg-0813f46da8ff12906
+    subnetIds:
+      - subnet-02343312243a19ab9
   httpApi:
     cors:
       allowedOrigins:
@@ -721,18 +726,25 @@ functions:
 
   # ── Public ─────────────────────────────────────────────────
   getAgeLimits:
-    handler: src/handlers/public.getAgeLimits
+    handler: src/handlers/publicHandlers.getAgeLimits
     events:
       - httpApi:
           path: /api/v1/public/age-limits
           method: POST
 
   getCognitoSubId:
-    handler: src/handlers/public.getCognitoSubId
+    handler: src/handlers/publicHandlers.getCognitoSubId
     events:
       - httpApi:
           path: /api/v1/public/cognito-sub
           method: POST
+
+  getIpAddress:
+    handler: src/handlers/getIpAddress.handler
+    events:
+      - httpApi:
+          path: /api/v1/public/ip
+          method: GET
 
   listTypeOfExOfficers:
     handler: src/handlers/public/listTypeOfExOfficers.handler

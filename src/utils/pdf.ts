@@ -243,7 +243,7 @@ export async function generateApplicationHtml(data: PdfGenerationData): Promise<
     `;
   }
 
-  let unsubmittedDocNames = expectedDocs.filter(doc => !(documents && documents[doc.key])).map(d => d.label);
+  const unsubmittedDocNames = expectedDocs.filter(doc => !(documents && documents[doc.key])).map(d => d.label);
   let docNote = '';
   if (unsubmittedDocNames.length > 0) {
     docNote = `<p class="doc-note">

@@ -386,6 +386,7 @@ export const candidateStep1Schema = z.object({
       pwdCertificateIssueDate: z.string().nullable().default(''),
       isExServiceman: z.boolean().default(false),
       exServicemanYears: z.number().nullable().default(null),
+      biharGovtEmp: z.union([z.boolean(), z.string()]).optional().nullable(),
       isSportsQuota: z.boolean().default(false),
       sportsLevel: z.string().nullable().default(''),
       sportsAchievement: z.string().nullable().default(''),
