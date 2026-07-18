@@ -3,6 +3,10 @@ import { getDb } from '../database/drizzle';
 import {
   users,
   candidates,
+<<<<<<< HEAD
+=======
+  candidateMetadata,
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   type User,
   type NewUser,
   type Candidate,
@@ -38,6 +42,7 @@ export class UserRepository {
     }
   }
 
+<<<<<<< HEAD
   // REMOVED COGNITO COMPATIBILITY:
   // async findByCognitoSubId(id: string): Promise<User | null> {
   //   try {
@@ -48,6 +53,8 @@ export class UserRepository {
   //     throw new DatabaseError('Failed to find user by Cognito Sub ID', err as Error);
   //   }
   // }
+=======
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 
   async create(data: NewUser): Promise<User> {
     try {
@@ -101,15 +108,36 @@ export class UserRepository {
 
   // ── Candidates ───────────────────────────────────────────────
 
+<<<<<<< HEAD
+=======
+  private mapJoinedCandidate(row: any): Candidate | null {
+    if (!row) return null;
+    const core = row.candidates;
+    const meta = row.candidate_metadata || row.candidateMetadata;
+    return {
+      ...meta,
+      ...core,
+      id: core.id,
+    } as unknown as Candidate;
+  }
+
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   async findCandidateByUserId(userId: string): Promise<Candidate | null> {
     try {
       const db = getDb();
       const result = await db
         .select()
         .from(candidates)
+<<<<<<< HEAD
         .where(eq(candidates.userId, userId))
         .limit(1);
       return result[0] ?? null;
+=======
+        .leftJoin(candidateMetadata, eq(candidates.id, candidateMetadata.candidateId))
+        .where(eq(candidates.userId, userId))
+        .limit(1);
+      return this.mapJoinedCandidate(result[0]);
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     } catch (err) {
       throw new DatabaseError('Failed to find candidate by user ID', err as Error);
     }
@@ -118,8 +146,18 @@ export class UserRepository {
   async findCandidateById(id: string): Promise<Candidate | null> {
     try {
       const db = getDb();
+<<<<<<< HEAD
       const result = await db.select().from(candidates).where(eq(candidates.id, id)).limit(1);
       return result[0] ?? null;
+=======
+      const result = await db
+        .select()
+        .from(candidates)
+        .leftJoin(candidateMetadata, eq(candidates.id, candidateMetadata.candidateId))
+        .where(eq(candidates.id, id))
+        .limit(1);
+      return this.mapJoinedCandidate(result[0]);
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     } catch (err) {
       throw new DatabaseError('Failed to find candidate by ID', err as Error);
     }
@@ -131,9 +169,16 @@ export class UserRepository {
       const result = await db
         .select()
         .from(candidates)
+<<<<<<< HEAD
         .where(eq(candidates.registrationNumber, regNo))
         .limit(1);
       return result[0] ?? null;
+=======
+        .leftJoin(candidateMetadata, eq(candidates.id, candidateMetadata.candidateId))
+        .where(eq(candidates.registrationNumber, regNo))
+        .limit(1);
+      return this.mapJoinedCandidate(result[0]);
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     } catch (err) {
       throw new DatabaseError('Failed to find candidate by registration number', err as Error);
     }
@@ -142,13 +187,129 @@ export class UserRepository {
   async createCandidate(data: NewCandidate): Promise<Candidate> {
     try {
       const db = getDb();
+<<<<<<< HEAD
       const result = await db.insert(candidates).values(data).returning();
       return result[0];
+=======
+      const result = await db.transaction(async (tx) => {
+        const coreInsert = {
+          id: data.id,
+          userId: data.userId,
+          registrationNumber: data.registrationNumber,
+          dateOfBirth: data.dateOfBirth,
+          mobileNumber: data.mobileNumber,
+          alternateNumber: data.alternateNumber,
+          mobileVerified: data.mobileVerified,
+          emailVerified: data.emailVerified,
+          createdAt: data.createdAt,
+          createdBy: data.createdBy,
+          updatedAt: data.updatedAt,
+          updatedBy: data.updatedBy,
+          version: data.version,
+        };
+        const coreRows = await tx.insert(candidates).values(coreInsert).returning();
+        const core = coreRows[0];
+
+        const metaInsert = {
+          candidateId: core.id,
+          gender: data.gender,
+          category: data.category,
+          caste: data.caste,
+          biharDomicile: data.biharDomicile,
+          isPwd: data.isPwd,
+          disabilityType: data.disabilityType,
+          pwd40Percent: data.pwd40Percent,
+          isExServiceman: data.isExServiceman,
+          isBiharGovtEmp: data.isBiharGovtEmp,
+          isContractualEmp: data.isContractualEmp,
+          bsscAttempts: data.bsscAttempts,
+          nonCreamyLayer: data.nonCreamyLayer,
+          servicePeriod: data.servicePeriod,
+          postName: data.postName,
+          hasAgreement: data.hasAgreement,
+          contractualPeriod: data.contractualPeriod,
+          domicileCertificateNumber: data.domicileCertificateNumber,
+          domicileCertificateAuthority: data.domicileCertificateAuthority,
+          domicileCertificateIssueDate: data.domicileCertificateIssueDate,
+          categoryCertificateNumber: data.categoryCertificateNumber,
+          categoryCertificateAuthority: data.categoryCertificateAuthority,
+          categoryCertificateIssueDate: data.categoryCertificateIssueDate,
+          pwdCertificateNumber: data.pwdCertificateNumber,
+          pwdCertificateAuthority: data.pwdCertificateAuthority,
+          pwdCertificateIssueDate: data.pwdCertificateIssueDate,
+          disTypePersist: data.disTypePersist,
+          isScribeRequired: data.isScribeRequired,
+          organizationName: data.organizationName,
+          hasPostExperience: data.hasPostExperience,
+        };
+        const metaRows = await tx.insert(candidateMetadata).values(metaInsert).returning();
+        const meta = metaRows[0];
+
+        return {
+          ...core,
+          ...meta,
+          id: core.id,
+        } as unknown as Candidate;
+      });
+      return result;
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     } catch (err) {
       throw new DatabaseError('Failed to create candidate', err as Error);
     }
   }
 
+<<<<<<< HEAD
+=======
+  async updateCandidate(candidateId: string, updates: Partial<Candidate>): Promise<void> {
+    try {
+      const db = getDb();
+      await db.transaction(async (tx) => {
+        const coreUpdates: any = {};
+        if (updates.alternateNumber !== undefined) coreUpdates.alternateNumber = updates.alternateNumber;
+        if (updates.mobileNumber !== undefined) coreUpdates.mobileNumber = updates.mobileNumber;
+        if (updates.dateOfBirth !== undefined) coreUpdates.dateOfBirth = updates.dateOfBirth;
+        if (updates.mobileVerified !== undefined) coreUpdates.mobileVerified = updates.mobileVerified;
+        if (updates.emailVerified !== undefined) coreUpdates.emailVerified = updates.emailVerified;
+        if (updates.registrationNumber !== undefined) coreUpdates.registrationNumber = updates.registrationNumber;
+
+        if (Object.keys(coreUpdates).length > 0) {
+          await tx
+            .update(candidates)
+            .set({ ...coreUpdates, updatedAt: new Date() })
+            .where(eq(candidates.id, candidateId));
+        }
+
+        const metaUpdates: any = {};
+        const metaFields = [
+          'gender', 'category', 'caste', 'biharDomicile', 'isPwd', 'disabilityType',
+          'pwd40Percent', 'isExServiceman', 'isBiharGovtEmp', 'isContractualEmp',
+          'bsscAttempts', 'nonCreamyLayer', 'servicePeriod', 'postName', 'hasAgreement',
+          'contractualPeriod', 'domicileCertificateNumber', 'domicileCertificateAuthority',
+          'domicileCertificateIssueDate', 'categoryCertificateNumber', 'categoryCertificateAuthority',
+          'categoryCertificateIssueDate', 'pwdCertificateNumber', 'pwdCertificateAuthority',
+          'pwdCertificateIssueDate', 'disTypePersist', 'isScribeRequired', 'organizationName',
+          'hasPostExperience'
+        ];
+
+        for (const field of metaFields) {
+          if ((updates as any)[field] !== undefined) {
+            metaUpdates[field] = (updates as any)[field];
+          }
+        }
+
+        if (Object.keys(metaUpdates).length > 0) {
+          await tx
+            .update(candidateMetadata)
+            .set({ ...metaUpdates, updatedAt: new Date() })
+            .where(eq(candidateMetadata.candidateId, candidateId));
+        }
+      });
+    } catch (err) {
+      throw new DatabaseError('Failed to update candidate profile', err as Error);
+    }
+  }
+
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   async updateCandidateVerification(
     candidateId: string,
     updates: Partial<Pick<Candidate, 'mobileVerified' | 'emailVerified'>>

@@ -10,7 +10,11 @@ import { v4 as uuidv4 } from 'uuid';
 async function main() {
   const db = getDb();
   const email = 'awanish@vensysco.in';
+<<<<<<< HEAD
   
+=======
+
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   // Find or create role
   let candidateRole = await db.select().from(roles).where(eq(roles.name, 'candidate')).limit(1);
   let roleId: string;
@@ -48,7 +52,11 @@ async function main() {
       mobileVerified: true,
       emailVerified: true,
     });
+<<<<<<< HEAD
     
+=======
+
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     console.log(`Created user ID: ${userId}`);
   } else {
     userId = user[0].id;

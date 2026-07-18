@@ -1226,7 +1226,11 @@ components:
         sportsAchievement:
           type: string
           example: ''
+<<<<<<< HEAD
         isJharkhandDomicile:
+=======
+        isBiharDomicile:
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
           type: string
           enum:
             - 'yes'

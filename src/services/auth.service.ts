@@ -1,10 +1,15 @@
 import { userRepository } from '../repositories/user.repository';
+<<<<<<< HEAD
+=======
+import { v4 as uuidv4 } from 'uuid';
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 import { captchaRepository, otpRepository } from '../repositories/common.repository';
 import {
   compareHash,
   generateHash,
   generateRegistrationNumber,
   generateRandomToken,
+<<<<<<< HEAD
 
 } from '../utils/crypto';
 import { calculateBSSCAge } from '../utils/age';
@@ -14,6 +19,21 @@ import { verifyCaptchaText } from '../utils/captcha';
 import {
   generateTokens,
 } from '../utils/jwt';
+=======
+} from '../utils/crypto';
+import { verifyCaptchaText } from '../utils/captcha';
+import {
+  cognitoLogin,
+  cognitoRegister,
+  cognitoRefreshToken,
+  cognitoForgotPassword,
+  cognitoConfirmForgotPassword,
+  cognitoSignOut,
+  type CognitoTokens,
+  cognitoUpdateUserAttributes,
+  cognitoAdminSetUserPassword,
+} from '../utils/cognito';
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 import {
   AppError,
   ConflictError,
@@ -34,6 +54,7 @@ import type { User, Candidate } from '../database/schema';
 import config from '../config';
 
 import { log } from 'console';
+<<<<<<< HEAD
 
 export interface LocalTokens {
   accessToken: string;
@@ -45,6 +66,12 @@ export interface LoginResult {
   user: Omit<User, 'passwordHash'>;
   candidate: Candidate | null;
   tokens: LocalTokens;
+=======
+export interface LoginResult {
+  user: Omit<User, 'passwordHash'>;
+  candidate: Candidate | null;
+  tokens: CognitoTokens;
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 }
 
 export interface RegisterResult {
@@ -53,10 +80,13 @@ export interface RegisterResult {
   registrationNumber?: string;
   email: string;
 }
+<<<<<<< HEAD
 export const generateRandomPassword = (): string => {
   const random = Math.floor(100000 + Math.random() * 900000);
   return `BSSC@${random}`;
 };
+=======
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 
 export class AuthService {
   // ── CAPTCHA ──────────────────────────────────────────────────
@@ -122,10 +152,40 @@ export class AuthService {
         'The email address or password you entered is incorrect. Please check your details and try again.'
       );
 
+<<<<<<< HEAD
     const userWithRole = await userRepository.findUserWithRole(user.id);
     const roleName = userWithRole?.roleName ?? 'candidate';
 
     const tokens = generateTokens(user.id, user.email, [roleName]);
+=======
+    let tokens: CognitoTokens;
+    try {
+      tokens = await cognitoLogin(input.email, input.password);
+    } catch (cognitoError) {
+      console.warn(
+        'Cognito login failed, generating local fallback JWT:',
+        (cognitoError as Error).message
+      );
+      const jwt = await import('jsonwebtoken');
+      const userWithRole = await userRepository.findUserWithRole(user.id);
+      const roleName = userWithRole?.roleName ?? 'candidate';
+      const roleGroup = roleName.charAt(0).toUpperCase() + roleName.slice(1) + 's';
+      tokens = {
+        accessToken: jwt.default.sign(
+          { sub: user.id, email: user.email, 'cognito:groups': [roleGroup] },
+          config.JWT_SECRET,
+          { expiresIn: 3600 }
+        ),
+        refreshToken: jwt.default.sign({ sub: user.id }, config.JWT_SECRET, {
+          expiresIn: '30d',
+        }),
+        idToken: jwt.default.sign({ sub: user.id, email: user.email }, config.JWT_SECRET, {
+          expiresIn: 3600,
+        }),
+        expiresIn: 3600,
+      };
+    }
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 
     await userRepository.updateLastLogin(user.id);
     const candidate = await userRepository.findCandidateByUserId(user.id);
@@ -137,6 +197,13 @@ export class AuthService {
   // ── Register ─────────────────────────────────────────────────
 
   async register(input: RegisterInput): Promise<RegisterResult> {
+<<<<<<< HEAD
+=======
+    // if (!input.cognitoSubId) {
+    //   await this.validateCaptcha(input.captchaId!, input.captchaText!);
+    // }
+
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     const existingUser = await userRepository.findByEmail(input.email);
     if (existingUser) {
       throw new ConflictError(
@@ -150,12 +217,17 @@ export class AuthService {
     const db = getDb();
 
     // Determine the role
+<<<<<<< HEAD
     const roleName = 'candidate';
+=======
+    const roleName = input.cognitoSubId ? 'admin' : 'candidate';
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     const roleRows = await db.select().from(roles).where(eq(roles.name, roleName)).limit(1);
     const targetRoleId = roleRows[0]?.id;
     if (!targetRoleId)
       throw new AppError(`System configuration error: ${roleName} role not found`, 500);
 
+<<<<<<< HEAD
     const { v4: uuidv4 } = await import('uuid');
     const userId = uuidv4();
 
@@ -166,12 +238,51 @@ export class AuthService {
     const passwordHash = await generateHash(generatedPassword);
     const user = await userRepository.create({
       id: userId,
+=======
+    // 1. Obtain user's Cognito sub ID
+    let cognitoSub: string;
+    if (input.cognitoSubId) {
+      try {
+        await cognitoUpdateUserAttributes(input.cognitoSubId, {
+          name: input.fullName,
+          phone_number: `+91${input.mobileNumber}`,
+        });
+        await cognitoAdminSetUserPassword(input.cognitoSubId, input.password);
+        cognitoSub = input.cognitoSubId;
+      } catch (err) {
+        if (!config.MOCK_COGNITO) {
+          throw new AppError(`Cognito registration failed: ${(err as Error).message}`, 400);
+        }
+        cognitoSub = input.cognitoSubId;
+      }
+    } else {
+      try {
+        const cognitoResult = await cognitoRegister(input.email, input.password, {
+          name: input.fullName,
+          phone_number: `+91${input.mobileNumber}`,
+        });
+        cognitoSub = cognitoResult.userSub;
+      } catch (err) {
+        if (!config.MOCK_COGNITO) {
+          throw new AppError(`Cognito registration failed: ${(err as Error).message}`, 400);
+        }
+        const { v4: uuidv4 } = await import('uuid');
+        cognitoSub = uuidv4();
+      }
+    }
+
+    // 2. Create user locally using a locally generated UUID as the primary key
+    const passwordHash = await generateHash(input.password);
+    const user = await userRepository.create({
+      id: uuidv4(),
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
       email: input.email,
       passwordHash,
       fullName: input.fullName,
       roleId: targetRoleId,
     });
 
+<<<<<<< HEAD
     const registrationNumber = generateRegistrationNumber('BSSC');
     const candidate = await userRepository.createCandidate({
       userId: user.id,
@@ -188,13 +299,97 @@ export class AuthService {
       userId: user.id,
       candidateId: candidate.id,
       registrationNumber,
+=======
+    if (roleName === 'candidate') {
+      const registrationNumber = generateRegistrationNumber('BSSC');
+      const candidate = await userRepository.createCandidate({
+        userId: user.id,
+        registrationNumber,
+        dateOfBirth: input.dateOfBirth
+          ? new Date(input.dateOfBirth.split('-').reverse().join('-'))
+          : null,
+        mobileNumber: input.mobileNumber ?? null,
+        mobileVerified: false,
+        emailVerified: false,
+      });
+
+      // 3. Update Cognito attributes with registration_no and preferred_username
+      try {
+        const { cognitoAdminUpdateUserAttributes } = await import('../utils/cognito');
+        await cognitoAdminUpdateUserAttributes(input.email, {
+          'custom:registration_no': registrationNumber,
+          'preferred_username': registrationNumber,
+        });
+
+        // Optionally update custom:registration_number if defined
+        try {
+          await cognitoAdminUpdateUserAttributes(input.email, {
+            'custom:registration_number': registrationNumber,
+          });
+        } catch (innerErr) {
+          // Skip if custom:registration_number does not exist in pool schema
+        }
+      } catch (err) {
+        console.warn(
+          'Updating candidate attributes in Cognito failed (non-fatal):',
+          (err as Error).message
+        );
+      }
+
+      // 4. Send email to candidate with registration number and password
+      try {
+        const { notificationService } = await import('./notification.service');
+        const emailTemplate = notificationService.renderRegistrationSuccessEmail({
+          candidateName: input.fullName,
+          applicationNo: registrationNumber,
+          password: input.password,
+          email: input.email,
+        });
+        await notificationService.sendEmail(input.email, emailTemplate.subject, emailTemplate.body);
+        console.log(`[Registration Email] Successfully sent credentials to ${input.email}`);
+      } catch (err) {
+        console.warn(
+          'Sending registration success email failed (non-fatal):',
+          (err as Error).message
+        );
+      }
+
+      return {
+        userId: user.id,
+        candidateId: candidate.id,
+        registrationNumber,
+        email: user.email,
+      };
+    }
+
+    return {
+      userId: user.id,
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
       email: user.email,
     };
   }
 
   async candidateRegister(input: CandidateRegisterInput): Promise<RegisterResult> {
+<<<<<<< HEAD
     const existingUser = await userRepository.findByEmail(input.email);
     if (existingUser) {
+=======
+    // try {
+    //   await this.validateCaptcha(input.captchaId, input.captchaText);
+    // } catch (err: any) {
+    //   if (err.message === 'Incorrect CAPTCHA' || err.message === 'Invalid or expired CAPTCHA' || err.message === 'CAPTCHA has expired') {
+    //     throw new ValidationError([{ field: 'captchaText', message: 'Incorrect CAPTCHA answer' }], 'Incorrect CAPTCHA answer');
+    //   }
+    //   throw err;
+    // }
+    // const congitoSub = await getUserByCognitoSubId(input.cognitoSubId);
+    // const dbUser = await userRepository.findByCognitoSubId(input.cognitoSubId);
+    // if (congitoSub && dbUser) {
+    //   throw new ConflictError('User already exists');
+    // }
+    const dbUser = await userRepository.findByEmail(input.email);
+    if (dbUser) {
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
       throw new ConflictError('User already exists');
     }
 
@@ -208,11 +403,94 @@ export class AuthService {
       throw new AppError('System configuration error: candidate role not found', 500);
     }
 
+<<<<<<< HEAD
     const { v4: uuidv4 } = await import('uuid');
     const userId = uuidv4();
     const passwordHash = await generateHash(generateRandomPassword());
     const user = await userRepository.create({
       id: userId,
+=======
+    let cognitoSub: string;
+    const nameParts = input.fullName.trim().split(/\s+/);
+    const firstName = nameParts[0] || 'Candidate';
+    const lastName = nameParts.slice(1).join(' ') || 'Name';
+
+    const cognitoAttrs: Record<string, string> = {
+      given_name: firstName,
+      family_name: lastName,
+      name: input.fullName,
+      phone_number: `+91${input.mobileNumber}`,
+    };
+
+    if (input.dateOfBirth) {
+      const parts = input.dateOfBirth.split('-');
+      if (parts.length === 3) {
+        cognitoAttrs['birthdate'] = `${parts[2]}-${parts[1]}-${parts[0]}`;
+      }
+    }
+
+    if ((input as any).gender) {
+      cognitoAttrs['gender'] = (input as any).gender;
+    }
+
+    const customKeys = [
+      'bihar_domicile',
+      'bihar_govt_emp',
+      'bssc_attempts',
+      'caste',
+      'category',
+      'contractual_emp',
+      'disability_type',
+      'ex_serviceman',
+      'is_pwd',
+      'mobile_no',
+      'non_creamy_layer',
+      'pwd_40_percent',
+      'contractual_period',
+      'post_name',
+      'has_agreement',
+      'service_period',
+      'dis_type_persist',
+      'is_scribe_required',
+      'organization_name',
+      'has_post_experience',
+    ];
+
+    for (const key of customKeys) {
+      const val = (input as any)[key];
+      if (val !== undefined && val !== null) {
+        cognitoAttrs[`custom:${key}`] = String(val);
+      }
+    }
+
+    try {
+      const cognitoResult = await cognitoRegister(input.email, input.password, cognitoAttrs);
+      cognitoSub = cognitoResult.userSub;
+    } catch (err) {
+      if (!config.MOCK_COGNITO) {
+        throw new AppError(`Cognito registration failed: ${(err as Error).message}`, 400);
+      }
+      const { v4: uuidv4 } = await import('uuid');
+      cognitoSub = uuidv4();
+    }
+    // try {
+    //   await cognitoUpdateUserAttributes(input.cognitoSubId, {
+    //     name: input.fullName,
+    //     phone_number: `+91${input.mobileNumber}`,
+    //   });
+    //   await cognitoAdminSetUserPassword(input.cognitoSubId, input.password);
+    //   cognitoSub = input.cognitoSubId;
+    // } catch (err) {
+    //   if (!config.MOCK_COGNITO) {
+    //     throw new AppError(`Cognito registration failed: ${(err as Error).message}`, 400);
+    //   }
+    //   cognitoSub = input.cognitoSubId;
+    // }
+
+    const passwordHash = await generateHash(input.password);
+    const user = await userRepository.create({
+      id: uuidv4(),
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
       email: input.email,
       passwordHash,
       fullName: input.fullName,
@@ -220,6 +498,7 @@ export class AuthService {
     });
 
     const registrationNumber = generateRegistrationNumber('BSSC');
+<<<<<<< HEAD
     const candidate = await userRepository.createCandidate({
       userId: user.id,
       registrationNumber,
@@ -250,6 +529,100 @@ export class AuthService {
       emailVerified: true,
     });
 
+=======
+
+    const isBiharDomicile = input.bihar_domicile === 'YES';
+    const isPwd = input.is_pwd === 'YES';
+    const isExsm = input.ex_serviceman === 'YES';
+    const isBiharGovt = input.bihar_govt_emp === 'YES';
+    const isContractual = input.contractual_emp === 'YES';
+    const nonCreamy = input.non_creamy_layer === 'YES';
+    const pwd40 = input.pwd_40_percent === 'YES';
+    const hasAgreement = input.has_agreement === 'YES';
+
+    const parsedAttempts = parseInt(input.bssc_attempts || '1', 10);
+    const attempts = isNaN(parsedAttempts) ? 1 : parsedAttempts;
+
+    const mapCategoryValue = (val: string): string => {
+      const normalized = (val || '').toLowerCase().trim();
+      if (normalized.includes('extremely backward') || normalized.includes('ebc') || normalized.includes('अत्यंत')) return 'ebc1';
+      if (normalized.includes('backward class') || normalized.includes('bc') || normalized.includes('अनुसूची-2')) return 'bc2';
+      if (normalized.includes('scheduled caste') || normalized.includes('sc') || normalized.includes('अनुसूचित जाति')) return 'sc';
+      if (normalized.includes('scheduled tribe') || normalized.includes('st') || normalized.includes('अनुसूचित जनजाति')) return 'st';
+      if (normalized.includes('unreserved') || normalized.includes('general') || normalized.includes('ur') || normalized.includes('गैर')) return 'unreserved';
+      return normalized;
+    };
+    const categoryCode = mapCategoryValue(input.category || '');
+
+    const candidate = await userRepository.createCandidate({
+      userId: user.id,
+      registrationNumber,
+      dateOfBirth: new Date(input.dateOfBirth.split('-').reverse().join('-')),
+      mobileNumber: input.mobileNumber,
+      mobileVerified: true,
+      emailVerified: true,
+
+      // Custom BSSC Metadata fields mapped from candidate registration input
+      gender: input.gender || null,
+      category: categoryCode || null,
+      caste: input.caste || null,
+      biharDomicile: isBiharDomicile,
+      isPwd: isPwd,
+      disabilityType: input.disability_type || null,
+      pwd40Percent: pwd40,
+      isExServiceman: isExsm,
+      isBiharGovtEmp: isBiharGovt,
+      isContractualEmp: isContractual,
+      bsscAttempts: attempts,
+      nonCreamyLayer: nonCreamy,
+      postName: input.post_name || null,
+      hasAgreement: hasAgreement,
+      contractualPeriod: input.contractual_period || null,
+      servicePeriod: input.service_period || null,
+      disTypePersist: input.dis_type_persist || null,
+      isScribeRequired: input.is_scribe_required === 'YES',
+      organizationName: input.organization_name || null,
+      hasPostExperience: input.has_post_experience === 'YES',
+    });
+
+    try {
+      const { cognitoAdminUpdateUserAttributes } = await import('../utils/cognito');
+      await cognitoAdminUpdateUserAttributes(input.email, {
+        'custom:registration_no': registrationNumber,
+        'preferred_username': registrationNumber,
+      });
+
+      // Optionally update custom:registration_number if defined
+      try {
+        await cognitoAdminUpdateUserAttributes(input.email, {
+          'custom:registration_number': registrationNumber,
+        });
+      } catch (innerErr) {
+        // Skip if custom:registration_number does not exist in pool schema
+      }
+    } catch (err) {
+      console.warn('Updating candidate attributes in Cognito failed (non-fatal):', (err as Error).message);
+    }
+
+    // Send email to candidate with registration number and password
+    try {
+      const { notificationService } = await import('./notification.service');
+      const emailTemplate = notificationService.renderRegistrationSuccessEmail({
+        candidateName: input.fullName,
+        applicationNo: registrationNumber,
+        password: input.password,
+        email: input.email,
+      });
+      await notificationService.sendEmail(input.email, emailTemplate.subject, emailTemplate.body);
+      console.log(`[Registration Email] Successfully sent credentials to ${input.email}`);
+    } catch (err) {
+      console.warn(
+        'Sending registration success email failed (non-fatal):',
+        (err as Error).message
+      );
+    }
+
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     return {
       userId: user.id,
       candidateId: candidate.id,
@@ -260,6 +633,7 @@ export class AuthService {
 
   // ── Refresh Token ────────────────────────────────────────────
 
+<<<<<<< HEAD
   async refreshToken(input: RefreshTokenInput): Promise<LocalTokens> {
     const user = await userRepository.findByEmail(input.email);
     if (!user)
@@ -279,11 +653,22 @@ export class AuthService {
   }
 
   // ── Forgot Password  ──────────────────────────────────────────
+=======
+  async refreshToken(input: RefreshTokenInput): Promise<CognitoTokens> {
+    const user = await userRepository.findByEmail(input.email);
+    if (!user)
+      throw new UnauthorizedError('Your session has expired. Please log in again to continue.');
+    return cognitoRefreshToken(input.email, input.refreshToken);
+  }
+
+  // ── Forgot Password ──────────────────────────────────────────
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 
   async forgotPassword(input: ForgotPasswordInput): Promise<void> {
     await this.validateCaptcha(input.captchaId, input.captchaText);
     const user = await userRepository.findByEmail(input.email);
     if (!user) return; // Security: don't reveal whether email exists
+<<<<<<< HEAD
 
     const jwt = await import('jsonwebtoken');
     const resetToken = jwt.default.sign(
@@ -292,11 +677,15 @@ export class AuthService {
       { expiresIn: '15m' }
     );
     console.log(`[Reset Token generated for ${user.email}]: ${resetToken}`);
+=======
+    await cognitoForgotPassword(input.email);
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   }
 
   // ── Reset Password ────────────────────────────────────────────
 
   async resetPassword(input: ResetPasswordInput): Promise<void> {
+<<<<<<< HEAD
     const jwt = await import('jsonwebtoken');
     let decoded: any;
     try {
@@ -319,6 +708,25 @@ export class AuthService {
 
     const passwordHash = await generateHash(input.newPassword);
     await userRepository.updatePassword(user.id, passwordHash);
+=======
+    if (config.MOCK_COGNITO) {
+      // In mock mode, token is the userId
+      const user = await userRepository.findById(input.token);
+      if (!user)
+        throw new AppError(
+          'The password reset link is invalid or has expired. Please request a new one.',
+          400
+        );
+      const passwordHash = await generateHash(input.newPassword);
+      await userRepository.updatePassword(user.id, passwordHash);
+      return;
+    }
+    await cognitoConfirmForgotPassword(
+      input.token, // token = email in Cognito flow
+      input.token,
+      input.newPassword
+    );
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   }
 
   // ── Change Password ───────────────────────────────────────────
@@ -754,7 +1162,15 @@ export class AuthService {
   // ── Logout ────────────────────────────────────────────────────
 
   async logout(accessToken: string): Promise<void> {
+<<<<<<< HEAD
     // Stateless JWT logout (handled on frontend by discarding the token)
+=======
+    try {
+      await cognitoSignOut(accessToken);
+    } catch (err) {
+      console.warn('Cognito sign-out failed (non-fatal):', (err as Error).message);
+    }
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   }
 }
 

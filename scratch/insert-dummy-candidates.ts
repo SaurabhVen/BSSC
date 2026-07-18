@@ -43,8 +43,12 @@ async function main() {
     const [insertedUser] = await db.insert(users).values({
       email,
       passwordHash,
+<<<<<<< HEAD
       firstName,
       lastName,
+=======
+      fullName: `${firstName} ${lastName}`,
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
       roleId,
       isActive: true,
     }).returning();

@@ -26,10 +26,20 @@ export function parseBSSCDate(dateStr: string | Date): Date {
  * @param dobInput Date of birth (string or Date)
  * @returns Object containing years, months, and days
  */
+<<<<<<< HEAD
 export function calculateExactAge(dobInput: string | Date): { years: number; months: number; days: number } {
   const dob = parseBSSCDate(dobInput);
   if (isNaN(dob.getTime())) return { years: 0, months: 0, days: 0 };
   const refDate = new Date('2025-08-01');
+=======
+export function calculateExactAge(
+  dobInput: string | Date,
+  referenceDate?: string | Date
+): { years: number; months: number; days: number } {
+  const dob = parseBSSCDate(dobInput);
+  if (isNaN(dob.getTime())) return { years: 0, months: 0, days: 0 };
+  const refDate = referenceDate ? new Date(referenceDate) : new Date('2025-08-01');
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 
   let years = refDate.getFullYear() - dob.getFullYear();
   let months = refDate.getMonth() - dob.getMonth();
@@ -94,6 +104,7 @@ export function getBSSCAgeLimits(
   categoryValue: string,
   gender: string,
   isPwd: boolean,
+<<<<<<< HEAD
   isExServiceman: boolean
 ): AgeLimits {
   const minAge = 21;
@@ -101,6 +112,15 @@ export function getBSSCAgeLimits(
 
   const catVal = (categoryValue || '').toLowerCase();
   const genderLower = (gender || '').toLowerCase();
+=======
+  isExServiceman: boolean,
+  exServicemanYears: number = 0,
+  isGovtServant: boolean = false,
+  isCommissionedOfficer: boolean = false
+): AgeLimits {
+  const catVal = (categoryValue || '').toLowerCase().trim();
+  const genderLower = (gender || '').toLowerCase().trim();
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 
   const isScSt = [
     'sc',
@@ -115,6 +135,7 @@ export function getBSSCAgeLimits(
     'sauria_pahariya',
     'savar',
     'other',
+<<<<<<< HEAD
   ].includes(catVal);
   const isBc = ['bc1', 'bc2'].includes(catVal);
 
@@ -134,11 +155,46 @@ export function getBSSCAgeLimits(
   }
 
   return { minAge, maxAge };
+=======
+    '54',
+  ].includes(catVal);
+  const isBc = ['bc1', 'bc2', 'bc-i', 'bc-ii', 'ebc', 'bc', '50', '51', '52', '53', 'ebc1'].includes(catVal);
+
+  let baseMax = 37; // Default UR/EWS Male
+  if (isScSt) {
+    baseMax = 42;
+  } else if (isBc || genderLower === 'transgender') {
+    baseMax = 40;
+  } else if (genderLower === 'female') {
+    baseMax = 40; // UR/EWS Female
+  }
+
+  let maxAge = baseMax;
+
+  // Apply relaxations
+  if (isPwd) {
+    maxAge = baseMax + 10;
+  } else if (isExServiceman) {
+    if (isCommissionedOfficer) {
+      maxAge = Math.min(baseMax + 5, 53);
+    } else {
+      const extraForScSt = isScSt ? 5 : 0;
+      maxAge = Math.min(baseMax + 3 + exServicemanYears + extraForScSt, 53);
+    }
+  } else if (isGovtServant) {
+    maxAge = baseMax + 5;
+  }
+
+  return { minAge: 21, maxAge };
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 }
 
 /**
  * Checks if a candidate is strictly within the age limits on the reference date.
+<<<<<<< HEAD
  * If overage by even 1 day, returns false.
+=======
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
  */
 export function checkBSSCEligibility(
   dobInput: string | Date,
@@ -146,6 +202,7 @@ export function checkBSSCEligibility(
   maxAge: number,
   referenceDate?: string | Date
 ): boolean {
+<<<<<<< HEAD
   const dob = parseBSSCDate(dobInput);
   if (isNaN(dob.getTime())) return false;
 
@@ -164,4 +221,16 @@ export function checkBSSCEligibility(
   const latestTime = new Date(latestDob.getFullYear(), latestDob.getMonth(), latestDob.getDate()).getTime();
 
   return dobTime >= earliestTime && dobTime <= latestTime;
+=======
+  const age = calculateExactAge(dobInput, referenceDate);
+  if (age.years === 0 && age.months === 0 && age.days === 0) {
+    // Invalid date or birthdate matches refDate (underage)
+    return false;
+  }
+
+  const isAtLeastMin = age.years >= minAge;
+  const isAtMostMax = age.years < maxAge || (age.years === maxAge && age.months === 0 && age.days === 0);
+
+  return isAtLeastMin && isAtMostMax;
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 }

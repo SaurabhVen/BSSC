@@ -1,0 +1,91 @@
+{
+  "step0_registration": {
+    "email": "saurabh+9@vensysco.in",
+    "password": "Password@12345",
+    "name": "Saurabh Mishra",
+    "phone_number": "+918382044417",
+    "gender": "MALE",
+    "birthdate": "1999-10-16",
+    "custom:category": "UR",
+    "custom:bihar_domicile": "NO",
+    "custom:is_pwd": "NO",
+    "custom:ex_serviceman": "NO"
+  },
+  "step1_personal_info": {
+    "fullName": "Saurabh Mishra",
+    "fatherName": "Father Name",
+    "motherName": "Mother Name",
+    "dateOfBirth": "16-10-1999",
+    "gender": "male",
+    "maritalStatus": "unmarried",
+    "nationality": "Indian",
+    "identityType": "aadhaar",
+    "identityNumber": "123456789012",
+    "identificationMark1": "Mole on right cheek",
+    "identificationMark2": "",
+    "mobileNumber": "8382044417",
+    "alternateNumber": "",
+    "emailId": "saurabh+9@vensysco.in",
+    "address": {
+      "permanent": {
+        "street": "123 Test Street",
+        "post": "Test Post",
+        "district": "Patna",
+        "city": "Patna",
+        "state": "Bihar",
+        "pincode": "800001",
+        "country": "India"
+      },
+      "correspondence": {
+        "sameAsPermanent": true
+      }
+    }
+  },
+  "step2_payment_initiate": {
+    "applicationId": "0b935ecc-5543-4107-b71b-b4f737d04b8c"
+  },
+  "step2_payment_verify": {
+    "razorpay_order_id": "order_mock123",
+    "razorpay_payment_id": "pay_mock123",
+    "razorpay_signature": "mock_signature_abc123"
+  },
+  "step3_education": {
+    "highestQualification": "graduation",
+    "qualifications": [
+      {
+        "level": "matriculation",
+        "boardUniversity": "CBSE",
+        "institutionName": "Test School",
+        "degree": "10th",
+        "specialization": "General",
+        "rollNumber": "1234567",
+        "yearOfPassing": 2015,
+        "totalMarks": 500,
+        "marksObtained": 450,
+        "percentage": 90,
+        "grade": "A"
+      },
+      {
+        "level": "graduation",
+        "boardUniversity": "Patna University",
+        "institutionName": "Science College",
+        "degree": "B.Sc",
+        "specialization": "Physics",
+        "rollNumber": "987654",
+        "yearOfPassing": 2020,
+        "totalMarks": 1000,
+        "marksObtained": 850,
+        "percentage": 85,
+        "grade": "A"
+      }
+    ]
+  },
+  "step4_photo_signature": {
+    "photograph": "ae5016c6-947b-402a-96e0-ca469b9ee32e",
+    "signatureEnglish": "48f6d78f-9193-4fad-896d-842c09806ee7",
+    "signatureHindi": "fc05f384-ab4d-4f8f-83b6-5f008a9e4086"
+  },
+  "step5_live_photo": {
+    "livePhoto": "92ffc9af-1ff6-4dce-835a-9b8fef102293"
+  }
+}

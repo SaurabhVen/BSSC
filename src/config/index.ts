@@ -18,10 +18,21 @@ const envSchema = z.object({
   AWS_ACCESS_KEY_ID: z.string().optional().default('mock-key'),
   AWS_SECRET_ACCESS_KEY: z.string().optional().default('mock-secret'),
 
+<<<<<<< HEAD
+=======
+  COGNITO_USER_POOL_ID: z.string().optional().default('us-east-1_mockPoolId'),
+  COGNITO_CLIENT_ID: z.string().optional().default('mockClientId1234567890'),
+  COGNITO_CLIENT_SECRET: z.string().optional().default('mockClientSecret1234567890'),
+
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   JWT_SECRET: z.string().default('super-secret-jwt-key-for-local-development-only-12345678'),
   S3_BUCKET: z.string().default('candidate-portal-documents-bucket'),
   SECRETS_MANAGER_NAME: z.string().default('candidate-portal/secrets'),
 
+<<<<<<< HEAD
+=======
+  MOCK_COGNITO: z.preprocess((val) => val === 'true', z.boolean()).default(false),
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   MOCK_S3: z.preprocess((val) => val === 'true', z.boolean()).default(false),
   MOCK_PAYMENT: z.preprocess((val) => val === 'true', z.boolean()).default(false),
   MOCK_SMS_EMAIL: z.preprocess((val) => val === 'true', z.boolean()).default(false),
@@ -39,6 +50,16 @@ const envSchema = z.object({
   GETEPAY_RETURN_URL: z.string().optional().default('https://api-jtglcce.panjikaran.in'),
   FRONTEND_URL: z.string().optional().default('https://jtglcce-2026.panjikaran.in'),
   SES_SOURCE_EMAIL: z.string().optional().default('noreply@bssc-portal.gov.in'),
+<<<<<<< HEAD
+=======
+
+  // BSSC Fee Settings
+  FEE_UR_EBC_BC_MALE: z.coerce.number().default(540),
+  FEE_SC_ST_BIHAR: z.coerce.number().default(135),
+  FEE_PWD_BIHAR: z.coerce.number().default(135),
+  FEE_WOMEN_BIHAR: z.coerce.number().default(135),
+  FEE_OUTSIDE_BIHAR: z.coerce.number().default(540),
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 });
 
 export type AppConfig = z.infer<typeof envSchema>;

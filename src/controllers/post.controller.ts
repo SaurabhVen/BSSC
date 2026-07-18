@@ -8,8 +8,14 @@ import {
   applicationStepData,
   jobQualifications,
   categories,
+<<<<<<< HEAD
 } from '../database/schema';
 import { calculateBSSCAge, getBSSCAgeLimits, calculateExactAge } from '../utils/age';
+=======
+  applications,
+} from '../database/schema';
+import { calculateBSSCAge, getBSSCAgeLimits, calculateExactAge, checkBSSCEligibility } from '../utils/age';
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 import { eq, inArray } from 'drizzle-orm';
 import { response } from '../helpers/response';
 import { AppError, DatabaseError, NotFoundError } from '../errors/AppError';
@@ -44,6 +50,16 @@ export class PostController {
       }
 
       const db = getDb();
+<<<<<<< HEAD
+=======
+      const appRecord = await db
+        .select()
+        .from(applications)
+        .where(eq(applications.id, applicationId))
+        .limit(1);
+      const applicationObj = appRecord[0];
+
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
       const allStepData = await db
         .select()
         .from(applicationStepData)
@@ -69,9 +85,15 @@ export class PostController {
       if (step0Data?.dateOfBirth) {
         const dobStr = String(step0Data.dateOfBirth);
         // Safely parse date and calculate age using the updated calculateBSSCAge utility
+<<<<<<< HEAD
         candidateAge = calculateBSSCAge(dobStr);
 
         const exactAge = calculateExactAge(dobStr);
+=======
+        candidateAge = calculateBSSCAge(dobStr, '2025-08-01');
+
+        const exactAge = calculateExactAge(dobStr, '2025-08-01');
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         candidateAge = exactAge.years;
 
         // Get category value
@@ -91,6 +113,7 @@ export class PostController {
         const isPwd = step1Data?.isPwd === true || step1Data?.isPwd === 'true';
         const isExServiceman =
           step1Data?.isExServiceman === true || step1Data?.isExServiceman === 'true';
+<<<<<<< HEAD
 
         const limits = getBSSCAgeLimits(catValue, gender, isPwd, isExServiceman);
 
@@ -99,6 +122,47 @@ export class PostController {
           exactAge.years > limits.maxAge ||
           (exactAge.years === limits.maxAge && (exactAge.months > 0 || exactAge.days > 0))
         ) {
+=======
+        const exServicemanYears = Number(step1Data?.exServicemanYears || 0);
+        const isGovtServant =
+          step1Data?.isGovtServant === true || step1Data?.isGovtServant === 'true';
+        const isCommissionedOfficer =
+          step1Data?.isCommissionedOfficer === true || step1Data?.isCommissionedOfficer === 'true';
+
+        // Check if candidate qualified on or before 2022-08-01
+        let qualifiedPre2022 = false;
+        if (step2Data) {
+          if (Array.isArray(step2Data.qualifications)) {
+            const grad = step2Data.qualifications.find((q: any) => q.level === 'graduation');
+            if (grad && grad.passingYear) {
+              qualifiedPre2022 = Number(grad.passingYear) <= 2022;
+            }
+          } else if (step2Data.graduation && step2Data.graduation.passingYear) {
+            qualifiedPre2022 = Number(step2Data.graduation.passingYear) <= 2022;
+          }
+        }
+
+        const limits = getBSSCAgeLimits(
+          catValue,
+          gender,
+          isPwd,
+          isExServiceman,
+          exServicemanYears,
+          isGovtServant,
+          isCommissionedOfficer
+        );
+
+        // Reference date for ex-serviceman check is time of application (submissionDate or current date)
+        const refDateForMax = isExServiceman
+          ? (applicationObj?.submissionDate ? new Date(applicationObj.submissionDate) : new Date())
+          : new Date('2025-08-01');
+
+        const isMinAgeEligible = checkBSSCEligibility(dobStr, limits.minAge, 150, '2025-08-01');
+        const isMaxAgeEligibleBase = checkBSSCEligibility(dobStr, 0, limits.maxAge, refDateForMax);
+        const isMaxAgeEligibleCarryForward = checkBSSCEligibility(dobStr, 0, limits.maxAge, '2022-08-01') && qualifiedPre2022;
+
+        if (!isMinAgeEligible || (!isMaxAgeEligibleBase && !isMaxAgeEligibleCarryForward)) {
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
           isEligibleByAge = false;
         }
       }

@@ -15,10 +15,24 @@ import { sendPaymentSuccessSms } from '../utils/sms';
 import { sendPaymentSuccessEmail } from '../utils/email';
 
 const FEE_AMOUNTS: Record<string, number> = {
+<<<<<<< HEAD
+=======
+  /* Original JSSC Fee Amounts:
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   general: 100,
   obc: 100,
   sc_st: 50,
   pwd: 0,
+<<<<<<< HEAD
+=======
+  */
+  general: config.FEE_UR_EBC_BC_MALE,
+  obc: config.FEE_UR_EBC_BC_MALE,
+  sc_st: config.FEE_SC_ST_BIHAR,
+  pwd: config.FEE_PWD_BIHAR,
+  women: config.FEE_WOMEN_BIHAR,
+  outside_bihar: config.FEE_OUTSIDE_BIHAR,
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 };
 
 export interface InitiatePaymentInput {
@@ -64,12 +78,44 @@ export class PaymentService {
     if (!userRecord) throw new NotFoundError('User profile not found');
 
     const existingPayments = await paymentRepository.findByApplicationId(input.applicationId);
+<<<<<<< HEAD
+=======
+
+    // Double check if any pending payments succeeded at the gateway
+    for (const payment of existingPayments) {
+      if (payment.status === 'pending' && payment.paymentOrderId) {
+        try {
+          const gateway = process.env.PAYMENT_GATEWAY || 'getepay';
+          if (gateway === 'getepay') {
+            const getepayRes = await GetepayAdapter.verifyPayment(payment.paymentOrderId);
+            if (getepayRes.txnStatus === 'SUCCESS' || getepayRes.paymentStatus === 'SUCCESS') {
+              await this.verifyPayment({
+                paymentOrderId: payment.paymentOrderId,
+                getepayPaymentId: getepayRes.getepayTxnId || payment.paymentOrderId,
+                transactionId: getepayRes.getepayTxnId || payment.paymentOrderId,
+                gatewayResponse: getepayRes,
+              });
+              payment.status = 'completed';
+            }
+          }
+        } catch (err) {
+          console.error(`[Requery] Failed to check pending payment during initiation:`, err);
+        }
+      }
+    }
+
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     const completedPayment = existingPayments.find((p) => p.status === 'completed');
     if (completedPayment) {
       throw new AppError('Payment has already been completed for this application', 409);
     }
 
+<<<<<<< HEAD
     // Securely calculate fee from Step 1 Data
+=======
+    // Securely calculate fee from step data
+    /* Original JSSC Fee Calculation (Commented Out):
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     const db = getDb();
     const step1Record = await db
       .select()
@@ -101,12 +147,21 @@ export class PaymentService {
         step1Data?.isExServiceman === 'yes' ||
         step1Data?.isExServiceman === 'YES' ||
         step1Data?.isExServiceman === 1;
+<<<<<<< HEAD
       const isJharkhandDomicile =
         step1Data?.isJharkhandDomicile === true ||
         step1Data?.isJharkhandDomicile === 'true' ||
         step1Data?.isJharkhandDomicile === 'yes' ||
         step1Data?.isJharkhandDomicile === 'YES' ||
         step1Data?.isJharkhandDomicile === 1;
+=======
+      const isBiharDomicile =
+        step1Data?.isBiharDomicile === true ||
+        step1Data?.isBiharDomicile === 'true' ||
+        step1Data?.isBiharDomicile === 'yes' ||
+        step1Data?.isBiharDomicile === 'YES' ||
+        step1Data?.isBiharDomicile === 1;
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 
       let catValue = 'unreserved';
       if (step1Data?.mainCategory) {
@@ -135,21 +190,115 @@ export class PaymentService {
         'other',
       ].includes((catValue || '').toLowerCase());
 
+<<<<<<< HEAD
       if (isPwd && isJharkhandDomicile) {
         amount = 0;
       } else if (isJharkhandDomicile && isScSt) {
+=======
+      if (isPwd && isBiharDomicile) {
+        amount = 0;
+      } else if (isBiharDomicile && isScSt) {
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         amount = 50;
       } else {
         amount = 100;
       }
     }
+<<<<<<< HEAD
+=======
+    */
+    const db = getDb();
+    const stepRecords = await db
+      .select()
+      .from(applicationStepData)
+      .where(eq(applicationStepData.applicationId, input.applicationId));
+
+    const step0Record = stepRecords.find((r) => r.stepNumber === 0);
+    const step1Record = stepRecords.find((r) => r.stepNumber === 1);
+
+    let amount = config.FEE_UR_EBC_BC_MALE; // Default standard fee
+    if (step1Record) {
+      const step1Data =
+        typeof step1Record.data === 'string'
+          ? JSON.parse(step1Record.data)
+          : step1Record.data;
+
+      const isPwd =
+        step1Data?.isPwd === true ||
+        step1Data?.isPwd === 'true' ||
+        step1Data?.isPwd === 'yes' ||
+        step1Data?.isPwd === 'YES' ||
+        step1Data?.isPwd === 1;
+
+      const isBiharDomicile =
+        step1Data?.isBiharDomicile === true ||
+        step1Data?.isBiharDomicile === 'true' ||
+        step1Data?.isBiharDomicile === 'yes' ||
+        step1Data?.isBiharDomicile === 'YES' ||
+        step1Data?.isBiharDomicile === 1;
+
+      let catValue = 'unreserved';
+      if (step1Data?.mainCategory) {
+        const catRecord = await db
+          .select()
+          .from(categories)
+          .where(eq(categories.catId, step1Data.mainCategory))
+          .limit(1);
+        if (catRecord.length > 0) {
+          catValue = catRecord[0].catValue || 'unreserved';
+        }
+      }
+
+      const isScSt = [
+        'sc',
+        'st',
+        'primitive',
+        'asur',
+        'birhor',
+        'birjia',
+        'korwa',
+        'mal_pahariya',
+        'pahariya',
+        'sauria_pahariya',
+        'savar',
+        'other',
+      ].includes((catValue || '').toLowerCase());
+
+      let gender = 'male';
+      if (step0Record) {
+        const step0Data =
+          typeof step0Record.data === 'string'
+            ? JSON.parse(step0Record.data)
+            : step0Record.data;
+        if (step0Data?.gender) {
+          gender = step0Data.gender;
+        }
+      }
+
+      if (!isBiharDomicile) {
+        amount = config.FEE_OUTSIDE_BIHAR;
+      } else if (isPwd) {
+        amount = config.FEE_PWD_BIHAR;
+      } else if ((gender || '').toLowerCase() === 'female') {
+        amount = config.FEE_WOMEN_BIHAR;
+      } else if (isScSt) {
+        amount = config.FEE_SC_ST_BIHAR;
+      } else {
+        amount = config.FEE_UR_EBC_BC_MALE;
+      }
+    }
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     // Create actual Razorpay Order if fee > 0
     let paymentOrderId = `order_${generateUUID().substring(0, 14).toUpperCase()}`;
     let paymentUrl = '';
 
     if (amount > 0 && !config.MOCK_PAYMENT) {
       try {
+<<<<<<< HEAD
         const rcptId = `rcpt_${input.applicationId.substring(0, 20).replace(/-/g, '')}`;
+=======
+        const rcptId = `rcpt_${input.applicationId.substring(0, 20).replace(/-/g, '')}_${Date.now()}`;
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         const gateway = process.env.PAYMENT_GATEWAY || 'getepay';
 
         if (gateway === 'getepay') {
@@ -194,6 +343,7 @@ export class PaymentService {
 
       // const appRecord = await applicationRepository.findById(input.applicationId);
       // if (appRecord) {
+<<<<<<< HEAD
       //   const completedSteps = Array.from(new Set([...appRecord.completedSteps, 7]));
       //   await applicationRepository.updateCurrentStep(
       //     appRecord.id,
@@ -203,6 +353,17 @@ export class PaymentService {
 
       //   // Save the step 7 data for frontend consistency
       //   await applicationRepository.upsertStepData(input.applicationId, 7, {
+=======
+      //   const completedSteps = Array.from(new Set([...appRecord.completedSteps, 2]));
+      //   await applicationRepository.updateCurrentStep(
+      //     appRecord.id,
+      //     Math.max(appRecord.currentStep, 3),
+      //     completedSteps
+      //   );
+
+      //   // Save the step 2 data for frontend consistency
+      //   await applicationRepository.upsertStepData(input.applicationId, 2, {
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
       //     paymentOrderId,
       //     amount: 0,
       //     paymentStatus: 'completed',
@@ -252,6 +413,7 @@ export class PaymentService {
 
     const appRecord = await applicationRepository.findById(payment.applicationId);
     if (appRecord) {
+<<<<<<< HEAD
       const completedSteps = Array.from(new Set([...appRecord.completedSteps, 7]));
       await applicationRepository.updateCurrentStep(
         appRecord.id,
@@ -261,6 +423,17 @@ export class PaymentService {
 
       // Save the step 7 data
       await applicationRepository.upsertStepData(payment.applicationId, 7, {
+=======
+      const completedSteps = Array.from(new Set([...appRecord.completedSteps, 2]));
+      await applicationRepository.updateCurrentStep(
+        appRecord.id,
+        Math.max(appRecord.currentStep, 3),
+        completedSteps
+      );
+
+      // Save the step 2 data
+      await applicationRepository.upsertStepData(payment.applicationId, 2, {
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         paymentOrderId,
         amount: 0,
         paymentStatus: 'completed',
@@ -304,6 +477,13 @@ export class PaymentService {
 
     const gateway = process.env.PAYMENT_GATEWAY || 'getepay';
 
+<<<<<<< HEAD
+=======
+    let isSuccess = true;
+    let failureReason = '';
+    let apiResponse = input.gatewayResponse || (input as unknown as Record<string, unknown>);
+
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     if (gateway === 'getepay') {
       if (input.gatewayResponse && (input.gatewayResponse.txnStatus === 'SUCCESS' || input.gatewayResponse.paymentStatus === 'SUCCESS')) {
         transactionId = input.gatewayResponse.getepayTxnId || input.getepayPaymentId || orderId;
@@ -313,20 +493,66 @@ export class PaymentService {
         const pId = input.getepayPaymentId || input.paymentOrderId || orderId;
         try {
           const getepayRes = await GetepayAdapter.verifyPayment(pId);
+<<<<<<< HEAD
           if (getepayRes.txnStatus !== 'SUCCESS' && getepayRes.paymentStatus !== 'SUCCESS') {
             if (!config.MOCK_PAYMENT) throw new AppError(`Getepay payment not successful: ${getepayRes.txnStatus || getepayRes.paymentStatus}`, 400);
+=======
+          apiResponse = getepayRes;
+          if (getepayRes.txnStatus !== 'SUCCESS' && getepayRes.paymentStatus !== 'SUCCESS') {
+            if (!config.MOCK_PAYMENT) {
+              isSuccess = false;
+              failureReason = `Getepay payment not successful: ${getepayRes.txnStatus || getepayRes.paymentStatus}`;
+            }
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
           }
           transactionId = getepayRes.getepayTxnId || pId;
           paymentMode = 'getepay';
           bankName = 'Getepay Gateway';
         } catch (err: any) {
+<<<<<<< HEAD
           if (!config.MOCK_PAYMENT) throw new AppError(`Getepay verification failed: ${err.message}`, 400);
+=======
+          if (!config.MOCK_PAYMENT) {
+            isSuccess = false;
+            failureReason = `Getepay verification failed: ${err.message}`;
+            if (err.response?.data) {
+              apiResponse = err.response.data;
+            }
+          }
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         }
       }
     } else {
       transactionId = input.transactionId || `TXN${Date.now()}`;
     }
 
+<<<<<<< HEAD
+=======
+    if (!isSuccess) {
+      await paymentRepository.updateStatus(payment.id, {
+        status: 'failed',
+        transactionId,
+        paymentMode,
+        bankName,
+        gatewayResponse: apiResponse,
+        payJson: input.payJson,
+      });
+
+      // Update step data
+      await applicationRepository.upsertStepData(payment.applicationId, 2, {
+        paymentOrderId: payment.paymentOrderId,
+        transactionId,
+        amount: parseFloat(payment.amount),
+        paymentStatus: 'failed',
+        paymentMode,
+        bankName,
+        paymentDate: new Date().toISOString(),
+      });
+
+      throw new AppError(failureReason, 400);
+    }
+
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     const status = 'completed';
 
     const updatedPayment = await paymentRepository.updateStatus(payment.id, {
@@ -334,7 +560,11 @@ export class PaymentService {
       transactionId,
       paymentMode,
       bankName,
+<<<<<<< HEAD
       gatewayResponse: input.gatewayResponse || (input as unknown as Record<string, unknown>),
+=======
+      gatewayResponse: apiResponse,
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
       payJson: input.payJson,
     });
 
@@ -344,6 +574,7 @@ export class PaymentService {
     const appRecord = await applicationRepository.findById(payment.applicationId);
 
     if (appRecord) {
+<<<<<<< HEAD
       const completedSteps = Array.from(new Set([...appRecord.completedSteps, 7]));
       await applicationRepository.updateCurrentStep(
         appRecord.id,
@@ -352,6 +583,16 @@ export class PaymentService {
       );
 
       await applicationRepository.upsertStepData(payment.applicationId, 7, {
+=======
+      const completedSteps = Array.from(new Set([...appRecord.completedSteps, 2]));
+      await applicationRepository.updateCurrentStep(
+        appRecord.id,
+        Math.max(appRecord.currentStep, 3),
+        completedSteps
+      );
+
+      await applicationRepository.upsertStepData(payment.applicationId, 2, {
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         paymentOrderId: payment.paymentOrderId,
         transactionId: updatedPayment.transactionId,
         amount: parseFloat(payment.amount),
@@ -438,6 +679,7 @@ export class PaymentService {
     if (application.candidateId !== candidateId) {
       throw new ForbiddenError('Application does not belong to this candidate');
     }
+<<<<<<< HEAD
     return paymentRepository.findByApplicationId(applicationId);
   }
 
@@ -445,6 +687,50 @@ export class PaymentService {
 
   getFeeStructure(): Record<string, number> {
     return { ...FEE_AMOUNTS };
+=======
+    const payments = await paymentRepository.findByApplicationId(applicationId);
+
+    // Double check if any pending payments succeeded at the gateway
+    for (const payment of payments) {
+      if (payment.status === 'pending' && payment.paymentOrderId) {
+        try {
+          const gateway = process.env.PAYMENT_GATEWAY || 'getepay';
+          if (gateway === 'getepay') {
+            console.log(`[Requery] Querying Getepay status for pending payment order ID: ${payment.paymentOrderId}`);
+            const getepayRes = await GetepayAdapter.verifyPayment(payment.paymentOrderId);
+            if (getepayRes.txnStatus === 'SUCCESS' || getepayRes.paymentStatus === 'SUCCESS') {
+              console.log(`[Requery] Payment verified as SUCCESS. Updating database record...`);
+              await this.verifyPayment({
+                paymentOrderId: payment.paymentOrderId,
+                getepayPaymentId: getepayRes.getepayTxnId || payment.paymentOrderId,
+                transactionId: getepayRes.getepayTxnId || payment.paymentOrderId,
+                gatewayResponse: getepayRes,
+              });
+              payment.status = 'completed';
+              payment.transactionId = getepayRes.getepayTxnId || payment.paymentOrderId;
+            }
+          }
+        } catch (err) {
+          console.error(`[Requery] Failed to verify payment for ${payment.paymentOrderId}:`, err);
+        }
+      }
+    }
+
+    return payments;
+  }
+
+  getFeeStructure(): Record<string, number> {
+    // Original implementation:
+    // return { ...FEE_AMOUNTS };
+    return {
+      general: config.FEE_UR_EBC_BC_MALE,
+      obc: config.FEE_UR_EBC_BC_MALE,
+      sc_st: config.FEE_SC_ST_BIHAR,
+      pwd: config.FEE_PWD_BIHAR,
+      women: config.FEE_WOMEN_BIHAR,
+      outside_bihar: config.FEE_OUTSIDE_BIHAR,
+    };
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   }
 
   // ── Get Invoice ───────────────────────────────────────────────

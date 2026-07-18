@@ -52,7 +52,11 @@
     "exServicemanYears": 23,
     "isLocallyResident": true,
     "sportsAchievement": "wertgtfrdeswaqsd",
+<<<<<<< HEAD
     "isJharkhandDomicile": true,
+=======
+    "isBiharDomicile": true,
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     "pwdCertificateNumber": "sdfd",
     "pwdCertificateAuthority": "sss",
     "pwdCertificateIssueDate": "04-06-2026",

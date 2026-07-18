@@ -37,12 +37,18 @@ export const validateCaptchaSchema = z.object({
 export const registerSchema = z
   .object({
     email: emailSchema,
+<<<<<<< HEAD
+=======
+    password: passwordSchema,
+    confirmPassword: z.string().optional(),
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     fullName: z.string().min(1).max(200),
     dateOfBirth: z
       .string()
       .regex(
         /^(0[1-9]|[12]\d|3[01])-(0[1-9]|1[0-2])-\d{4}$/,
         'Date of birth must be in dd-mm-yyyy format'
+<<<<<<< HEAD
       ),
     mobileNumber: mobileSchema,
     captchaId: z.string().min(1, 'Captcha ID is required').optional(),
@@ -107,6 +113,92 @@ export const candidateRegisterSchema = z.object({
 });
 
 
+=======
+      )
+      .optional(),
+    mobileNumber: mobileSchema.optional(),
+    cognitoSubId: z.string().uuid('Invalid Cognito Sub ID').optional(),
+    captchaId: z.string().min(1, 'Captcha ID is required').optional(),
+    captchaText: z.string().min(1, 'Captcha text is required').optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.cognitoSubId) {
+      if (!data.confirmPassword) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Please enter your password confirmation.',
+          path: ['confirmPassword'],
+        });
+      }
+      if (!data.dateOfBirth) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Please enter your date of birth.',
+          path: ['dateOfBirth'],
+        });
+      }
+      if (!data.mobileNumber) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Please enter a valid 10-digit mobile number.',
+          path: ['mobileNumber'],
+        });
+      }
+    }
+  });
+
+export const candidateRegisterSchema = z
+  .preprocess(
+    (data: any) => {
+      if (data && typeof data === 'object') {
+        if (data.captchaCode !== undefined && data.captchaText === undefined) {
+          return {
+            ...data,
+            captchaText: data.captchaCode,
+          };
+        }
+      }
+      return data;
+    },
+    z.object({
+      fullName: z.string().min(1, 'Full name is required').max(200),
+      dateOfBirth: z
+        .string()
+        .regex(
+          /^(0[1-9]|[12]\d|3[01])-(0[1-9]|1[0-2])-\d{4}$/,
+          'Date of birth must be in dd-mm-yyyy format'
+        ),
+      mobileNumber: mobileSchema,
+      email: emailSchema,
+      password: passwordSchema,
+      confirmPassword: z.string().min(1, 'Confirm password is required'),
+      // cognitoSubId: z.string().uuid('Invalid Cognito Sub ID').optional(),
+
+      // Optional Cognito Custom and standard attributes
+      bihar_domicile: z.string().optional(),
+      bihar_govt_emp: z.string().optional(),
+      bssc_attempts: z.string().optional(),
+      caste: z.string().optional(),
+      category: z.string().optional(),
+      contractual_emp: z.string().optional(),
+      disability_type: z.string().optional(),
+      ex_serviceman: z.string().optional(),
+      is_pwd: z.string().optional(),
+      mobile_no: z.string().optional(),
+      non_creamy_layer: z.string().optional(),
+      pwd_40_percent: z.string().optional(),
+      contractual_period: z.string().optional(),
+      post_name: z.string().optional(),
+      has_agreement: z.string().optional(),
+      gender: z.string().optional(),
+      service_period: z.string().optional(),
+      dis_type_persist: z.string().optional(),
+      is_scribe_required: z.string().optional(),
+      organization_name: z.string().optional(),
+      has_post_experience: z.string().optional(),
+    })
+  );
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 
 export const forgotPasswordSchema = z.object({
   email: emailSchema,
@@ -169,21 +261,38 @@ export const candidateAddressSchema = z.object({
   pincode: z.string().regex(/^\d{6}$/, 'Pincode must be exactly 6 digits'),
   cityOrVillage: z.string().min(1, 'City/Village is required').max(100),
 });
+<<<<<<< HEAD
+=======
+/*
+// ── Original JSSC Candidate Step 1 Schema ───────────────────────────
+export const candidateStep1Schema_legacy = z.object({
+  personalInfo: z.object({ ... })
+});
+*/
+
+/*
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 export const candidateStep1Schema = z.object({
   personalInfo: z
     .object({
       fullName: z.string().min(1, 'Full name is required').max(200),
+<<<<<<< HEAD
 
       fathersName: z.string().min(1, "Father's name is required").max(200),
 
       motherName: z.string().min(1, "Mother's name is required").max(200),
 
+=======
+      fathersName: z.string().min(1, "Father's name is required").max(200),
+      motherName: z.string().min(1, "Mother's name is required").max(200),
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
       dob: z
         .string()
         .regex(
           /^(0[1-9]|[12]\d|3[01])-(0[1-9]|1[0-2])-\d{4}$/,
           'Date of birth must be in dd-mm-yyyy format'
         ),
+<<<<<<< HEAD
 
       age: z.number().int().min(18).max(100).optional(),
 
@@ -212,6 +321,22 @@ export const candidateStep1Schema = z.object({
       correspondenceAddress: candidateAddressSchema.optional(),
       spouseName: z.string().max(200).optional(),
 
+=======
+      age: z.number().int().min(18).max(100).optional(),
+      gender: z.string().optional(),
+      nationality: z.string().min(1, 'Nationality is required').max(100),
+      aadharNumber: z.string().regex(/^\d{12}$/, 'Aadhaar number must be exactly 12 digits').optional().nullable().or(z.literal('')),
+      identificationMark1: z.string().min(0).max(255),
+      identificationMark2: z.string().max(255).optional(),
+      mobileNumber: mobileSchema,
+      alternateNumber: mobileSchema.optional().or(z.literal('')),
+      maritalStatus: z.string().optional().or(z.literal('')),
+      emailId: emailSchema,
+      permanentAddress: candidateAddressSchema,
+      sameAsPermanent: z.boolean().default(false),
+      correspondenceAddress: candidateAddressSchema.optional(),
+      spouseName: z.string().max(200).optional(),
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     })
     .superRefine((data, ctx) => {
       if (!data.sameAsPermanent && !data.correspondenceAddress) {
@@ -222,6 +347,7 @@ export const candidateStep1Schema = z.object({
         });
       }
     }),
+<<<<<<< HEAD
 });
 // ── Candidate Step 2 Schema ────────────────────────────────────
 export const candidateStep2Schema = z.object({
@@ -267,13 +393,41 @@ export const candidateStep2Schema = z.object({
       // Sports
       isSportsQuota: z.boolean(),
 
+=======
+  reservationCategory: z
+    .object({
+      isLocallyResident: z.union([z.boolean(), z.string()]),
+      localDistrictId: z.number().int().optional(),
+      isBiharDomicile: z.boolean(),
+      domicileCertificateNumber: z.string().optional(),
+      domicileCertificateAuthority: z.string().optional(),
+      domicileCertificateIssueDate: z.string().optional().or(z.literal('')),
+      mainCategory: z.number().int(),
+      subCategory: z.number().int().optional().nullable(),
+      subSubCategoryId: z.number().int().optional().nullable(),
+      categoryCertificateNumber: z.string().optional(),
+      categoryCertificateAuthority: z.string().optional(),
+      categoryCertificateIssueDate: z.string().optional().or(z.literal('')),
+      isPwd: z.boolean(),
+      pwdType: z.number().int().optional(),
+      pwdPercentage: z.number().min(0).max(100).optional(),
+      pwdCertificateNumber: z.string().optional(),
+      pwdCertificateAuthority: z.string().optional(),
+      pwdCertificateIssueDate: z.string().optional().or(z.literal('')),
+      isExServiceman: z.boolean(),
+      exServicemanYears: z.number().int().min(0).optional(),
+      isSportsQuota: z.boolean(),
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
       sportsLevel: z.string().optional(),
       sportsAchievement: z.string().optional(),
       sportsCertificateNumber: z.string().optional(),
       sportsCertificateAuthority: z.string().optional(),
       sportsCertificateIssueDate: z.string().optional().or(z.literal('')),
+<<<<<<< HEAD
 
       // Declaration
+=======
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
       declaration: z.literal(true, {
         errorMap: () => ({
           message: 'You must agree to the declaration to proceed.',
@@ -281,10 +435,14 @@ export const candidateStep2Schema = z.object({
       }),
     })
     .superRefine((data, ctx) => {
+<<<<<<< HEAD
       // Local Resident Validation removed as per request
 
       // Domicile Validation
       if (data.isJharkhandDomicile) {
+=======
+      if (data.isBiharDomicile) {
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         if (!data.domicileCertificateNumber) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -293,8 +451,11 @@ export const candidateStep2Schema = z.object({
           });
         }
       }
+<<<<<<< HEAD
 
       // PwD Validation
+=======
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
       if (data.isPwd) {
         if (!data.pwdType) {
           ctx.addIssue({
@@ -303,7 +464,10 @@ export const candidateStep2Schema = z.object({
             message: 'Please select the type of disability.',
           });
         }
+<<<<<<< HEAD
 
+=======
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         if (!data.pwdPercentage || data.pwdPercentage < 40) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -313,8 +477,11 @@ export const candidateStep2Schema = z.object({
           });
         }
       }
+<<<<<<< HEAD
 
       // Ex-Serviceman Validation
+=======
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
       if (data.isExServiceman && !data.exServicemanYears) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -322,8 +489,11 @@ export const candidateStep2Schema = z.object({
           message: 'Please enter your total years of service.',
         });
       }
+<<<<<<< HEAD
 
       // Sports Quota Validation
+=======
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
       if (data.isSportsQuota) {
         if (!data.sportsLevel) {
           ctx.addIssue({
@@ -332,7 +502,10 @@ export const candidateStep2Schema = z.object({
             message: 'Please select your level of sports participation.',
           });
         }
+<<<<<<< HEAD
 
+=======
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         if (!data.sportsAchievement) {
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
@@ -343,6 +516,98 @@ export const candidateStep2Schema = z.object({
       }
     }),
 });
+<<<<<<< HEAD
+=======
+*/
+
+export const candidateStep1Schema = z.object({
+  personalInfo: z
+    .object({
+      fullName: z.string().default(''),
+      fathersName: z.string().default(''),
+      motherName: z.string().default(''),
+      dob: z.string().default('16-10-1999'),
+      age: z.number().default(25),
+      gender: z.string().default('MALE'),
+      nationality: z.string().default('Indian'),
+      aadharNumber: z.string().nullable().default(''),
+      identificationMark1: z.string().default(''),
+      identificationMark2: z.string().default(''),
+      mobileNumber: z.string().default(''),
+      alternateNumber: z.string().default(''),
+      maritalStatus: z.string().default(''),
+      emailId: z.string().default(''),
+      permanentAddress: z
+        .object({
+          street: z.string().default(''),
+          post: z.string().default(''),
+          state: z.string().default(''),
+          district: z.string().default(''),
+          pincode: z.string().default(''),
+          cityOrVillage: z.string().default(''),
+        })
+        .default({}),
+      sameAsPermanent: z.boolean().default(false),
+      correspondenceAddress: z
+        .object({
+          street: z.string().default(''),
+          post: z.string().default(''),
+          state: z.string().default(''),
+          district: z.string().default(''),
+          pincode: z.string().default(''),
+          cityOrVillage: z.string().default(''),
+        })
+        .default({}),
+      spouseName: z.string().default(''),
+    })
+    .default({}),
+  reservationCategory: z
+    .object({
+      isLocallyResident: z.union([z.boolean(), z.string()]).default(false),
+      localDistrictId: z.number().nullable().default(null),
+      isBiharDomicile: z.boolean().default(false),
+      domicileCertificateNumber: z.string().nullable().default(''),
+      domicileCertificateAuthority: z.string().nullable().default(''),
+      domicileCertificateIssueDate: z.string().nullable().default(''),
+      mainCategory: z.number().default(1),
+      subCategory: z.number().nullable().default(null),
+      subSubCategoryId: z.number().nullable().default(null),
+      categoryCertificateNumber: z.string().nullable().default(''),
+      categoryCertificateAuthority: z.string().nullable().default(''),
+      categoryCertificateIssueDate: z.string().nullable().default(''),
+      isPwd: z.boolean().default(false),
+      pwdType: z.number().nullable().default(null),
+      pwdPercentage: z.number().nullable().default(null),
+      pwdCertificateNumber: z.string().nullable().default(''),
+      pwdCertificateAuthority: z.string().nullable().default(''),
+      pwdCertificateIssueDate: z.string().nullable().default(''),
+      isExServiceman: z.boolean().default(false),
+      exServicemanYears: z.number().nullable().default(null),
+      biharGovtEmp: z.union([z.boolean(), z.string()]).optional().nullable(),
+      isSportsQuota: z.boolean().default(false),
+      sportsLevel: z.string().nullable().default(''),
+      sportsAchievement: z.string().nullable().default(''),
+      sportsCertificateNumber: z.string().nullable().default(''),
+      sportsCertificateAuthority: z.string().nullable().default(''),
+      sportsCertificateIssueDate: z.string().nullable().default(''),
+      declaration: z.boolean().default(true),
+    })
+    .default({}),
+});
+
+/*
+// ── Original JSSC Candidate Step 2 Schema ───────────────────────────
+export const candidateStep2Schema_legacy = z.object({
+  reservationCategory: z.object({ ... })
+});
+*/
+
+export const candidateStep2Schema = z.object({
+  paymentMode: z.enum(['online_card', 'online_upi', 'online_netbanking', 'challan']).optional(),
+  paymentOrderId: z.string().optional(),
+  paymentStatus: z.string().optional(),
+});
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 // ── Candidate Step 3 Schema ────────────────────────────────────
 
 export const candidateStep3Schema = z.object({
@@ -423,6 +688,7 @@ export type CandidateStep2Input = z.infer<typeof candidateStep2Schema>;
 export type CandidateStep3Input = z.infer<typeof candidateStep3Schema>;
 
 export const candidateStep4Schema = z.object({
+<<<<<<< HEAD
   subjects: z.object({
     paperOne: z.string().optional(),
     paperTwo: z.string().optional(),
@@ -435,11 +701,17 @@ export const candidateStep4Schema = z.object({
     hasPost7: z.boolean().optional(),
     isPostId4And7: z.boolean().optional(),
   }),
+=======
+  photograph: z.string().uuid('Photograph is required'),
+  signatureEnglish: z.string().uuid('English Signature is required'),
+  signatureHindi: z.string().uuid('Hindi Signature is required'),
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 });
 
 export type CandidateStep4Input = z.infer<typeof candidateStep4Schema>;
 
 export const candidateStep5Schema = z.object({
+<<<<<<< HEAD
   tenthMarksheet: z.string().uuid('Tenth marksheet is required'),
   twelfthMarksheet: z.string().uuid().optional().nullable().or(z.literal('')),
   graduationMarksheet: z.string().uuid().optional().nullable().or(z.literal('')),
@@ -456,6 +728,9 @@ export const candidateStep5Schema = z.object({
   sportsCertificate: z.string().uuid().optional().nullable().or(z.literal('')),
   pwdCertificate: z.string().uuid().optional().nullable().or(z.literal('')),
   declarationAccepted: z.boolean().optional().default(true),
+=======
+  livePhoto: z.string().uuid('Live Photo is required'),
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 });
 
 export type CandidateStep5Input = z.infer<typeof candidateStep5Schema>;

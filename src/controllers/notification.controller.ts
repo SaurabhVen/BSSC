@@ -15,19 +15,35 @@ export class NotificationController {
     let emailBody = '';
 
     switch (input.templateType) {
+<<<<<<< HEAD
       case 'registrationSuccess':
+=======
+      case 'registrationSuccess': {
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         const reg = notificationService.renderRegistrationSuccessEmail(input.details);
         subject = reg.subject;
         emailBody = reg.body;
         break;
+<<<<<<< HEAD
 
       case 'submissionSuccess':
+=======
+      }
+
+      case 'submissionSuccess': {
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         const sub = notificationService.renderSubmissionSuccessEmail(input.details);
         subject = sub.subject;
         emailBody = sub.body;
         break;
+<<<<<<< HEAD
 
       case 'emailOtp':
+=======
+      }
+
+      case 'emailOtp': {
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         const otp = notificationService.renderEmailOtpEmail(
           input.details.otp,
           input.details.examName
@@ -35,6 +51,10 @@ export class NotificationController {
         subject = otp.subject;
         emailBody = otp.body;
         break;
+<<<<<<< HEAD
+=======
+      }
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     }
 
     await notificationService.sendEmail(input.email, subject, emailBody);

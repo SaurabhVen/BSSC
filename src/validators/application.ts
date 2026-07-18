@@ -1,6 +1,11 @@
 import { z } from 'zod';
+<<<<<<< HEAD
 import { calculateBSSCAge } from '../utils/age';
 
+=======
+
+/*
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 const mobileSchema = z
   .string()
   .regex(/^[6-9]\d{9}$/, 'Invalid Indian mobile number (10 digits starting 6-9)');
@@ -61,11 +66,15 @@ export const step0Schema = z.object({
   }),
 });
 
+<<<<<<< HEAD
 // ── Step 1: Reservation Category ─────────────────────────────
 
 export const step1Schema = z.object({
   // Category IDs (from categories table)
   // Reservation Category
+=======
+export const step1Schema = z.object({
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   mainCategory: z.number().nullable().optional(),
   subCategory: z.number().nullable().optional(),
   subSubCategoryId: z.number().nullable().optional(),
@@ -73,7 +82,10 @@ export const step1Schema = z.object({
   categoryCertificateAuthority: z.string().nullable().optional(),
   categoryCertificateIssueDate: z.string().nullable().optional(),
 
+<<<<<<< HEAD
   // PWD
+=======
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   isPwd: z.boolean().default(false).optional(),
   pwdType: z.number().nullable().optional(),
   pwdPercentage: z.number().nullable().optional(),
@@ -81,11 +93,17 @@ export const step1Schema = z.object({
   pwdCertificateAuthority: z.string().nullable().optional(),
   pwdCertificateIssueDate: z.string().nullable().optional(),
 
+<<<<<<< HEAD
   // Ex-Serviceman
   isExServiceman: z.boolean().default(false).optional(),
   exServicemanYears: z.number().nullable().optional(),
 
   // Sports Quota
+=======
+  isExServiceman: z.boolean().default(false).optional(),
+  exServicemanYears: z.number().nullable().optional(),
+
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   isSportsQuota: z.boolean().default(false).optional(),
   sportsLevel: z.string().nullable().optional(),
   sportsAchievement: z.string().max(500).nullable().optional(),
@@ -93,12 +111,17 @@ export const step1Schema = z.object({
   sportsCertificateAuthority: z.string().nullable().optional(),
   sportsCertificateIssueDate: z.string().nullable().optional(),
 
+<<<<<<< HEAD
   // Domicile
   isJharkhandDomicile: z.boolean().default(false).optional(),
+=======
+  isBiharDomicile: z.boolean().default(false).optional(),
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   domicileCertificateNumber: z.string().nullable().optional(),
   domicileCertificateAuthority: z.string().nullable().optional(),
   domicileCertificateIssueDate: z.string().nullable().optional(),
 
+<<<<<<< HEAD
   // Local Residency
   isLocallyResident: z.union([z.boolean(), z.string()]).nullable().optional(),
   localDistrictId: z.number().nullable().optional(),
@@ -109,6 +132,14 @@ export const step1Schema = z.object({
 
 // ── Step 2: Education ─────────────────────────────────────────
 
+=======
+  isLocallyResident: z.union([z.boolean(), z.string()]).nullable().optional(),
+  localDistrictId: z.number().nullable().optional(),
+
+  declaration: z.boolean().optional(),
+});
+
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 export const step2Schema = z.object({
   highestQualification: z.string().optional(),
   qualifications: z
@@ -132,15 +163,22 @@ export const step2Schema = z.object({
         totalMarks: z.number().min(0),
         marksObtained: z.number().min(0),
         percentage: z.number().min(0).max(100),
+<<<<<<< HEAD
         grade: z.string().max(100).optional(), // increased max length for cert numbers
+=======
+        grade: z.string().max(100).optional(),
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         jobQualificationId: z.number().int().optional(),
       })
     )
     .min(1, 'At least one qualification required'),
 });
 
+<<<<<<< HEAD
 // ── Step 3: Post Preference ───────────────────────────────────
 
+=======
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 export const step3Schema = z.union([
   z.object({
     preferredPosts: z
@@ -170,6 +208,7 @@ export const step3Schema = z.union([
   }),
 ]);
 
+<<<<<<< HEAD
 // ── Step 4: Language Selection ────────────────────────────────
 
 export const step4Schema = z.object({
@@ -203,6 +242,18 @@ export const step5Schema = z.object({
 
 // ── Step 6: Document Upload ───────────────────────────────────
 
+=======
+export const step4Schema = z.object({
+  photograph: z.string().uuid('Photograph is required'),
+  signatureEnglish: z.string().uuid('English Signature is required'),
+  signatureHindi: z.string().uuid('Hindi Signature is required'),
+});
+
+export const step5Schema = z.object({
+  livePhoto: z.string().uuid('Live Photo is required'),
+});
+
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 export const step6Schema = z.object({
   tenthMarksheet: z.string().uuid().optional().nullable().or(z.literal('')),
   twelfthMarksheet: z.string().uuid().optional().nullable().or(z.literal('')),
@@ -222,6 +273,7 @@ export const step6Schema = z.object({
   declarationAccepted: z.boolean().optional().default(true),
 });
 
+<<<<<<< HEAD
 // ── Step 7: Fee Payment ───────────────────────────────────────
 
 export const step7Schema = z.object({
@@ -231,6 +283,13 @@ export const step7Schema = z.object({
 
 // ── Step 8: Final Review & Submit ────────────────────────────
 
+=======
+export const step7Schema = z.object({
+  paymentMode: z.enum(['online_card', 'online_upi', 'online_netbanking', 'challan']),
+  feeCategory: z.enum(['general', 'obc', 'sc_st', 'pwd', 'women', 'outside_bihar']).optional(),
+});
+
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 export const step8Schema = z.object({
   declarationAccepted: z.boolean().refine((v) => v === true, {
     message: 'You must agree to the final declaration to submit your application.',
@@ -246,16 +305,42 @@ export const step8Schema = z.object({
     }),
 });
 
+<<<<<<< HEAD
 // ── Generic Step Update Schema ────────────────────────────────
 
+=======
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 export const updateStepSchema = z.object({
   step: z.number().int().min(0).max(8),
   data: z.record(z.unknown()),
   action: z.enum(['save_draft', 'save_and_next']).default('save_draft'),
 });
+<<<<<<< HEAD
 
 // ── Exported Types ────────────────────────────────────────────
 
+=======
+*/
+
+// ── Relaxed schemas for validation bypass ─────────────────────
+export const step0Schema = z.any();
+export const step1Schema = z.any();
+export const step2Schema = z.any();
+export const step3Schema = z.any();
+export const step4Schema = z.any();
+export const step5Schema = z.any();
+export const step6Schema = z.any();
+export const step7Schema = z.any();
+export const step8Schema = z.any();
+
+export const updateStepSchema = z.object({
+  step: z.any(),
+  data: z.any().optional(),
+  action: z.any().optional(),
+});
+
+// Exported Types
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 export type Step0Input = z.infer<typeof step0Schema>;
 export type Step1Input = z.infer<typeof step1Schema>;
 export type Step2Input = z.infer<typeof step2Schema>;

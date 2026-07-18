@@ -72,12 +72,69 @@ export class GatewayPaymentController {
     const gateway = pathParameters?.gateway;
     if (!gateway) throw new AppError('Gateway identifier is required', 400);
 
+<<<<<<< HEAD
+=======
+    let verificationResult: any = null;
+
+    if (gateway === 'getepay' && body && body.response) {
+      try {
+        const key = process.env.GETEPAY_KEY || config.GETEPAY_KEY || '';
+        const iv = process.env.GETEPAY_IV || config.GETEPAY_IV || '';
+
+        const keys = CryptoJS.enc.Base64.parse(key);
+        const ivs = CryptoJS.enc.Base64.parse(iv);
+
+        const decryptedStr = CryptoJS.AES.decrypt(body.response as string, keys, {
+          iv: ivs,
+          mode: CryptoJS.mode.CBC,
+          padding: CryptoJS.pad.Pkcs7,
+          format: CryptoJS.format.Hex,
+        }).toString(CryptoJS.enc.Utf8);
+
+        let decryptedRes: any;
+        try {
+          decryptedRes = JSON.parse(decryptedStr);
+          if (typeof decryptedRes === 'string') {
+            decryptedRes = JSON.parse(decryptedRes);
+          }
+        } catch (e) {
+          console.error("Failed to parse decrypted webhook string", e);
+          decryptedRes = {};
+        }
+
+        const transactionId = decryptedRes.merchantTransactionId || decryptedRes.merchantOrderNo;
+        const paymentId = decryptedRes.paymentId || decryptedRes.getepayTxnId;
+        if (transactionId) {
+          console.log(`[Webhook] Decrypted Getepay txn: ${transactionId}, status: ${decryptedRes.txnStatus}`);
+          verificationResult = await paymentService.verifyPayment({
+            paymentOrderId: transactionId,
+            getepayPaymentId: paymentId,
+            transactionId: paymentId,
+            gatewayResponse: decryptedRes,
+          });
+        }
+      } catch (err) {
+        console.error('Error processing Getepay webhook:', err);
+      }
+    }
+
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     const signature = headers['x-razorpay-signature'] || headers['x-easebuzz-signature'] || '';
 
     // Log and process idempotently
     const result = await gatewayPaymentService.processWebhook(gateway, body, signature);
 
+<<<<<<< HEAD
     return response.success(200, { message: 'Webhook processed', data: result });
+=======
+    return response.success(200, {
+      message: 'Webhook processed successfully',
+      data: {
+        ...result,
+        verification: verificationResult,
+      }
+    });
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   }
 
   async returnRedirect(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {

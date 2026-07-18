@@ -1,6 +1,10 @@
 {
     "info": {
+<<<<<<< HEAD
         "_postman_id": "aec4d27c-647c-4b63-b71f-63189dbdc46c",
+=======
+        "_postman_id": "2278d801-02d7-4519-87fb-7eaee066859b",
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         "name": "BSSC API Collection",
         "description": "Postman collection with valid payloads for BSSC API",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
@@ -8,7 +12,11 @@
     "variable": [
         {
             "key": "baseUrl",
+<<<<<<< HEAD
             "value": "http://localhost:3000/dev",
+=======
+            "value": "https://7q7gdq1rke.execute-api.ap-south-1.amazonaws.com",
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
             "type": "string"
         },
         {
@@ -628,7 +636,11 @@
                         },
                         "body": {
                             "mode": "raw",
+<<<<<<< HEAD
                             "raw": "{\n    \"personalInfo\": {\n        \"fullName\": \"John Doe\",\n        \"fathersName\": \"Richard Doe\",\n        \"motherName\": \"Jane Doe\",\n        \"dob\": \"1990-01-01\",\n        \"age\": 30,\n        \"gender\": \"male\",\n        \"nationality\": \"Indian\",\n        \"aadharNumber\": \"123456789012\",\n        \"identificationMark1\": \"A mole on right cheek\",\n        \"mobileNumber\": \"9876543210\",\n        \"emailId\": \"candidate@example.com\",\n        \"permanentAddress\": {\n            \"street\": \"123 Main St\",\n            \"post\": \"Central Post Office\",\n            \"state\": \"Jharkhand\",\n            \"district\": \"Ranchi\",\n            \"pincode\": \"834001\",\n            \"cityOrVillage\": \"Ranchi\"\n        },\n        \"sameAsPermanent\": true\n    }\n}",
+=======
+                            "raw": "{\n    \"personalInfo\": {\n        \"fullName\": \"John Doe\",\n        \"fathersName\": \"Richard Doe\",\n        \"motherName\": \"Jane Doe\",\n        \"dob\": \"01-01-1990\",\n        \"age\": 30,\n        \"gender\": \"male\",\n        \"nationality\": \"Indian\",\n        \"aadharNumber\": \"123456789012\",\n        \"identificationMark1\": \"A mole on right cheek\",\n        \"mobileNumber\": \"9876543210\",\n        \"emailId\": \"candidate@example.com\",\n        \"permanentAddress\": {\n            \"street\": \"123 Main St\",\n            \"post\": \"Central Post Office\",\n            \"state\": \"Bihar\",\n            \"district\": \"Patna\",\n            \"pincode\": \"800001\",\n            \"cityOrVillage\": \"Patna\"\n        },\n        \"sameAsPermanent\": true\n    },\n    \"reservationCategory\": {\n        \"isLocallyResident\": true,\n        \"isBiharDomicile\": true,\n        \"domicileCertificateNumber\": \"DOM-BIH-2026-99282\",\n        \"mainCategory\": 1,\n        \"isPwd\": false,\n        \"isExServiceman\": false,\n        \"isSportsQuota\": false,\n        \"declaration\": true\n    }\n}",
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
                             "options": {
                                 "raw": {
                                     "language": "json"
@@ -670,7 +682,11 @@
                         },
                         "body": {
                             "mode": "raw",
+<<<<<<< HEAD
                             "raw": "{\n    \"reservationCategory\": {}\n}",
+=======
+                            "raw": "{\n    \"paymentMode\": \"online_upi\"\n}",
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
                             "options": {
                                 "raw": {
                                     "language": "json"
@@ -712,7 +728,11 @@
                         },
                         "body": {
                             "mode": "raw",
+<<<<<<< HEAD
                             "raw": "{\n    \"highestQualification\": \"graduation\",\n    \"graduation\": {\n        \"graduationCourse\": \"B.Tech\",\n        \"university\": \"Ranchi University\",\n        \"passoutYear\": \"2012\",\n        \"percentage\": \"75.5\"\n    }\n}",
+=======
+                            "raw": "{\n    \"highestQualification\": \"graduation\",\n    \"tenth\": {\n        \"board\": \"BSEB\",\n        \"percentage\": \"80\",\n        \"totalMarks\": \"500\",\n        \"marksObtained\": \"400\",\n        \"passingCertificateNo\": \"10TH-123\",\n        \"passingYear\": \"2011\"\n    },\n    \"graduation\": {\n        \"degreeId\": 1,\n        \"university\": \"Patna University\",\n        \"percentage\": \"72.3\",\n        \"totalMarks\": \"1000\",\n        \"marksObtained\": \"723\",\n        \"passingCertificateNo\": \"GRAD-112998\",\n        \"passingYear\": \"2016\"\n    }\n}",
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
                             "options": {
                                 "raw": {
                                     "language": "json"
@@ -754,7 +774,11 @@
                         },
                         "body": {
                             "mode": "raw",
+<<<<<<< HEAD
                             "raw": "{\n    \"languageSelection\": {\n        \"paperOneLanguage\": \"Hindi\",\n        \"paperTwoLanguage\": \"English\",\n        \"paperThreeLanguage\": \"Sanskrit\"\n    }\n}",
+=======
+                            "raw": "{\n    \"photograph\": \"{{documentId}}\",\n    \"signatureEnglish\": \"{{documentId}}\",\n    \"signatureHindi\": \"{{documentId}}\"\n}",
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
                             "options": {
                                 "raw": {
                                     "language": "json"
@@ -765,9 +789,15 @@
                     "response": []
                 },
                 {
+<<<<<<< HEAD
                     "name": "POST /api/v1/auth/candidate/step-5",
                     "request": {
                         "method": "POST",
+=======
+                    "name": "PATCH /api/v1/auth/candidate/step-5",
+                    "request": {
+                        "method": "PATCH",
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
                         "header": [
                             {
                                 "key": "Content-Type",
@@ -796,7 +826,11 @@
                         },
                         "body": {
                             "mode": "raw",
+<<<<<<< HEAD
                             "raw": "{\n    \"tenthMarksheet\": \"{{documentId}}\",\n    \"signature\": \"{{documentId}}\",\n    \"photo\": \"{{documentId}}\",\n    \"declarationAccepted\": true\n}",
+=======
+                            "raw": "{\n    \"livePhoto\": \"{{documentId}}\"\n}",
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
                             "options": {
                                 "raw": {
                                     "language": "json"
@@ -838,7 +872,11 @@
                         },
                         "body": {
                             "mode": "raw",
+<<<<<<< HEAD
                             "raw": "{\n    \"postPreferences\": {\n        \"vacancyStream\": \"both\",\n        \"isRegular\": true,\n        \"isBacklog\": true,\n        \"postRankings\": [\n            {\n                \"postId\": 1,\n                \"priority\": 1\n            }\n        ]\n    }\n}",
+=======
+                            "raw": "{\n    \"postPreferences\": {\n        \"vacancyStream\": \"both\",\n        \"isRegular\": true,\n        \"isBacklog\": true,\n        \"postRankings\": [\n            {\n                \"postCode\": \"101\",\n                \"priority\": 1\n            }\n        ]\n    }\n}",
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
                             "options": {
                                 "raw": {
                                     "language": "json"
@@ -1289,7 +1327,11 @@
                         },
                         "body": {
                             "mode": "raw",
+<<<<<<< HEAD
                             "raw": "{\n    \"mainCategory\": 1,\n    \"subCategory\": 0,\n    \"isPwd\": false,\n    \"isExServiceman\": false,\n    \"isSportsQuota\": false,\n    \"isJharkhandDomicile\": true,\n    \"declaration\": true\n}",
+=======
+                            "raw": "{\n    \"mainCategory\": 1,\n    \"subCategory\": 0,\n    \"isPwd\": false,\n    \"isExServiceman\": false,\n    \"isSportsQuota\": false,\n    \"isBiharDomicile\": true,\n    \"declaration\": true\n}",
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
                             "options": {
                                 "raw": {
                                     "language": "json"
@@ -2570,6 +2612,41 @@
                     "response": []
                 },
                 {
+<<<<<<< HEAD
+=======
+                    "name": "GET /api/v1/public/type-of-ex-officer",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json",
+                                "type": "text"
+                            },
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}",
+                                "type": "text"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/api/v1/public/type-of-ex-officer",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "public",
+                                "type-of-ex-officer"
+                            ],
+                            "variable": []
+                        }
+                    },
+                    "response": []
+                },
+                {
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
                     "name": "POST /api/v1/subjects/seed",
                     "request": {
                         "method": "POST",

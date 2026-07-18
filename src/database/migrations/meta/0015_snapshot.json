@@ -1,6 +1,11 @@
 {
+<<<<<<< HEAD
   "id": "0a5b35ec-1498-4503-ade4-e3107bfc876b",
   "prevId": "9ab6175b-e4a5-48e3-9cd5-c6f9c96ba26b",
+=======
+  "id": "63521fde-5c64-4293-875f-cf83c547c4f8",
+  "prevId": "39bd7c94-fb9e-4ef6-baf7-bf6d158bb694",
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   "version": "6",
   "dialect": "postgresql",
   "tables": {
@@ -479,12 +484,85 @@
           "primaryKey": false,
           "notNull": false
         },
+<<<<<<< HEAD
+=======
+        "full_name": {
+          "name": "full_name",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "father_name": {
+          "name": "father_name",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mother_name": {
+          "name": "mother_name",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": false
+        },
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         "date_of_birth": {
           "name": "date_of_birth",
           "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
+<<<<<<< HEAD
+=======
+        "gender": {
+          "name": "gender",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "marital_status": {
+          "name": "marital_status",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "spouse_name": {
+          "name": "spouse_name",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nationality": {
+          "name": "nationality",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "'Indian'"
+        },
+        "identity_type": {
+          "name": "identity_type",
+          "type": "varchar(30)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "identity_number": {
+          "name": "identity_number",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "identification_mark_1": {
+          "name": "identification_mark_1",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "identification_mark_2": {
+          "name": "identification_mark_2",
+          "type": "varchar(200)",
+          "primaryKey": false,
+          "notNull": false
+        },
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         "mobile_number": {
           "name": "mobile_number",
           "type": "varchar(15)",
@@ -511,6 +589,187 @@
           "notNull": true,
           "default": false
         },
+<<<<<<< HEAD
+=======
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "permanent_street": {
+          "name": "permanent_street",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "permanent_post": {
+          "name": "permanent_post",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "permanent_city": {
+          "name": "permanent_city",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "permanent_district": {
+          "name": "permanent_district",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "permanent_state": {
+          "name": "permanent_state",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "permanent_pincode": {
+          "name": "permanent_pincode",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "correspondence_same_as_permanent": {
+          "name": "correspondence_same_as_permanent",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": true
+        },
+        "correspondence_street": {
+          "name": "correspondence_street",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "correspondence_post": {
+          "name": "correspondence_post",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "correspondence_city": {
+          "name": "correspondence_city",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "correspondence_district": {
+          "name": "correspondence_district",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "correspondence_state": {
+          "name": "correspondence_state",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "correspondence_pincode": {
+          "name": "correspondence_pincode",
+          "type": "varchar(10)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "category": {
+          "name": "category",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "caste": {
+          "name": "caste",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "non_creamy_layer": {
+          "name": "non_creamy_layer",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "bihar_domicile": {
+          "name": "bihar_domicile",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "domicile_certificate_number": {
+          "name": "domicile_certificate_number",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_pwd": {
+          "name": "is_pwd",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "disability_type": {
+          "name": "disability_type",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "pwd_40_percent": {
+          "name": "pwd_40_percent",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "pwd_certificate_number": {
+          "name": "pwd_certificate_number",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "is_ex_serviceman": {
+          "name": "is_ex_serviceman",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "is_ncc_cadet": {
+          "name": "is_ncc_cadet",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "is_bihar_govt_emp": {
+          "name": "is_bihar_govt_emp",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "is_contractual_emp": {
+          "name": "is_contractual_emp",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "bssc_attempts": {
+          "name": "bssc_attempts",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 1
+        },
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         "created_at": {
           "name": "created_at",
           "type": "timestamp",
@@ -2444,6 +2703,15 @@
           "primaryKey": false,
           "notNull": true
         },
+<<<<<<< HEAD
+=======
+        "cognito_sub_id": {
+          "name": "cognito_sub_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         "is_active": {
           "name": "is_active",
           "type": "boolean",
@@ -2498,6 +2766,16 @@
             "email"
           ],
           "isUnique": true
+<<<<<<< HEAD
+=======
+        },
+        "users_cognito_sub_idx": {
+          "name": "users_cognito_sub_idx",
+          "columns": [
+            "cognito_sub_id"
+          ],
+          "isUnique": true
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         }
       },
       "foreignKeys": {
@@ -2516,7 +2794,19 @@
         }
       },
       "compositePrimaryKeys": {},
+<<<<<<< HEAD
       "uniqueConstraints": {}
+=======
+      "uniqueConstraints": {
+        "users_cognito_sub_id_unique": {
+          "name": "users_cognito_sub_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "cognito_sub_id"
+          ]
+        }
+      }
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     }
   },
   "enums": {},

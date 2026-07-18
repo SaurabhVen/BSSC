@@ -5,7 +5,11 @@ import { eq, isNull } from 'drizzle-orm';
 import { seedCategories } from '../database/seeders/categories.seeder';
 import { response } from '../helpers/response';
 import { parseEvent } from '../helpers/request';
+<<<<<<< HEAD
 import { ValidationError, DatabaseError } from '../errors/AppError';
+=======
+import { ValidationError, DatabaseError, NotFoundError } from '../errors/AppError';
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 import type { LambdaResponse } from '../types';
 
 export class CategoryController {
@@ -107,6 +111,66 @@ export class CategoryController {
       throw new DatabaseError('Failed to fetch categories', err as Error);
     }
   }
+<<<<<<< HEAD
+=======
+
+  // ── GET /categories/{catId} ─────────────────────────────────
+  // Find category by ID (numeric) or category value (string)
+
+  async find(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
+    const { pathParameters } = parseEvent(event);
+    const catIdStr = pathParameters?.catId;
+
+    if (!catIdStr) {
+      throw new ValidationError([
+        { field: 'catId', message: 'Category ID or value is required' },
+      ]);
+    }
+
+    const catId = parseInt(catIdStr, 10);
+    const db = getDb();
+
+    try {
+      let categoryRecord;
+
+      if (isNaN(catId)) {
+        // Find by catValue
+        const result = await db
+          .select()
+          .from(categories)
+          .where(eq(categories.catValue, catIdStr))
+          .limit(1);
+        if (result.length > 0) {
+          categoryRecord = result[0];
+        }
+      } else {
+        // Find by catId
+        const result = await db
+          .select()
+          .from(categories)
+          .where(eq(categories.catId, catId))
+          .limit(1);
+        if (result.length > 0) {
+          categoryRecord = result[0];
+        }
+      }
+
+      if (!categoryRecord) {
+        throw new NotFoundError(`Category not found with identifier: ${catIdStr}`);
+      }
+
+      return response.success(200, {
+        message: 'Category retrieved successfully',
+        data: categoryRecord,
+      });
+    } catch (err) {
+      if (err instanceof ValidationError || err instanceof NotFoundError) {
+        throw err;
+      }
+      throw new DatabaseError('Failed to fetch category', err as Error);
+    }
+  }
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 }
 
 export const categoryController = new CategoryController();

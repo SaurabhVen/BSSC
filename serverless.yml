@@ -1,4 +1,9 @@
+<<<<<<< HEAD
 service: bssc-backend
+=======
+service: bssc
+
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 
 frameworkVersion: '3'
 useDotenv: true
@@ -18,27 +23,72 @@ package:
     - '!node_modules/prettier/**'
     - '!node_modules/ts-node/**'
     - '!node_modules/@types/**'
+<<<<<<< HEAD
+=======
+    - '!node_modules/.bin/**'
+    - '!node_modules/aws-sdk/**'
+    - '!node_modules/esbuild/**'
+    - '!node_modules/@esbuild/**'
+    - '!node_modules/@esbuild-kit/**'
+    - '!node_modules/serverless/**'
+    - '!node_modules/serverless-*/**'
+    - '!node_modules/java-invoke-local/**'
+    - '!node_modules/@babel/**'
+    - '!node_modules/rxjs/**'
+    - '!node_modules/es-abstract/**'
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     - '!tests/**'
     - '!coverage/**'
     - '!.git/**'
     - '!.serverless/**'
     - '!.build/**'
+<<<<<<< HEAD
 
 provider:
   name: aws
   runtime: nodejs20.x
   region: ${opt:region, 'ap-south-1'}
   stage: ${opt:stage, 'dev'}
+=======
+    - '!awscliv2.zip'
+    - '!*.pdf'
+    - '!*.postman_collection.json'
+    - '!*.txt'
+    - '!*.mmd'
+    - '!docs/**'
+    - '!scratch/**'
+    
+
+provider:
+  name: aws
+  runtime: nodejs24.x
+  region: ${opt:region, 'ap-south-1'}
+  stage: ${opt:stage, 'dev'}
+  deploymentBucket:
+    name: ${env:S3_BUCKET}
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   memorySize: 512
   timeout: 29
   logRetentionInDays: 14
   versionFunctions: false
+<<<<<<< HEAD
+=======
+  vpc:
+    securityGroupIds:
+      - sg-0813f46da8ff12906
+    subnetIds:
+      - subnet-02343312243a19ab9
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   httpApi:
     cors:
       allowedOrigins:
         - http://localhost:5173
+<<<<<<< HEAD
         - https://jtglcce-2026.panjikaran.in
         - https://jtglcce-2026-demo.cyberica.in
+=======
+        - https://d3lnk974uo6n00.cloudfront.net
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
       allowedHeaders:
         - Content-Type
         - Authorization
@@ -55,16 +105,39 @@ provider:
 
   environment:
     NODE_ENV: ${self:provider.stage}
+<<<<<<< HEAD
     DATABASE_URL: ${env:DATABASE_URL, ssm:/candidate-portal/${self:provider.stage}/database-url}
     JWT_SECRET: ${env:JWT_SECRET, ssm:/candidate-portal/${self:provider.stage}/jwt-secret}
     S3_BUCKET: ${env:S3_BUCKET, '${self:provider.stage}-candidate-portal-documents'}
     MOCK_S3: ${env:MOCK_S3, 'false'}
     MOCK_PAYMENT: ${env:MOCK_PAYMENT, 'false'}
     MOCK_SMS_EMAIL: ${env:MOCK_SMS_EMAIL, 'false'}
+=======
+    DATABASE_URL: ${env:DATABASE_URL}
+    COGNITO_USER_POOL_ID: ${env:COGNITO_USER_POOL_ID}
+    COGNITO_CLIENT_ID: ${env:COGNITO_CLIENT_ID}
+    COGNITO_CLIENT_SECRET: ${env:COGNITO_CLIENT_SECRET, ''}
+    JWT_SECRET: ${env:JWT_SECRET}
+    S3_BUCKET: ${env:S3_BUCKET, '${self:provider.stage}-candidate-portal-documents'}
+    MOCK_COGNITO: ${env:MOCK_COGNITO, 'false'}
+    MOCK_S3: ${env:MOCK_S3, 'false'}
+    MOCK_PAYMENT: ${env:MOCK_PAYMENT, 'false'}
+    MOCK_SMS_EMAIL: ${env:MOCK_SMS_EMAIL, 'false'}
+    SES_SOURCE_EMAIL: ${env:SES_SOURCE_EMAIL, 'noreply@vensysco.in'}
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     RAZORPAY_KEY_ID: ${env:RAZORPAY_KEY_ID, 'rzp_test_mock_key'}
     RAZORPAY_SECRET: ${env:RAZORPAY_SECRET, 'rzp_test_mock_secret'}
     GETEPAY_RETURN_URL: ${env:GETEPAY_RETURN_URL, 'http://localhost:3000/api/v1/payment/gateway/return'}
     FRONTEND_URL: ${env:FRONTEND_URL, 'http://localhost:5173'}
+<<<<<<< HEAD
+=======
+    GETEPAY_MID: ${env:GETEPAY_MID, '1401317'}
+    GETEPAY_TERMINAL_ID: ${env:GETEPAY_TERMINAL_ID, 'getepay.merchant1124894@axisbank'}
+    GETEPAY_KEY: ${env:GETEPAY_KEY, 'Iu7qyZORZ2ONsxdYvqKkyJIS8XP1uMQKe3cr+pkcfoQ='}
+    GETEPAY_IV: ${env:GETEPAY_IV, 'IosadgLAo1VYToxCg79uQg=='}
+    GETEPAY_URL: ${env:GETEPAY_URL, 'https://portal.getepay.in:8443/getepayPortal/pg/generateInvoice'}
+    GETEPAY_REQUERY_URL: ${env:GETEPAY_REQUERY_URL, 'https://portal.getepay.in:8443/getepayPortal/pg/invoiceStatus'}
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 
   iam:
     role:
@@ -78,12 +151,37 @@ provider:
             - arn:aws:s3:::${env:S3_BUCKET, '${self:provider.stage}-candidate-portal-documents'}/*
         - Effect: Allow
           Action:
+<<<<<<< HEAD
+=======
+            - cognito-idp:InitiateAuth
+            - cognito-idp:SignUp
+            - cognito-idp:ConfirmSignUp
+            - cognito-idp:ForgotPassword
+            - cognito-idp:ConfirmForgotPassword
+            - cognito-idp:GlobalSignOut
+            - cognito-idp:AdminGetUser
+            - cognito-idp:AdminDeleteUser
+            - cognito-idp:AdminUpdateUserAttributes
+            - cognito-idp:AdminSetUserPassword
+            - cognito-idp:ListUsers
+          Resource: '*'
+        - Effect: Allow
+          Action:
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
             - secretsmanager:GetSecretValue
           Resource: '*'
         - Effect: Allow
           Action:
             - kms:Decrypt
           Resource: '*'
+<<<<<<< HEAD
+=======
+        - Effect: Allow
+          Action:
+            - ses:SendEmail
+            - ses:SendRawEmail
+          Resource: '*'
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 
 
 custom:
@@ -164,8 +262,11 @@ functions:
 
   candidateStep5:
     handler: src/handlers/auth/candidateStep5.handler
+<<<<<<< HEAD
     memorySize: 1024
     timeout: 60
+=======
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     events:
       - httpApi:
           path: /api/v1/auth/candidate/step-5
@@ -249,6 +350,20 @@ functions:
           path: /api/v1/auth/seed-dummy
           method: POST
 
+<<<<<<< HEAD
+=======
+  customMessage:
+    handler: src/handlers/auth/customMessage.handler
+    description: "Cognito Custom Message Trigger for customized SMS and Email templates"
+
+  postConfirmation:
+    handler: src/handlers/auth/postConfirmation.handler
+    description: "Cognito Post Confirmation Trigger to synchronize registered candidate data to local PostgreSQL database"
+
+  customSmsSender:
+    handler: src/handlers/customSMSSender.handler
+    description: "Cognito Custom SMS Sender Trigger to dispatch SMS via AnalyticsMantra gateway"
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 
   # ── OTP ─────────────────────────────────────────────────────
   sendMobileOtp:
@@ -661,16 +776,50 @@ functions:
 
   # ── Public ─────────────────────────────────────────────────
   getAgeLimits:
+<<<<<<< HEAD
     handler: src/handlers/public.getAgeLimits
+=======
+    handler: src/handlers/publicHandlers.getAgeLimits
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     events:
       - httpApi:
           path: /api/v1/public/age-limits
           method: POST
 
   getCognitoSubId:
+<<<<<<< HEAD
     handler: src/handlers/public.getCognitoSubId
+=======
+    handler: src/handlers/publicHandlers.getCognitoSubId
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     events:
       - httpApi:
           path: /api/v1/public/cognito-sub
           method: POST
 
+<<<<<<< HEAD
+=======
+  getIpAddress:
+    handler: src/handlers/getIpAddress.handler
+    events:
+      - httpApi:
+          path: /api/v1/public/ip
+          method: GET
+
+  listTypeOfExOfficers:
+    handler: src/handlers/public/listTypeOfExOfficers.handler
+    events:
+      - httpApi:
+          path: /api/v1/public/type-of-ex-officer
+          method: GET
+
+  getPaidCandidate:
+    handler: src/handlers/public/getPaidCandidate.handler
+    events:
+      - httpApi:
+          path: /api/v1/paid-candidates
+          method: POST
+
+
+
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74

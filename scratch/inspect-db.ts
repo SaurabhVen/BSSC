@@ -5,7 +5,11 @@ import path from 'path';
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 async function main() {
+<<<<<<< HEAD
   const connectionString = process.env.DATABASE_URL;
+=======
+  let connectionString = process.env.DATABASE_URL;
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   console.log('Using DATABASE_URL:', connectionString);
   
   if (!connectionString) {
@@ -13,6 +17,7 @@ async function main() {
     process.exit(1);
   }
 
+<<<<<<< HEAD
   const client = new Client({ connectionString });
   await client.connect();
 
@@ -36,6 +41,23 @@ async function main() {
     const migrationsRes = await client.query('SELECT * FROM drizzle.__drizzle_migrations');
     console.log('Applied Migrations:', migrationsRes.rows);
 
+=======
+  connectionString = connectionString.replace('sslmode=require', 'sslmode=no-verify');
+
+  const client = new Client({
+    connectionString,
+    ssl: { rejectUnauthorized: false }
+  });
+  await client.connect();
+
+  try {
+    const columnsRes = await client.query(`
+      SELECT column_name, data_type, character_maximum_length, is_nullable
+      FROM information_schema.columns
+      WHERE table_name = 'educations';
+    `);
+    console.log('Educations Columns:', columnsRes.rows);
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   } catch (err) {
     console.error('Query error:', err);
   } finally {

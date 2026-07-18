@@ -2,7 +2,13 @@
   "compilerOptions": {
     "target": "ES2022",
     "module": "commonjs",
+<<<<<<< HEAD
     "lib": ["ES2022"],
+=======
+    "lib": [
+      "ES2022"
+    ],
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     "rootDir": "./",
     "outDir": "./dist",
     "strict": true,
@@ -23,9 +29,26 @@
     "strictNullChecks": true,
     "strictFunctionTypes": true,
     "paths": {
+<<<<<<< HEAD
       "@/*": ["./src/*"]
     }
   },
   "include": ["src/**/*", "tests/**/*"],
   "exclude": ["node_modules", "dist"]
 }
+=======
+      "@/*": [
+        "./src/*"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "tests/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74

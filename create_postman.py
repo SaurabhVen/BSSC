@@ -1,7 +1,11 @@
 import json
 import uuid
 
+<<<<<<< HEAD
 base_url = "http://localhost:3000/dev"
+=======
+base_url = "https://7q7gdq1rke.execute-api.ap-south-1.amazonaws.com"
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 
 endpoints = [
   ("GET", "/api/v1/auth/captcha", None),
@@ -46,7 +50,11 @@ endpoints = [
           "fullName": "John Doe",
           "fathersName": "Richard Doe",
           "motherName": "Jane Doe",
+<<<<<<< HEAD
           "dob": "1990-01-01",
+=======
+          "dob": "01-01-1990",
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
           "age": 30,
           "gender": "male",
           "nationality": "Indian",
@@ -57,6 +65,7 @@ endpoints = [
           "permanentAddress": {
               "street": "123 Main St",
               "post": "Central Post Office",
+<<<<<<< HEAD
               "state": "Jharkhand",
               "district": "Ranchi",
               "pincode": "834001",
@@ -89,6 +98,56 @@ endpoints = [
       "signature": "{{documentId}}",
       "photo": "{{documentId}}",
       "declarationAccepted": True
+=======
+              "state": "Bihar",
+              "district": "Patna",
+              "pincode": "800001",
+              "cityOrVillage": "Patna"
+          },
+          "sameAsPermanent": True
+      },
+      "reservationCategory": {
+          "isLocallyResident": True,
+          "isBiharDomicile": True,
+          "domicileCertificateNumber": "DOM-BIH-2026-99282",
+          "mainCategory": 1,
+          "isPwd": False,
+          "isExServiceman": False,
+          "isSportsQuota": False,
+          "declaration": True
+      }
+  }),
+  ("PATCH", "/api/v1/auth/candidate/step-2", {
+      "paymentMode": "online_upi"
+  }),
+  ("PATCH", "/api/v1/auth/candidate/step-3", {
+      "highestQualification": "graduation",
+      "tenth": {
+          "board": "BSEB",
+          "percentage": "80",
+          "totalMarks": "500",
+          "marksObtained": "400",
+          "passingCertificateNo": "10TH-123",
+          "passingYear": "2011"
+      },
+      "graduation": {
+          "degreeId": 1,
+          "university": "Patna University",
+          "percentage": "72.3",
+          "totalMarks": "1000",
+          "marksObtained": "723",
+          "passingCertificateNo": "GRAD-112998",
+          "passingYear": "2016"
+      }
+  }),
+  ("PATCH", "/api/v1/auth/candidate/step-4", {
+      "photograph": "{{documentId}}",
+      "signatureEnglish": "{{documentId}}",
+      "signatureHindi": "{{documentId}}"
+  }),
+  ("PATCH", "/api/v1/auth/candidate/step-5", {
+      "livePhoto": "{{documentId}}"
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   }),
   ("PATCH", "/api/v1/auth/candidate/step-6", {
       "postPreferences": {
@@ -97,7 +156,11 @@ endpoints = [
           "isBacklog": True,
           "postRankings": [
               {
+<<<<<<< HEAD
                   "postId": 1,
+=======
+                  "postCode": "101",
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
                   "priority": 1
               }
           ]
@@ -155,7 +218,11 @@ endpoints = [
       "isPwd": False,
       "isExServiceman": False,
       "isSportsQuota": False,
+<<<<<<< HEAD
       "isJharkhandDomicile": True,
+=======
+      "isBiharDomicile": True,
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
       "declaration": True
   }),
   ("POST", "/api/v1/application/{{applicationId}}/step/2", {
@@ -250,6 +317,10 @@ endpoints = [
   ("GET", "/api/v1/countries", None),
   ("GET", "/api/v1/countries/{countryId}/states", None),
   ("GET", "/api/v1/states/{stateId}/districts", None),
+<<<<<<< HEAD
+=======
+  ("GET", "/api/v1/public/type-of-ex-officer", None),
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   ("GET", "/api/v1/dashboard", None),
   ("GET", "/api/v1/dashboard/notifications", None),
   ("GET", "/api/v1/dashboard/admit-card", None),

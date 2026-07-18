@@ -45,6 +45,22 @@ export class GetepayAdapter {
     decrypted += decipher.final('utf8');
     return decrypted;
   }
+<<<<<<< HEAD
+=======
+  private static getReturnUrl() {
+    const configuredUrl = process.env.GETEPAY_RETURN_URL || config.GETEPAY_RETURN_URL || 'https://pay1.getepay.in:8443/getepayPortal/pg/generateInvoice';
+    if (configuredUrl.includes('/api/v1/payment/gateway/return')) {
+      return configuredUrl;
+    }
+    return configuredUrl.replace(/\/$/, '') + '/api/v1/payment/gateway/return';
+  }
+
+  private static getWebhookUrl() {
+    const configuredUrl = process.env.GETEPAY_RETURN_URL || config.GETEPAY_RETURN_URL || 'http://localhost:3000/api/v1/payment/gateway/return';
+    const base = configuredUrl.replace(/\/api\/v1\/payment\/gateway\/return$/, '').replace(/\/$/, '');
+    return `${base}/api/v1/payment/webhook/getepay`;
+  }
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 
   public static async createOrder(
     amount: number,
@@ -53,10 +69,15 @@ export class GetepayAdapter {
   ) {
     const { key, iv, mid, terminalId } = this.getKeyAndIv();
 
+<<<<<<< HEAD
     let returnUrl = process.env.GETEPAY_RETURN_URL || config.GETEPAY_RETURN_URL || "https://pay1.getepay.in:8443";
     if (!returnUrl.endsWith('/api/v1/payment/gateway/return')) {
       returnUrl = returnUrl.replace(/\/$/, '') + '/api/v1/payment/gateway/return';
     }
+=======
+    const returnUrl = this.getReturnUrl();
+    const webhookUrl = this.getWebhookUrl();
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 
     const data = {
       mid: mid,
@@ -75,7 +96,11 @@ export class GetepayAdapter {
       udf9: "",
       udf10: "",
       ru: returnUrl,
+<<<<<<< HEAD
       callbackUrl: "",
+=======
+      callbackUrl: webhookUrl,
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
       currency: "INR",
       paymentMode: "ALL",
       bankId: "",

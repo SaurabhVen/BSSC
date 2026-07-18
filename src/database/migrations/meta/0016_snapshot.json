@@ -1,6 +1,11 @@
 {
+<<<<<<< HEAD
   "id": "002764c1-132c-4747-ae8b-900bcd5f163a",
   "prevId": "0a5b35ec-1498-4503-ade4-e3107bfc876b",
+=======
+  "id": "f644cf2a-e9e2-4db3-9ffd-5e280f773eb8",
+  "prevId": "63521fde-5c64-4293-875f-cf83c547c4f8",
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   "version": "6",
   "dialect": "postgresql",
   "tables": {
@@ -479,6 +484,7 @@
           "primaryKey": false,
           "notNull": false
         },
+<<<<<<< HEAD
         "applicant_name": {
           "name": "applicant_name",
           "type": "varchar(150)",
@@ -491,6 +497,8 @@
           "primaryKey": false,
           "notNull": false
         },
+=======
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         "date_of_birth": {
           "name": "date_of_birth",
           "type": "timestamp",
@@ -509,6 +517,7 @@
           "primaryKey": false,
           "notNull": false
         },
+<<<<<<< HEAD
         "email": {
           "name": "email",
           "type": "varchar(255)",
@@ -681,6 +690,8 @@
           "primaryKey": false,
           "notNull": false
         },
+=======
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         "mobile_verified": {
           "name": "mobile_verified",
           "type": "boolean",
@@ -2593,6 +2604,31 @@
         }
       }
     },
+<<<<<<< HEAD
+=======
+    "public.type_of_ex_officers": {
+      "name": "type_of_ex_officers",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
+    },
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     "public.users": {
       "name": "users",
       "schema": "",
@@ -2628,6 +2664,15 @@
           "primaryKey": false,
           "notNull": true
         },
+<<<<<<< HEAD
+=======
+        "cognito_sub_id": {
+          "name": "cognito_sub_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         "is_active": {
           "name": "is_active",
           "type": "boolean",
@@ -2682,6 +2727,16 @@
             "email"
           ],
           "isUnique": true
+<<<<<<< HEAD
+=======
+        },
+        "users_cognito_sub_idx": {
+          "name": "users_cognito_sub_idx",
+          "columns": [
+            "cognito_sub_id"
+          ],
+          "isUnique": true
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         }
       },
       "foreignKeys": {
@@ -2700,7 +2755,19 @@
         }
       },
       "compositePrimaryKeys": {},
+<<<<<<< HEAD
       "uniqueConstraints": {}
+=======
+      "uniqueConstraints": {
+        "users_cognito_sub_id_unique": {
+          "name": "users_cognito_sub_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "cognito_sub_id"
+          ]
+        }
+      }
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     }
   },
   "enums": {},

@@ -1,6 +1,10 @@
 import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { UnauthorizedError, ForbiddenError } from '../errors/AppError';
+<<<<<<< HEAD
 import { verifyJwt, type JwtPayload } from '../utils/jwt';
+=======
+import { verifyJwt, type JwtPayload } from '../utils/cognito';
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 import { getAuthorizationToken } from '../helpers/request';
 import { userRepository } from '../repositories/user.repository';
 
@@ -19,12 +23,17 @@ export const authenticate = async (event: APIGatewayProxyEventV2): Promise<Authe
 
   let decoded: JwtPayload;
   try {
+<<<<<<< HEAD
     decoded = verifyJwt(token);
+=======
+    decoded = await verifyJwt(token);
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   } catch (err: unknown) {
     throw new UnauthorizedError((err as Error).message);
   }
   console.log('Decoded JWT payload:', decoded);
 
+<<<<<<< HEAD
   /* COGNITO FLOW (REMOVED):
   let userId = decoded.sub;
   let email = decoded.email;
@@ -35,11 +44,38 @@ export const authenticate = async (event: APIGatewayProxyEventV2): Promise<Authe
     userId = dbUser.id;
     email = dbUser.email;
   }
+=======
+  
+  let email = decoded.email;
+  if (!email) {
+    throw new UnauthorizedError('Invalid token: email claim is missing.');
+  }
+
+  let userId = '';
+
+  if (userRepository && typeof userRepository.findByEmail === 'function') {
+    const dbUser = await userRepository.findByEmail(email);
+    if (!dbUser) {
+      throw new UnauthorizedError(
+        'We could not find an account with these details. Please register a new account or check your information.'
+      );
+    }
+    if (!dbUser.isActive) {
+      throw new UnauthorizedError(
+        'Your account is currently deactivated. Please contact our support team for assistance.'
+      );
+    }
+    userId = dbUser.id;
+    email = dbUser.email;
+  }
+
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   return {
     userId,
     email,
     roles: decoded['cognito:groups'] || [],
   };
+<<<<<<< HEAD
   */
 
   const dbUser = await userRepository.findById(decoded.userId);
@@ -59,6 +95,8 @@ export const authenticate = async (event: APIGatewayProxyEventV2): Promise<Authe
     email: dbUser.email,
     roles: decoded.roles || [],
   };
+=======
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
 };
 
 export const requireRole = (user: AuthenticatedUser, allowedRoles: string[]): void => {

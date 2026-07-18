@@ -126,7 +126,11 @@
           }
         },
         {
+<<<<<<< HEAD
           "name": "Candidate Step 1 (Personal Info)",
+=======
+          "name": "Candidate Step 1 (Personal & Reservation)",
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
           "request": {
             "method": "PATCH",
             "header": [
@@ -137,13 +141,21 @@
             ],
             "body": {
               "mode": "raw",
+<<<<<<< HEAD
               "raw": "{\n  \"personalInfo\": {\n    \"fullName\": \"Rahul Sharma\",\n    \"fathersName\": \"Ramesh Sharma\",\n    \"motherName\": \"Sita Sharma\",\n    \"dob\": \"1995-08-15\",\n    \"age\": 28,\n    \"gender\": \"male\",\n    \"nationality\": \"Indian\",\n    \"aadharNumber\": \"123456789012\",\n    \"identificationMark1\": \"Mole on right cheek\",\n    \"identificationMark2\": \"\",\n    \"mobileNumber\": \"9876543210\",\n    \"alternateNumber\": \"8765432109\",\n    \"emailId\": \"rahul.sharma@example.com\",\n    \"permanentAddress\": {\n      \"street\": \"MGM Medical College Road\",\n      \"post\": \"Mango\",\n      \"cityOrVillage\": \"Jamshedpur\",\n      \"district\": \"East Singhbhum\",\n      \"state\": \"Jharkhand\",\n      \"pincode\": \"831001\"\n    },\n    \"sameAsPermanent\": true\n  }\n}"
+=======
+              "raw": "{\n  \"personalInfo\": {\n    \"fullName\": \"Rahul Sharma\",\n    \"fathersName\": \"Ramesh Sharma\",\n    \"motherName\": \"Sita Sharma\",\n    \"dob\": \"15-08-1995\",\n    \"gender\": \"male\",\n    \"nationality\": \"Indian\",\n    \"aadharNumber\": \"123456789012\",\n    \"identificationMark1\": \"Mole on right cheek\",\n    \"identificationMark2\": \"\",\n    \"mobileNumber\": \"9876543210\",\n    \"alternateNumber\": \"8765432109\",\n    \"emailId\": \"rahul.sharma@example.com\",\n    \"permanentAddress\": {\n      \"street\": \"MGM Medical College Road\",\n      \"post\": \"Mango\",\n      \"cityOrVillage\": \"Jamshedpur\",\n      \"district\": \"East Singhbhum\",\n      \"state\": \"Bihar\",\n      \"pincode\": \"831001\"\n    },\n    \"sameAsPermanent\": true\n  },\n  \"reservationCategory\": {\n    \"isLocallyResident\": true,\n    \"isBiharDomicile\": true,\n    \"domicileCertificateNumber\": \"DOM-BIH-2026-99282\",\n    \"mainCategory\": 1,\n    \"isPwd\": true,\n    \"pwdType\": 1,\n    \"pwdPercentage\": 45,\n    \"pwdCertificateNumber\": \"CERT123\",\n    \"pwdCertificateAuthority\": \"CMO Patna\",\n    \"pwdCertificateIssueDate\": \"10-10-2025\",\n    \"isExServiceman\": true,\n    \"exServicemanYears\": 5,\n    \"typeOfExOfficer\": 1,\n    \"isSportsQuota\": false,\n    \"declaration\": true\n  }\n}"
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
             },
             "url": "{{baseUrl}}/api/v1/auth/candidate/step-1"
           }
         },
         {
+<<<<<<< HEAD
           "name": "Candidate Step 2 (Reservation)",
+=======
+          "name": "Candidate Step 2 (Payment Process)",
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
           "request": {
             "method": "PATCH",
             "header": [
@@ -154,13 +166,21 @@
             ],
             "body": {
               "mode": "raw",
+<<<<<<< HEAD
               "raw": "{\n  \"isJharkhandDomicile\": true,\n  \"mainCategory\": 54,\n  \"subCategory\": 0,\n  \"isPwd\": false,\n  \"isExServiceman\": false,\n  \"isSportsQuota\": false,\n  \"declaration\": true\n}"
+=======
+              "raw": "{\n  \"paymentMode\": \"online_upi\"\n}"
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
             },
             "url": "{{baseUrl}}/api/v1/auth/candidate/step-2"
           }
         },
         {
+<<<<<<< HEAD
           "name": "Candidate Step 3 (Experience/Edu)",
+=======
+          "name": "Candidate Step 3 (Educational Details)",
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
           "request": {
             "method": "PATCH",
             "header": [
@@ -171,13 +191,21 @@
             ],
             "body": {
               "mode": "raw",
+<<<<<<< HEAD
               "raw": "{\n  \"highestQualification\": \"graduation\",\n  \"experience\": {\n    \"hasExperience\": true,\n    \"organization\": \"Tech Solutions\",\n    \"designation\": \"Software Engineer\",\n    \"durationYears\": 2,\n    \"durationMonths\": 5\n  },\n  \"qualifications\": [\n    {\n      \"level\": \"matriculation\",\n      \"degree\": \"10th\",\n      \"boardUniversity\": \"JAC\",\n      \"institutionName\": \"Ranchi High School\",\n      \"yearOfPassing\": 2011,\n      \"totalMarks\": 500,\n      \"marksObtained\": 400,\n      \"percentage\": 80,\n      \"rollNumber\": \"100123\"\n    }\n  ]\n}"
+=======
+              "raw": "{\n  \"highestQualification\": \"graduation\",\n  \"tenth\": {\n    \"board\": \"BSEB\",\n    \"percentage\": \"80\",\n    \"totalMarks\": \"500\",\n    \"marksObtained\": \"400\",\n    \"passingCertificateNo\": \"10TH-123\",\n    \"passingYear\": \"2011\"\n  },\n  \"graduation\": {\n    \"degreeId\": 1,\n    \"university\": \"Patna University\",\n    \"percentage\": \"72.3\",\n    \"totalMarks\": \"1000\",\n    \"marksObtained\": \"723\",\n    \"passingCertificateNo\": \"GRAD-112998\",\n    \"passingYear\": \"2016\"\n  }\n}"
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
             },
             "url": "{{baseUrl}}/api/v1/auth/candidate/step-3"
           }
         },
         {
+<<<<<<< HEAD
           "name": "Candidate Step 4 (Post Pref)",
+=======
+          "name": "Candidate Step 4 (Photo & Signature)",
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
           "request": {
             "method": "PATCH",
             "header": [
@@ -188,12 +216,17 @@
             ],
             "body": {
               "mode": "raw",
+<<<<<<< HEAD
               "raw": "{\n  \"vacancyStream\": \"both\",\n  \"isRegular\": true,\n  \"isBacklog\": true,\n  \"postRankings\": [\n    { \"postId\": 46, \"priority\": 1 },\n    { \"postId\": 44, \"priority\": 2 }\n  ]\n}"
+=======
+              "raw": "{\n  \"photograph\": \"{{documentId}}\",\n  \"signatureEnglish\": \"{{documentId}}\",\n  \"signatureHindi\": \"{{documentId}}\"\n}"
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
             },
             "url": "{{baseUrl}}/api/v1/auth/candidate/step-4"
           }
         },
         {
+<<<<<<< HEAD
           "name": "Candidate Step 5 (Languages)",
           "request": {
             "method": "POST",
@@ -212,6 +245,9 @@
         },
         {
           "name": "Candidate Step 6 (Documents)",
+=======
+          "name": "Candidate Step 5 (Live Photo)",
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
           "request": {
             "method": "PATCH",
             "header": [
@@ -222,7 +258,28 @@
             ],
             "body": {
               "mode": "raw",
+<<<<<<< HEAD
               "raw": "{\n  \"photo\": \"uuid-for-photo\",\n  \"signature\": \"uuid-for-signature\",\n  \"tenthMarksheet\": \"uuid-for-tenth\",\n  \"declarationAccepted\": true\n}"
+=======
+              "raw": "{\n  \"livePhoto\": \"{{documentId}}\"\n}"
+            },
+            "url": "{{baseUrl}}/api/v1/auth/candidate/step-5"
+          }
+        },
+        {
+          "name": "Candidate Step 6 (Post Preferences)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"postPreferences\": {\n    \"vacancyStream\": \"both\",\n    \"isRegular\": true,\n    \"isBacklog\": true,\n    \"postRankings\": [\n      { \"postCode\": \"101\", \"priority\": 1 }\n    ]\n  }\n}"
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
             },
             "url": "{{baseUrl}}/api/v1/auth/candidate/step-6"
           }
@@ -809,7 +866,11 @@
       ]
     },
     {
+<<<<<<< HEAD
       "name": "Locations",
+=======
+      "name": "Locations & Lookups",
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
       "item": [
         {
           "name": "Get Countries",
@@ -831,6 +892,16 @@
             "method": "GET",
             "url": "{{baseUrl}}/api/v1/states/{{stateId}}/districts"
           }
+<<<<<<< HEAD
+=======
+        },
+        {
+          "name": "Get Ex-Officer Types",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/public/type-of-ex-officer"
+          }
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
         }
       ]
     },

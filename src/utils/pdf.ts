@@ -51,7 +51,11 @@ export async function generateApplicationHtml(data: PdfGenerationData): Promise<
   const category = reservationCategory.mainCategoryName || 'UR';
   const maritalStatus = personalInfo.maritalStatus ? personalInfo.maritalStatus.toUpperCase() : 'N/A';
   const spouseName = personalInfo.spouseName ? personalInfo.spouseName.toUpperCase() : 'N/A';
+<<<<<<< HEAD
   const domicile = reservationCategory.isJharkhandDomicile ? 'YES' : 'NO';
+=======
+  const domicile = reservationCategory.isBiharDomicile ? 'YES' : 'NO';
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   const mobileNumber = personalInfo.mobileNumber || 'N/A';
   const emailAddress = personalInfo.emailId ? personalInfo.emailId.toLowerCase() : 'N/A';
   const aadharNumber = personalInfo.aadharNumber || personalInfo.identityNumber || 'N/A';
@@ -243,7 +247,11 @@ export async function generateApplicationHtml(data: PdfGenerationData): Promise<
     `;
   }
 
+<<<<<<< HEAD
   let unsubmittedDocNames = expectedDocs.filter(doc => !(documents && documents[doc.key])).map(d => d.label);
+=======
+  const unsubmittedDocNames = expectedDocs.filter(doc => !(documents && documents[doc.key])).map(d => d.label);
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   let docNote = '';
   if (unsubmittedDocNames.length > 0) {
     docNote = `<p class="doc-note">

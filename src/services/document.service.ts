@@ -16,14 +16,28 @@ import config from '../config';
 const ALLOWED_MIME_TYPES: Record<string, string[]> = {
   photograph: ['image/jpeg', 'image/jpg', 'image/png'],
   signature: ['image/jpeg', 'image/jpg', 'image/png'],
+<<<<<<< HEAD
+=======
+  signature_english: ['image/jpeg', 'image/jpg'],
+  signature_hindi: ['image/jpeg', 'image/jpg'],
+  live_photo: ['image/jpeg', 'image/jpg'],
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   identityProof: ['application/pdf', 'image/jpeg', 'image/png'],
   categoryProof: ['application/pdf', 'image/jpeg', 'image/png'],
   educationProof: ['application/pdf', 'image/jpeg', 'image/png'],
 };
 
 const MAX_FILE_SIZES: Record<string, number> = {
+<<<<<<< HEAD
   photograph: 3 * 1024 * 1024, // 3 MB
   signature: 3 * 1024 * 1024, // 3 MB
+=======
+  photograph: 50 * 1024, // 50 KB
+  signature: 3 * 1024 * 1024, // 3 MB
+  signature_english: 30 * 1024, // 30 KB
+  signature_hindi: 30 * 1024, // 30 KB
+  live_photo: 100 * 1024, // 100 KB
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
   identityProof: 3 * 1024 * 1024, // 3 MB
   categoryProof: 3 * 1024 * 1024, // 3 MB
   educationProof: 3 * 1024 * 1024, // 3 MB
@@ -127,7 +141,12 @@ export class DocumentService {
 
     const maxSize = MAX_FILE_SIZES[input.documentType];
     if (input.fileSize > maxSize) {
+<<<<<<< HEAD
       throw new AppError(`File size exceeds limit. Maximum allowed: 3 MB`, 422);
+=======
+      const sizeStr = maxSize >= 1024 * 1024 ? `${maxSize / (1024 * 1024)} MB` : `${maxSize / 1024} KB`;
+      throw new AppError(`File size exceeds limit. Maximum allowed: ${sizeStr}`, 422);
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
     }
 
     const fileKey = `candidates/${input.candidateId}/${input.documentType}/${generateUUID()}-${input.fileName}`;

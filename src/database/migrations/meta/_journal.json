@@ -110,15 +110,88 @@
     {
       "idx": 15,
       "version": "6",
+<<<<<<< HEAD
       "when": 1782885536502,
       "tag": "0015_tan_korg",
+=======
+      "when": 1783502402511,
+      "tag": "0015_add_candidate_fields",
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
       "breakpoints": true
     },
     {
       "idx": 16,
       "version": "6",
+<<<<<<< HEAD
       "when": 1782908510266,
       "tag": "0016_brief_baron_strucker",
+=======
+      "when": 1783597643263,
+      "tag": "0016_slimy_randall",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1783940038953,
+      "tag": "0017_glossy_agent_zero",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "6",
+      "when": 1784005359658,
+      "tag": "0018_peaceful_metal_master",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1784005369175,
+      "tag": "0019_ambiguous_gorgon",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1784090360949,
+      "tag": "0020_mature_ma_gnuci",
+      "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1784090524763,
+      "tag": "0021_simple_reavers",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "6",
+      "when": 1784108137260,
+      "tag": "0022_odd_human_fly",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1784183342333,
+      "tag": "0023_rainy_ezekiel_stane",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "6",
+      "when": 1784206686604,
+      "tag": "0024_funny_vin_gonzales",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "6",
+      "when": 1784217461926,
+      "tag": "0025_unusual_zarda",
+>>>>>>> b5d3be6e099ba6bac81a614738a5b4b0d8414e74
       "breakpoints": true
     }
   ]
