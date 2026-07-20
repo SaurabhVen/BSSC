@@ -11,4 +11,5 @@ export const getPaidCandidateSchema = z.object({
   mothername: z.string({
     required_error: "Mother's name is required",
   }).trim().min(1, "Mother's name is required"),
+  fullname: z.string().trim().optional(),
 });

@@ -53,6 +53,7 @@ import {
 } from '../database/schema';
 import { eq, asc, or, inArray, and } from 'drizzle-orm';
 import { calculateBSSCAge, getBSSCAgeLimits, checkBSSCEligibility } from '../utils/age';
+import { generateUUID } from '../utils/crypto';
 
 interface UnifiedCandidate {
   dob?: string;
@@ -539,6 +540,79 @@ export class AuthController {
 
     const draft = await applicationService.getOrCreateDraft(candidate.id);
 
+    const previouslyRegistered = (rawBody as any).previouslyRegistered || (rawBody as any).previously_registered || candidate.previouslyRegistered;
+    const oldRegNo = (rawBody as any).oldRegistrationNumber || (rawBody as any).old_registration_number || candidate.oldRegistrationNumber;
+
+    if (previouslyRegistered === 'YES' || oldRegNo) {
+      if (!oldRegNo) {
+        throw new ValidationError(
+          [{ field: 'oldRegistrationNumber', message: 'Registration number is required for previously registered candidates' }],
+          'Registration number is required'
+        );
+      }
+
+      const regIdNum = parseInt(oldRegNo.toString().trim(), 10);
+      if (!isNaN(regIdNum)) {
+        const { paidCandidateRepository } = await import('../repositories/paidCandidate.repository');
+        const paidCandidate = await paidCandidateRepository.findByRegId(regIdNum);
+        if (!paidCandidate) {
+          throw new ValidationError(
+            [{ field: 'oldRegistrationNumber', message: 'Registration number is incorrect or not found' }],
+            'Registration number is incorrect'
+          );
+        }
+
+        // Validate Candidate's name (fullName)
+        const dbFullName = paidCandidate.fullName || '';
+        const inputFullName = mappedPersonalInfo.fullName || '';
+        if (dbFullName.trim().toLowerCase() !== inputFullName.trim().toLowerCase()) {
+          throw new ValidationError(
+            [{ field: 'fullName', message: 'Candidate name is incorrect' }],
+            'Candidate name is incorrect'
+          );
+        }
+
+        // Validate Father's name
+        const dbFatherName = paidCandidate.fatherName || '';
+        const inputFatherName = mappedPersonalInfo.fatherName || '';
+        if (dbFatherName.trim().toLowerCase() !== inputFatherName.trim().toLowerCase()) {
+          throw new ValidationError(
+            [{ field: 'fatherName', message: "Father's name is incorrect" }],
+            "Father's name is incorrect"
+          );
+        }
+
+        // Validate Mother's name
+        const dbMotherName = paidCandidate.motherName || '';
+        const inputMotherName = mappedPersonalInfo.motherName || '';
+        if (dbMotherName.trim().toLowerCase() !== inputMotherName.trim().toLowerCase()) {
+          throw new ValidationError(
+            [{ field: 'motherName', message: "Mother's name is incorrect" }],
+            "Mother's name is incorrect"
+          );
+        }
+
+        // If verified, auto-complete the payment status in the database so that they skip the payment page.
+        console.log(`[candidateStep1] Auto-completing payment for pre-paid candidate: ${regIdNum}`);
+        const { paymentService } = await import('../services/payment.service');
+        const payments = await paymentService.getPaymentStatus(draft.applicationId, candidate.id);
+        const completedPayment = payments.find((p) => p.status === 'completed');
+        if (!completedPayment) {
+          const { paymentRepository } = await import('../repositories/common.repository');
+          const paymentOrderId = `free_auto_${generateUUID().substring(0, 8).toUpperCase()}`;
+          await paymentRepository.create({
+            applicationId: draft.applicationId,
+            paymentOrderId,
+            amount: '0.00',
+            currency: 'INR',
+            status: 'pending',
+            paymentMode: 'exempt',
+          });
+          await paymentService.completeFreePayment(paymentOrderId);
+        }
+      }
+    }
+
     // Save Step 0 (Personal Details)
     await applicationService.saveStep(
       draft.applicationId,
@@ -552,7 +626,7 @@ export class AuthController {
     );
 
     // Save Step 1 (Reservation Details)
-    const result = await applicationService.saveStep(
+    await applicationService.saveStep(
       draft.applicationId,
       candidate.id,
       1,
@@ -604,10 +678,16 @@ export class AuthController {
       hasPostExperience: (rawBody as any).hasPostExperience === 'YES' || (rawBody as any).hasPostExperience === true || (rawBody as any).has_post_experience === 'YES',
     });
 
+    const updatedDraft = await applicationService.getOrCreateDraft(candidate.id);
+
     return response.success(200, {
       message: 'Candidate personal and reservation details (Step 1) saved successfully',
       data: {
-        ...result,
+        applicationId: updatedDraft.applicationId,
+        savedStep: 1,
+        currentStep: updatedDraft.currentStep,
+        status: updatedDraft.status,
+        updatedAt: new Date(),
         savedData: {
           personalInfo: mappedPersonalInfo,
           reservationCategory: mappedReservation,

@@ -277,7 +277,7 @@ export class PaymentService {
         const motherName = step0Data?.motherName;
         if (oldRegNo && fatherName && motherName) {
           const regIdNum = parseInt(oldRegNo.toString().trim(), 10);
-          
+
           if (!isNaN(regIdNum)) {
             // 1. Check if another candidate has already claimed/completed an application with this old registration number
             const { candidates } = await import('../database/schema');
@@ -355,7 +355,7 @@ export class PaymentService {
     });
 
 
-    
+
 
     // If amount is 0 (e.g. PwD), auto-complete
     if (amount === 0) {
