@@ -102,6 +102,11 @@ provider:
     GETEPAY_IV: ${env:GETEPAY_IV, 'IosadgLAo1VYToxCg79uQg=='}
     GETEPAY_URL: ${env:GETEPAY_URL, 'https://portal.getepay.in:8443/getepayPortal/pg/generateInvoice'}
     GETEPAY_REQUERY_URL: ${env:GETEPAY_REQUERY_URL, 'https://portal.getepay.in:8443/getepayPortal/pg/invoiceStatus'}
+    FEE_UR_EBC_BC_MALE: ${env:FEE_UR_EBC_BC_MALE, '100'}
+    FEE_SC_ST_BIHAR: ${env:FEE_SC_ST_BIHAR, '100'}
+    FEE_PWD_BIHAR: ${env:FEE_PWD_BIHAR, '100'}
+    FEE_WOMEN_BIHAR: ${env:FEE_WOMEN_BIHAR, '100'}
+    FEE_OUTSIDE_BIHAR: ${env:FEE_OUTSIDE_BIHAR, '100'}
 
   iam:
     role:
@@ -732,12 +737,12 @@ functions:
           path: /api/v1/public/age-limits
           method: POST
 
-  getCognitoSubId:
-    handler: src/handlers/publicHandlers.getCognitoSubId
-    events:
-      - httpApi:
-          path: /api/v1/public/cognito-sub
-          method: POST
+  # getCognitoSubId:
+  #   handler: src/handlers/publicHandlers.getCognitoSubId
+  #   events:
+  #     - httpApi:
+  #         path: /api/v1/public/cognito-sub
+  #         method: POST
 
   getIpAddress:
     handler: src/handlers/getIpAddress.handler
@@ -759,6 +764,14 @@ functions:
       - httpApi:
           path: /api/v1/paid-candidates
           method: POST
+
+  forgotRegistrationNumber:
+    handler: src/handlers/public/forgotRegistrationNumber.handler
+    events:
+      - httpApi:
+          path: /api/v1/public/forgot-registration-number
+          method: POST
+
 
 
 

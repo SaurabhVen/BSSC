@@ -72,6 +72,8 @@ export const candidates = pgTable(
       .references(() => users.id)
       .unique(),
     registrationNumber: varchar('registration_number', { length: 20 }).unique(),
+    oldRegistrationNumber: varchar('old_registration_number', { length: 20 }),
+    previouslyRegistered: varchar('previously_registered', { length: 10 }),
     dateOfBirth: timestamp('date_of_birth'),
     mobileNumber: varchar('mobile_number', { length: 15 }),
     alternateNumber: varchar('alternate_number', { length: 15 }),
@@ -115,6 +117,7 @@ export const candidateMetadata = pgTable(
     postName: varchar('post_name', { length: 100 }),
     hasAgreement: boolean('has_agreement').default(false).notNull(),
     contractualPeriod: varchar('contractual_period', { length: 100 }),
+    governmentIdNumber: varchar('government_id_number', { length: 50 }),
 
     domicileCertificateNumber: varchar('domicile_certificate_number', { length: 100 }),
     domicileCertificateAuthority: varchar('domicile_certificate_authority', { length: 100 }),

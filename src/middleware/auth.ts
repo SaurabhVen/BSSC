@@ -25,8 +25,8 @@ export const authenticate = async (event: APIGatewayProxyEventV2): Promise<Authe
   }
   console.log('Decoded JWT payload:', decoded);
 
-  
-  let email = decoded.email;
+
+  let email = decoded.username;
   if (!email) {
     throw new UnauthorizedError('Invalid token: email claim is missing.');
   }

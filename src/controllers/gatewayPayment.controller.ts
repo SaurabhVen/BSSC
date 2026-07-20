@@ -131,8 +131,8 @@ export class GatewayPaymentController {
   }
 
   async returnRedirect(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
-    const baseUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    let frontendUrl = `${baseUrl}/dashboard/my-applications`;
+    const baseUrl = process.env.FRONTEND_URL || 'https://d3lnk974uo6n00.cloudfront.net';
+    let frontendUrl = `${baseUrl}/application`;
 
     try {
 
@@ -190,7 +190,7 @@ export class GatewayPaymentController {
             console.error('Error verifying payment in return redirect:', verifyErr);
           }
 
-          frontendUrl = `${baseUrl}/dashboard/my-applications?txn=${transactionId}`;
+          frontendUrl = `${baseUrl}/application?txn=${transactionId}`;
         }
       }
     } catch (err) {

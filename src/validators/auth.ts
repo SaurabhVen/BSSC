@@ -39,6 +39,7 @@ export const registerSchema = z
     email: emailSchema,
     password: passwordSchema,
     confirmPassword: z.string().optional(),
+    oldRegistrationNumber: z.string().optional().nullable(),
     fullName: z.string().min(1).max(200),
     dateOfBirth: z
       .string()
@@ -180,6 +181,18 @@ export const verifyEmailOtpSchema = z.object({
 export const resendOtpSchema = z.object({
   otpRequestId: z.string().min(1, 'OTP Request ID is required'),
 });
+
+
+export const forgotRegistrationNumberSchema = z.object({
+  email: z
+    .string()
+    .email('Invalid email address')
+    .max(255)
+    .toLowerCase()
+    .trim(),
+});
+
+export type ForgotRegistrationNumberInput = z.infer<typeof forgotRegistrationNumberSchema>;
 
 // ── Candidate Step 1 Schema ────────────────────────────────────
 

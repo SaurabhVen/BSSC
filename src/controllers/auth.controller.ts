@@ -27,6 +27,7 @@ import {
   candidateStep5Schema,
   candidateStep6Schema,
   type CandidateRegisterInput,
+  forgotRegistrationNumberSchema,
 } from '../validators/auth';
 import { applicationService } from '../services/application.service';
 import { documentService } from '../services/document.service';
@@ -1802,6 +1803,17 @@ export class AuthController {
     const result = await otpService.resendOtp(input);
     return response.success(200, { message: 'OTP resent', ...result });
   }
+
+  async forgotRegistrationNumber(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
+  const { body } = parseEvent(event);
+  const input = validate(forgotRegistrationNumberSchema, body);
+  
+  await authService.forgotRegistrationNumber(input);
+  
+  return response.success(200, {
+    message: 'If the email is registered, your registration number has been sent to your email address.',
+  });
+}
 }
 
 export const authController = new AuthController();

@@ -156,6 +156,7 @@ export class UserRepository {
           id: data.id,
           userId: data.userId,
           registrationNumber: data.registrationNumber,
+          oldRegistrationNumber: (data as any).oldRegistrationNumber,
           dateOfBirth: data.dateOfBirth,
           mobileNumber: data.mobileNumber,
           alternateNumber: data.alternateNumber,
@@ -228,6 +229,8 @@ export class UserRepository {
         if (updates.mobileVerified !== undefined) coreUpdates.mobileVerified = updates.mobileVerified;
         if (updates.emailVerified !== undefined) coreUpdates.emailVerified = updates.emailVerified;
         if (updates.registrationNumber !== undefined) coreUpdates.registrationNumber = updates.registrationNumber;
+        if (updates.oldRegistrationNumber !== undefined) coreUpdates.oldRegistrationNumber = updates.oldRegistrationNumber;
+        if (updates.previouslyRegistered !== undefined) coreUpdates.previouslyRegistered = updates.previouslyRegistered;
 
         if (Object.keys(coreUpdates).length > 0) {
           await tx
@@ -245,7 +248,7 @@ export class UserRepository {
           'domicileCertificateIssueDate', 'categoryCertificateNumber', 'categoryCertificateAuthority',
           'categoryCertificateIssueDate', 'pwdCertificateNumber', 'pwdCertificateAuthority',
           'pwdCertificateIssueDate', 'disTypePersist', 'isScribeRequired', 'organizationName',
-          'hasPostExperience'
+          'hasPostExperience', 'governmentIdNumber'
         ];
 
         for (const field of metaFields) {

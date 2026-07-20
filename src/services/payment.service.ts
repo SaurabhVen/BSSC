@@ -257,6 +257,60 @@ export class PaymentService {
         amount = config.FEE_UR_EBC_BC_MALE;
       }
     }
+
+    if (stepRecords) {
+      const step0Record = stepRecords.find((r) => r.stepNumber === 0);
+      const step1Record = stepRecords.find((r) => r.stepNumber === 1);
+      if (step0Record) {
+        const step0Data =
+          typeof step0Record.data === 'string'
+            ? JSON.parse(step0Record.data)
+            : (step0Record.data as Record<string, any>);
+        const step1Data = step1Record
+          ? typeof step1Record.data === 'string'
+            ? JSON.parse(step1Record.data)
+            : (step1Record.data as Record<string, any>)
+          : null;
+
+        const oldRegNo = step1Data?.oldRegistrationNumber || step0Data?.oldRegistrationNumber || step0Data?.previousRegistrationNumber;
+        const fatherName = step0Data?.fatherName;
+        const motherName = step0Data?.motherName;
+        if (oldRegNo && fatherName && motherName) {
+          const regIdNum = parseInt(oldRegNo.toString().trim(), 10);
+          
+          if (!isNaN(regIdNum)) {
+            // 1. Check if another candidate has already claimed/completed an application with this old registration number
+            const { candidates } = await import('../database/schema');
+            const { and: drAnd, ne } = await import('drizzle-orm');
+            const duplicateCheck = await db
+              .select()
+              .from(candidates)
+              .where(
+                drAnd(
+                  eq(candidates.oldRegistrationNumber, oldRegNo.toString().trim()),
+                  ne(candidates.id, input.candidateId)
+                )
+              );
+            if (duplicateCheck.length > 0) {
+              throw new AppError('This old registration number has already been claimed by another applicant.', 400);
+            }
+            // 2. Lookup the paid status in the database
+            const { paidCandidateRepository } = await import('../repositories/paidCandidate.repository');
+            const paidRecord = await paidCandidateRepository.findByDetails(
+              regIdNum,
+              fatherName,
+              motherName
+            );
+            if (paidRecord) {
+              console.log(`[Payment] Verified pre-paid candidate with Old RegId: ${regIdNum}. Bypassing payment.`);
+              amount = 0; // Set fee to 0, which triggers the system's built-in free/exempt payment flow
+            }
+          }
+        }
+      }
+    }
+
+
     // Create actual Razorpay Order if fee > 0
     let paymentOrderId = `order_${generateUUID().substring(0, 14).toUpperCase()}`;
     let paymentUrl = '';
@@ -299,6 +353,9 @@ export class PaymentService {
       status: 'pending',
       paymentUrl,
     });
+
+
+    
 
     // If amount is 0 (e.g. PwD), auto-complete
     if (amount === 0) {
