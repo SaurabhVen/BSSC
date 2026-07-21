@@ -3,13 +3,13 @@ import { disabilities } from '../schema';
 import { eq } from 'drizzle-orm';
 
 const DISABILITIES = [
-  { code: 'vi', name: 'Visual Impairment' },
-  { code: 'dd', name: 'Deaf and Hard of Hearing' },
-  { code: 'pcep', name: 'Locomotor Disability / Cerebral Palsy' },
-  {
-    code: 'AIMLD',
-    name: 'Autism, Intellectual Disability, Specific Learning Disability, Mental Illness',
-  },
+  { code: 'vi', name: 'Low Vision/Blindness' },
+  { code: 'dd', name: 'Hearing Impairment' },
+  { code: 'pcep', name: 'Orthopedic' },
+  // {
+  //   code: 'AIMLD',
+  //   name: 'Autism, Intellectual Disability, Specific Learning Disability, Mental Illness',
+  // },
 ];
 
 export const seedDisabilities = async (): Promise<void> => {

@@ -4,6 +4,7 @@ import { getDb } from '../database/drizzle';
 import { calculateBSSCAge, getBSSCAgeLimits, checkBSSCEligibility } from '../utils/age';
 import { eq, and, inArray } from 'drizzle-orm';
 import { generateApplicationHtml } from '../utils/pdf';
+import { cognitoAdminGetUser } from '../utils/cognito';
 import {
   candidateQualifications,
   candidatePostPreferences,
@@ -16,6 +17,7 @@ import {
   districts,
   finalSubmissions,
   users,
+  typeOfExOfficers,
 } from '../database/schema';
 import { documentRepository } from '../repositories/common.repository';
 import { documentService } from './document.service';
@@ -111,7 +113,7 @@ const COGNITO_KEYS = new Set([
   'mainCategory', 'categoryId', 'category',
   'subCategory', 'casteId', 'caste',
   'isPwd', 'disability', 'pwdType', 'natureOfDisability', 'pwdPercentage', 'disabilityPercent', 'pwd40Percent', 'isMin40PercentPwD', 'isScribeRequired',
-  'isExServiceman', 'exServiceman', 'exServicemanYears', 'officerType', 'servicePeriod',
+  'isExServiceman', 'exServiceman', 'exServicemanYears', 'officerType', 'typeOfExOfficer', 'servicePeriod',
   'biharGovtEmployee', 'biharGovtEmp', 'numberOfAttempts', 'bsscAttempts', 'contractualEmployee', 'contractualEmp', 'organizationName', 'hasPostExperience', 'nameOfPost', 'postName', 'agreementCircular', 'hasAgreement', 'contractualPeriod', 'disTypePersist', 'natureOfDisabilityType',
   'nonCreamyLayer', 'isNonCreamyLayer',
   'registrationNumber', 'previouslyRegistered', 'governmentIdNumber', 'oldRegistrationNumber'
@@ -527,8 +529,8 @@ export class ApplicationService {
       candidateRecord = await userRepository.findCandidateById(candidateId);
     }
 
-    // Fetch candidate and user details from DB to build step0 dynamically if it is missing
-    if (!stepDataMap[0] && candidateId && candidateRecord) {
+    // Fetch candidate and user details from DB to build/merge step0 dynamically from Cognito data
+    if (candidateId && candidateRecord) {
       try {
         const candidate = candidateRecord;
 
@@ -565,7 +567,92 @@ export class ApplicationService {
             ? new Date(candidate.dateOfBirth).toISOString().split('T')[0].split('-').reverse().join('-')
             : '';
 
-          stepDataMap[0] = {
+          // If any of the newly added custom keys are null in DB, try to fetch them dynamically from Cognito as auto-healing fallback
+          let shouldUpdateDB = false;
+          let fetchedServiceFromDate = candidate.serviceFromDate;
+          let fetchedServiceToDate = candidate.serviceToDate;
+          let fetchedContractualFromDate = candidate.contractualFromDate;
+          let fetchedContractualToDate = candidate.contractualToDate;
+          let fetchedIsOwnScribe = candidate.isOwnScribe;
+          let fetchedTypeOfExOfficer = candidate.typeOfExOfficer;
+
+          // Only call Cognito if one of these fields is null AND dbUser.email is available
+          if (
+            (fetchedServiceFromDate === null || fetchedServiceToDate === null || 
+             fetchedContractualFromDate === null || fetchedContractualToDate === null || 
+             fetchedTypeOfExOfficer === null) && 
+            dbUser?.email
+          ) {
+            try {
+              const cognitoUser = await cognitoAdminGetUser(dbUser.email);
+              if (cognitoUser && Array.isArray(cognitoUser.UserAttributes)) {
+                const attrs: Record<string, string> = {};
+                for (const attr of cognitoUser.UserAttributes as any[]) {
+                  if (attr.Name && attr.Value) {
+                    attrs[attr.Name] = attr.Value;
+                  }
+                }
+
+                if (fetchedServiceFromDate === null && attrs['custom:serviceFromDate']) {
+                  fetchedServiceFromDate = new Date(attrs['custom:serviceFromDate']);
+                  shouldUpdateDB = true;
+                }
+                if (fetchedServiceToDate === null && attrs['custom:serviceToDate']) {
+                  fetchedServiceToDate = new Date(attrs['custom:serviceToDate']);
+                  shouldUpdateDB = true;
+                }
+                if (fetchedContractualFromDate === null && attrs['custom:contractualFromDate']) {
+                  fetchedContractualFromDate = new Date(attrs['custom:contractualFromDate']);
+                  shouldUpdateDB = true;
+                }
+                if (fetchedContractualToDate === null && attrs['custom:contractualToDate']) {
+                  fetchedContractualToDate = new Date(attrs['custom:contractualToDate']);
+                  shouldUpdateDB = true;
+                }
+                if (fetchedTypeOfExOfficer === null && attrs['custom:officer_type']) {
+                  const oType = attrs['custom:officer_type'].trim();
+                  const parsedInt = parseInt(oType, 10);
+                  if (!isNaN(parsedInt)) {
+                    fetchedTypeOfExOfficer = parsedInt;
+                    shouldUpdateDB = true;
+                  } else {
+                    const exOfficerList = await db
+                      .select()
+                      .from(typeOfExOfficers)
+                      .where(eq(typeOfExOfficers.name, oType))
+                      .limit(1);
+                    if (exOfficerList.length > 0) {
+                      fetchedTypeOfExOfficer = exOfficerList[0].id;
+                      shouldUpdateDB = true;
+                    }
+                  }
+                }
+                if (attrs['custom:isownscribe'] !== undefined) {
+                  const val = attrs['custom:isownscribe'] === 'YES' || attrs['custom:isownscribe'] === 'true';
+                  if (fetchedIsOwnScribe !== val) {
+                    fetchedIsOwnScribe = val;
+                    shouldUpdateDB = true;
+                  }
+                }
+              }
+            } catch (cognitoErr) {
+              console.error('Auto-healing: failed to retrieve user from Cognito:', dbUser.email, cognitoErr);
+            }
+          }
+
+          if (shouldUpdateDB) {
+            console.log(`Auto-healing candidate metadata for candidate: ${candidate.id}`);
+            await userRepository.updateCandidate(candidate.id, {
+              serviceFromDate: fetchedServiceFromDate,
+              serviceToDate: fetchedServiceToDate,
+              contractualFromDate: fetchedContractualFromDate,
+              contractualToDate: fetchedContractualToDate,
+              isOwnScribe: fetchedIsOwnScribe,
+              typeOfExOfficer: fetchedTypeOfExOfficer,
+            });
+          }
+
+          const cognitoData = {
             fullName: dbUser?.fullName || '',
             emailId: dbUser?.email || '',
             mobileNumber: candidate.mobileNumber || '',
@@ -594,6 +681,8 @@ export class ApplicationService {
 
             isExServiceman: candidate.isExServiceman === true,
             exServicemanYears: 0,
+            typeOfExOfficer: fetchedTypeOfExOfficer,
+            officerType: fetchedTypeOfExOfficer ? String(fetchedTypeOfExOfficer) : '',
             servicePeriod: candidate.servicePeriod || '',
             biharGovtEmp: candidate.isBiharGovtEmp === true ? 'YES' : 'NO',
             bsscAttempts: candidate.bsscAttempts ? String(candidate.bsscAttempts) : '0',
@@ -606,6 +695,11 @@ export class ApplicationService {
             disTypePersist: candidate.disTypePersist || '',
             isScribeRequired: candidate.isScribeRequired === true ? 'YES' : 'NO',
             nonCreamyLayer: candidate.nonCreamyLayer === true ? 'YES' : 'NO',
+            serviceFromDate: fetchedServiceFromDate ? new Date(fetchedServiceFromDate).toISOString().split('T')[0] : null,
+            serviceToDate: fetchedServiceToDate ? new Date(fetchedServiceToDate).toISOString().split('T')[0] : null,
+            contractualFromDate: fetchedContractualFromDate ? new Date(fetchedContractualFromDate).toISOString().split('T')[0] : null,
+            contractualToDate: fetchedContractualToDate ? new Date(fetchedContractualToDate).toISOString().split('T')[0] : null,
+            isownscribe: fetchedIsOwnScribe === true ? 'YES' : 'NO',
             sportsLevel: null,
             sportsAchievement: null,
             sportsCertificateNumber: null,
@@ -615,6 +709,11 @@ export class ApplicationService {
             previouslyRegistered: candidate.previouslyRegistered || 'NO',
             governmentIdNumber: candidate.governmentIdNumber || null,
             oldRegistrationNumber: candidate.oldRegistrationNumber || null
+          };
+
+          stepDataMap[0] = {
+            ...(stepDataMap[0] || {}),
+            ...cognitoData
           };
         }
       } catch (err) {
@@ -749,6 +848,42 @@ export class ApplicationService {
         categoryId: String(s1.categoryId || s1.mainCategory || s0.categoryId || s0.mainCategory || ''),
         caste: s1.caste || s0.caste || '',
         casteId: String(s1.casteId || s1.subCategory || s0.casteId || s0.subCategory || ''),
+        mainCategory: s1.mainCategory || s0.mainCategory || (s1.categoryId ? Number(s1.categoryId) : null) || (s0.categoryId ? Number(s0.categoryId) : null) || null,
+        subCategory: s1.subCategory || s0.subCategory || (s1.casteId ? Number(s1.casteId) : null) || (s0.casteId ? Number(s0.casteId) : null) || null,
+        subSubCategoryId: s1.subSubCategoryId || s0.subSubCategoryId || null,
+        mainCategoryId: s1.mainCategoryId || s0.mainCategoryId || (s1.categoryId ? Number(s1.categoryId) : null) || (s0.categoryId ? Number(s0.categoryId) : null) || null,
+        subCategoryId: s1.subCategoryId || s0.subCategoryId || (s1.casteId ? Number(s1.casteId) : null) || (s0.casteId ? Number(s0.casteId) : null) || null,
+        reservationCategory: s1.reservationCategory || {
+          isLocallyResident: s1.isLocallyResident || s0.isLocallyResident || false,
+          localDistrictId: s1.localDistrictId || s0.localDistrictId || null,
+          isBiharDomicile: s1.isBiharDomicile || s0.isBiharDomicile || false,
+          domicileCertificateNumber: s1.domicileCertificateNumber || s0.domicileCertificateNumber || null,
+          domicileCertificateAuthority: s1.domicileCertificateAuthority || s0.domicileCertificateAuthority || null,
+          domicileCertificateIssueDate: s1.domicileCertificateIssueDate || s0.domicileCertificateIssueDate || null,
+          mainCategory: s1.mainCategory || s0.mainCategory || (s1.categoryId ? Number(s1.categoryId) : null) || (s0.categoryId ? Number(s0.categoryId) : null) || null,
+          subCategory: s1.subCategory || s0.subCategory || (s1.casteId ? Number(s1.casteId) : null) || (s0.casteId ? Number(s0.casteId) : null) || null,
+          subSubCategoryId: s1.subSubCategoryId || s0.subSubCategoryId || null,
+          categoryCertificateNumber: s1.categoryCertificateNumber || s0.categoryCertificateNumber || null,
+          categoryCertificateAuthority: s1.categoryCertificateAuthority || s0.categoryCertificateAuthority || null,
+          categoryCertificateIssueDate: s1.categoryCertificateIssueDate || s0.categoryCertificateIssueDate || null,
+          isPwd: s1.isPwd || s0.isPwd || false,
+          pwdType: s1.pwdType || s0.pwdType || null,
+          pwdPercentage: s1.pwdPercentage || s0.pwdPercentage || null,
+          pwdCertificateNumber: s1.pwdCertificateNumber || s0.pwdCertificateNumber || null,
+          pwdCertificateAuthority: s1.pwdCertificateAuthority || s0.pwdCertificateAuthority || null,
+          pwdCertificateIssueDate: s1.pwdCertificateIssueDate || s0.pwdCertificateIssueDate || null,
+          isExServiceman: s1.isExServiceman || s0.isExServiceman || false,
+          exServicemanYears: s1.exServicemanYears || s0.exServicemanYears || null,
+          typeOfExOfficer: s1.typeOfExOfficer || s0.typeOfExOfficer || (s1.officerType ? parseInt(s1.officerType, 10) : null) || (s0.officerType ? parseInt(s0.officerType, 10) : null) || null,
+          isSportsQuota: s1.isSportsQuota || s0.isSportsQuota || false,
+          sportsLevel: s1.sportsLevel || s0.sportsLevel || null,
+          sportsAchievement: s1.sportsAchievement || s0.sportsAchievement || null,
+          serviceFromDate: s1.serviceFromDate || s0.serviceFromDate || null,
+          serviceToDate: s1.serviceToDate || s0.serviceToDate || null,
+          contractualFromDate: s1.contractualFromDate || s0.contractualFromDate || null,
+          contractualToDate: s1.contractualToDate || s0.contractualToDate || null,
+          isownscribe: s1.isownscribe || s0.isownscribe || null,
+        },
         isNonCreamyLayer: (s1.nonCreamyLayer === 'YES' || s1.nonCreamyLayer === true || s0.nonCreamyLayer === 'YES' || s0.nonCreamyLayer === true) ? 'YES' : 'NO',
         categoryCertNo: s1.categoryCertNo || s1.categoryCertificateNumber || s0.categoryCertNo || s0.categoryCertificateNumber || '',
         categoryIssueDate: s1.categoryIssueDate || s1.categoryCertificateIssueDate || s0.categoryIssueDate || s0.categoryCertificateIssueDate || '',
@@ -764,8 +899,10 @@ export class ApplicationService {
         disabilityAuthority: s1.disabilityAuthority || s1.pwdCertificateAuthority || s0.disabilityAuthority || s0.pwdCertificateAuthority || '',
         disabilityAuthorityOther: s1.disabilityAuthorityOther || s0.disabilityAuthorityOther || '',
         isScribeRequired: (s1.isScribeRequired === 'YES' || s1.isScribeRequired === true || s0.isScribeRequired === 'YES' || s0.isScribeRequired === true) ? 'YES' : 'NO',
+        isownscribe: (s1.isownscribe === 'YES' || s1.isownscribe === true || s0.isownscribe === 'YES' || s0.isownscribe === true) ? 'YES' : 'NO',
         exServiceman: (s1.isExServiceman === true || s1.isExServiceman === 'YES' || s1.exServiceman === 'YES' || s1.exServiceman === true || s0.isExServiceman === true || s0.isExServiceman === 'YES' || s0.exServiceman === 'YES' || s0.exServiceman === true) ? 'YES' : 'NO',
         officerType: String(s1.officerType || s1.typeOfExOfficer || s0.officerType || s0.typeOfExOfficer || ''),
+        typeOfExOfficer: s1.typeOfExOfficer || s0.typeOfExOfficer || (s1.officerType ? parseInt(s1.officerType, 10) : null) || (s0.officerType ? parseInt(s0.officerType, 10) : null) || null,
         serviceFromDate: s1.serviceFromDate || s0.serviceFromDate || '',
         serviceToDate: s1.serviceToDate || s0.serviceToDate || '',
         wardOfFreedomFighter: (s1.wardOfFreedomFighter === 'YES' || s1.wardOfFreedomFighter === true || s1.isFreedomFighter === 'YES' || s1.isFreedomFighter === true || s0.wardOfFreedomFighter === 'YES' || s0.wardOfFreedomFighter === true || s0.isFreedomFighter === 'YES' || s0.isFreedomFighter === true) ? 'YES' : 'NO',
@@ -1025,8 +1162,8 @@ export class ApplicationService {
 
     normalizeStepDataDates(stepDataMap);
   }
-  async finalSubmitLegacy(applicationId: string, candidateId: string): Promise<any> {
-    const db = getDb();
+  async finalSubmitLegacy(applicationId: string, candidateId: string, txClient?: any): Promise<any> {
+    const db = txClient || getDb();
     const app = await applicationRepository.findById(applicationId);
     if (!app) throw new NotFoundError('Application not found');
     if (app.candidateId !== candidateId) throw new ForbiddenError('Not your application');
@@ -1061,9 +1198,19 @@ export class ApplicationService {
           candidateId,
           payload,
         });
+      } else {
+        await db
+          .update(finalSubmissions)
+          .set({ payload })
+          .where(
+            and(
+              eq(finalSubmissions.applicationId, applicationId),
+              eq(finalSubmissions.candidateId, candidateId)
+            )
+          );
       }
     } catch (e) {
-      console.error("Failed to insert into finalSubmissions table in finalSubmitLegacy:", e);
+      console.error("Failed to insert or update finalSubmissions table in finalSubmitLegacy:", e);
     }
 
     // Process Step 0 -> Candidates table
@@ -1125,7 +1272,13 @@ export class ApplicationService {
 
         organizationName: s0.organizationName || null,
         hasPostExperience: s0.hasPostExperience === 'YES' || s0.hasPostExperience === true || s0.hasPostExperience === 'yes',
-      });
+
+        serviceFromDate: parseServiceDate(s0.serviceFromDate || (s0.reservationCategory && s0.reservationCategory.serviceFromDate)),
+        serviceToDate: parseServiceDate(s0.serviceToDate || (s0.reservationCategory && s0.reservationCategory.serviceToDate)),
+        contractualFromDate: parseServiceDate(s0.contractualFromDate || (s0.reservationCategory && s0.reservationCategory.contractualFromDate)),
+        contractualToDate: parseServiceDate(s0.contractualToDate || (s0.reservationCategory && s0.reservationCategory.contractualToDate)),
+        isOwnScribe: s0.isownscribe === 'YES' || s0.isownscribe === true || s0.isownscribe === 'yes' || (s0.reservationCategory && (s0.reservationCategory.isownscribe === 'YES' || s0.reservationCategory.isownscribe === true)),
+      }, db);
     }
 
     // Process Step 1 -> Candidates table (for BSSC flat payload and extra details)
@@ -1185,7 +1338,13 @@ export class ApplicationService {
 
         organizationName: s1.organizationName || null,
         hasPostExperience: s1.hasPostExperience === 'YES' || s1.hasPostExperience === true || s1.hasPostExperience === 'yes',
-      });
+
+        serviceFromDate: parseServiceDate(s1.serviceFromDate || (s1.reservationCategory && s1.reservationCategory.serviceFromDate)),
+        serviceToDate: parseServiceDate(s1.serviceToDate || (s1.reservationCategory && s1.reservationCategory.serviceToDate)),
+        contractualFromDate: parseServiceDate(s1.contractualFromDate || (s1.reservationCategory && s1.reservationCategory.contractualFromDate)),
+        contractualToDate: parseServiceDate(s1.contractualToDate || (s1.reservationCategory && s1.reservationCategory.contractualToDate)),
+        isOwnScribe: s1.isownscribe === 'YES' || s1.isownscribe === true || s1.isownscribe === 'yes' || (s1.reservationCategory && (s1.reservationCategory.isownscribe === 'YES' || s1.reservationCategory.isownscribe === true)),
+      }, db);
     }
 
     // Determine whether this application is using BSSC step numbers (educational details in step 3) or JSSC step numbers (educational details in step 2)
@@ -1399,7 +1558,7 @@ export class ApplicationService {
 
     try {
       // Generate and upload HTML
-      const htmlString = await this.generateHtml(applicationId, candidateId);
+      const htmlString = await this.generateHtml(applicationId, candidateId, true);
       const s3Url = await documentService.uploadGeneratedHtml(
         candidateId,
         Buffer.from(htmlString),
@@ -1429,27 +1588,53 @@ export class ApplicationService {
       payload[`step${row.stepNumber}`] = row.data;
     }
 
-    // 1. Store the constructed payload in final_submissions table
-    try {
-      await db.insert(finalSubmissions).values({
-        applicationId,
-        candidateId,
-        payload,
-      });
-    } catch (e) {
-      console.error("Failed to insert into finalSubmissions table, maybe it doesn't exist yet:", e);
-    }
+    // Wrap the entire final submission mapping and auditing logic in a transaction
+    return await db.transaction(async (tx) => {
+      // 1. Store the constructed payload in final_submissions table
+      try {
+        const existing = await tx
+          .select()
+          .from(finalSubmissions)
+          .where(
+            and(
+              eq(finalSubmissions.applicationId, applicationId),
+              eq(finalSubmissions.candidateId, candidateId)
+            )
+          )
+          .limit(1);
 
-    // 2. Call legacy submit to map data into existing tables
-    return this.finalSubmitLegacy(applicationId, candidateId);
+        if (existing.length === 0) {
+          await tx.insert(finalSubmissions).values({
+            applicationId,
+            candidateId,
+            payload,
+          });
+        } else {
+          await tx
+            .update(finalSubmissions)
+            .set({ payload })
+            .where(
+              and(
+                eq(finalSubmissions.applicationId, applicationId),
+                eq(finalSubmissions.candidateId, candidateId)
+              )
+            );
+        }
+      } catch (e) {
+        console.error("Failed to insert or update finalSubmissions table in unifiedFinalSubmit:", e);
+      }
+
+      // 2. Call legacy submit to map data into existing tables, passing the transaction context
+      return this.finalSubmitLegacy(applicationId, candidateId, tx);
+    });
   }
 
-  async generateHtml(applicationId: string, candidateId: string): Promise<string> {
+  async generateHtml(applicationId: string, candidateId: string, bypassSubmitCheck = false): Promise<string> {
     const application = await applicationRepository.findById(applicationId);
     if (!application) throw new NotFoundError('Application not found');
     if (application.candidateId !== candidateId)
       throw new ForbiddenError('Application does not belong to this candidate');
-    if (!application.isSubmitted)
+    if (!bypassSubmitCheck && !application.isSubmitted)
       throw new AppError(
         'You can only view or print the application preview after it has been fully submitted.',
         422

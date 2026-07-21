@@ -366,6 +366,11 @@ export class AuthService {
       'is_scribe_required',
       'organization_name',
       'has_post_experience',
+      'serviceFromDate',
+      'serviceToDate',
+      'contractualFromDate',
+      'contractualToDate',
+      'isownscribe',
     ];
 
     for (const key of customKeys) {

@@ -137,10 +137,15 @@ export const step1Schema = z.object({
   isMin40PercentPwD: z.string().optional().nullable().or(z.literal('')),
   isNonCreamyLayer: z.string().optional().nullable().or(z.literal('')),
   isScribeRequired: z.string().optional().nullable().or(z.literal('')),
+  isownscribe: z.string().optional().nullable().or(z.literal('')),
   exServiceman: z.string().optional().nullable().or(z.literal('')),
+  typeOfExOfficer: z.union([z.number(), z.string()]).optional().nullable().or(z.literal('')),
   wardOfFreedomFighter: z.string().optional().nullable().or(z.literal('')),
   sameAsPermanent: z.boolean().optional().nullable(),
-  
+  serviceFromDate: z.string().optional().nullable().or(z.literal('')),
+  serviceToDate: z.string().optional().nullable().or(z.literal('')),
+  contractualFromDate: z.string().optional().nullable().or(z.literal('')),
+  contractualToDate: z.string().optional().nullable().or(z.literal('')),
   declaration: z.boolean().optional(),
   address: z.any().optional(),
 });

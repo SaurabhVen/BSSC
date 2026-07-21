@@ -10,7 +10,8 @@ import crypto from 'crypto';
 import { getDb } from '../database/drizzle';
 import { applicationStepData, categories } from '../database/schema';
 import { eq, and } from 'drizzle-orm';
-import { GetepayAdapter } from './getepay.adapter';
+// import { GetepayAdapter } from './getepay.adapter';
+import { SbiAdapter } from './sbi.adapter';
 import { sendPaymentSuccessSms } from '../utils/sms';
 import { sendPaymentSuccessEmail } from '../utils/email';
 
@@ -75,19 +76,30 @@ export class PaymentService {
 
     // Double check if any pending payments succeeded at the gateway
     for (const payment of existingPayments) {
-      if (payment.status === 'pending' && payment.paymentOrderId) {
+      if ((payment.status === 'pending' || payment.status === 'INITIATED' || payment.status === 'PENDING') && payment.paymentOrderId) {
         try {
-          const gateway = process.env.PAYMENT_GATEWAY || 'getepay';
-          if (gateway === 'getepay') {
-            const getepayRes = await GetepayAdapter.verifyPayment(payment.paymentOrderId);
-            if (getepayRes.txnStatus === 'SUCCESS' || getepayRes.paymentStatus === 'SUCCESS') {
+          const gateway = process.env.PAYMENT_GATEWAY || 'sbi';
+          // if (gateway === 'getepay') {
+          //   const getepayRes = await GetepayAdapter.verifyPayment(payment.paymentOrderId);
+          //   if (getepayRes.txnStatus === 'SUCCESS' || getepayRes.paymentStatus === 'SUCCESS') {
+          //     await this.verifyPayment({
+          //       paymentOrderId: payment.paymentOrderId,
+          //       getepayPaymentId: getepayRes.getepayTxnId || payment.paymentOrderId,
+          //       transactionId: getepayRes.getepayTxnId || payment.paymentOrderId,
+          //       gatewayResponse: getepayRes,
+          //     });
+          //     payment.status = 'completed';
+          //   }
+          // } else 
+          if (gateway === 'sbi') {
+            const sbiRes = await SbiAdapter.verifyPayment(payment.paymentOrderId, parseFloat(payment.amount));
+            if (sbiRes.status === 'SUCCESS') {
               await this.verifyPayment({
                 paymentOrderId: payment.paymentOrderId,
-                getepayPaymentId: getepayRes.getepayTxnId || payment.paymentOrderId,
-                transactionId: getepayRes.getepayTxnId || payment.paymentOrderId,
-                gatewayResponse: getepayRes,
+                transactionId: sbiRes.atrn || payment.paymentOrderId,
+                gatewayResponse: sbiRes,
               });
-              payment.status = 'completed';
+              payment.status = 'SUCCESS';
             }
           }
         } catch (err) {
@@ -96,7 +108,7 @@ export class PaymentService {
       }
     }
 
-    const completedPayment = existingPayments.find((p) => p.status === 'completed');
+    const completedPayment = existingPayments.find((p) => p.status === 'completed' || p.status === 'SUCCESS');
     if (completedPayment) {
       throw new AppError('Payment has already been completed for this application', 409);
     }
@@ -314,20 +326,47 @@ export class PaymentService {
     // Create actual Razorpay Order if fee > 0
     let paymentOrderId = `order_${generateUUID().substring(0, 14).toUpperCase()}`;
     let paymentUrl = '';
+    let encData = '';
+    let merchIdVal = '';
+    let sbiPayment = false;
+    let htmlForm = '';
 
     if (amount > 0 && !config.MOCK_PAYMENT) {
       try {
         const rcptId = `rcpt_${input.applicationId.substring(0, 20).replace(/-/g, '')}_${Date.now()}`;
-        const gateway = process.env.PAYMENT_GATEWAY || 'getepay';
+        const gateway = process.env.PAYMENT_GATEWAY || 'sbi';
 
-        if (gateway === 'getepay') {
-          const order = await GetepayAdapter.createOrder(amount, rcptId, {
-            email: userRecord.email,
-            phone: candidate.mobileNumber || '',
-            name: userRecord.fullName
-          });
-          paymentOrderId = order.paymentId || order.getepayTxnId || `getepay_${generateUUID().substring(0, 8)}`;
-          paymentUrl = order.paymentUrl || '';
+        // if (gateway === 'getepay') {
+        //   const order = await GetepayAdapter.createOrder(amount, rcptId, {
+        //     email: userRecord.email,
+        //     phone: candidate.mobileNumber || '',
+        //     name: userRecord.fullName
+        //   });
+        //   paymentOrderId = order.paymentId || order.getepayTxnId || `getepay_${generateUUID().substring(0, 8)}`;
+        //   paymentUrl = order.paymentUrl || '';
+        // } else 
+        if (gateway === 'sbi') {
+          const order = SbiAdapter.createOrder(amount, rcptId);
+          paymentOrderId = rcptId;
+          paymentUrl = order.paymentUrl;
+          encData = order.encData;
+          merchIdVal = order.merchantId;
+          sbiPayment = true;
+          htmlForm = `<!DOCTYPE html>
+<html>
+<head>
+    <title>Redirecting to SBI...</title>
+</head>
+<body>
+    <form id="sbiForm" method="POST" action="${paymentUrl}">
+        <input type="hidden" name="EncryptTrans" value="${encData}" />
+        <input type="hidden" name="merchIdVal" value="${merchIdVal}" />
+    </form>
+    <script type="text/javascript">
+        document.getElementById('sbiForm').submit();
+    </script>
+</body>
+</html>`;
         } else {
           throw new AppError('Payment gateway is not configured', 500);
         }
@@ -350,7 +389,7 @@ export class PaymentService {
       paymentOrderId,
       amount: amount.toString(),
       currency: 'INR',
-      status: 'pending',
+      status: sbiPayment ? 'INITIATED' : 'pending',
       paymentUrl,
     });
 
@@ -397,8 +436,12 @@ export class PaymentService {
         contact: candidate.mobileNumber || '',
       },
       paymentUrl,
-      paymentStatus: 'pending',
+      paymentStatus: sbiPayment ? 'INITIATED' : 'pending',
       isFree: amount === 0,
+      encData: encData || undefined,
+      merchIdVal: merchIdVal || undefined,
+      sbiPayment: sbiPayment || undefined,
+      htmlForm: htmlForm || undefined,
     };
   }
 
@@ -458,7 +501,7 @@ export class PaymentService {
     if (!payment) throw new NotFoundError('Payment order not found');
 
 
-    if (payment.status === 'completed') {
+    if (payment.status === 'completed' || payment.status === 'SUCCESS') {
 
       return {
         paymentStatus: 'completed',
@@ -473,48 +516,107 @@ export class PaymentService {
     let paymentMode = input.paymentMode || 'online';
     let bankName = input.bankName || 'Unknown Bank';
 
-    const gateway = process.env.PAYMENT_GATEWAY || 'getepay';
+    const gateway = process.env.PAYMENT_GATEWAY || 'sbi';
 
     let isSuccess = true;
     let failureReason = '';
     let apiResponse = input.gatewayResponse || (input as unknown as Record<string, unknown>);
+    let statusVal = 'PENDING';
 
-    if (gateway === 'getepay') {
-      if (input.gatewayResponse && (input.gatewayResponse.txnStatus === 'SUCCESS' || input.gatewayResponse.paymentStatus === 'SUCCESS')) {
-        transactionId = input.gatewayResponse.getepayTxnId || input.getepayPaymentId || orderId;
-        paymentMode = input.gatewayResponse.paymentMode || 'getepay';
-        bankName = 'Getepay Gateway';
+    // if (gateway === 'getepay') {
+    //   if (input.gatewayResponse && (input.gatewayResponse.txnStatus === 'SUCCESS' || input.gatewayResponse.paymentStatus === 'SUCCESS')) {
+    //     transactionId = input.gatewayResponse.getepayTxnId || input.getepayPaymentId || orderId;
+    //     paymentMode = input.gatewayResponse.paymentMode || 'getepay';
+    //     bankName = 'Getepay Gateway';
+    //   } else {
+    //     const pId = input.getepayPaymentId || input.paymentOrderId || orderId;
+    //     try {
+    //       const getepayRes = await GetepayAdapter.verifyPayment(pId);
+    //       apiResponse = getepayRes;
+    //       if (getepayRes.txnStatus !== 'SUCCESS' && getepayRes.paymentStatus !== 'SUCCESS') {
+    //         if (!config.MOCK_PAYMENT) {
+    //           isSuccess = false;
+    //           failureReason = `Getepay payment not successful: ${getepayRes.txnStatus || getepayRes.paymentStatus}`;
+    //         }
+    //       }
+    //       transactionId = getepayRes.getepayTxnId || pId;
+    //       paymentMode = 'getepay';
+    //       bankName = 'Getepay Gateway';
+    //     } catch (err: any) {
+    //       if (!config.MOCK_PAYMENT) {
+    //         isSuccess = false;
+    //         failureReason = `Getepay verification failed: ${err.message}`;
+    //         if (err.response?.data) {
+    //           apiResponse = err.response.data;
+    //         }
+    //       }
+    //     }
+    //   }
+    // }
+
+    if (gateway === 'sbi') {
+      const sbiStatus = input.paymentStatus || (input.gatewayResponse?.status as string) || (input.gatewayResponse?.rawFields?.[2] as string);
+      
+      if (sbiStatus === 'SUCCESS' || sbiStatus === 'completed') {
+        transactionId = input.transactionId || input.gatewayResponse?.atrn || input.gatewayResponse?.rawFields?.[1] || orderId;
+        paymentMode = 'sbi';
+        bankName = 'SBI Gateway';
+        isSuccess = true;
+        statusVal = 'SUCCESS';
+        apiResponse = input.gatewayResponse || { status: sbiStatus };
+      } else if (sbiStatus === 'PENDING' || sbiStatus === 'pending') {
+        transactionId = input.transactionId || input.gatewayResponse?.atrn || input.gatewayResponse?.rawFields?.[1] || orderId;
+        paymentMode = 'sbi';
+        bankName = 'SBI Gateway';
+        isSuccess = false;
+        statusVal = 'PENDING';
+        apiResponse = input.gatewayResponse || { status: sbiStatus };
+        failureReason = 'SBI payment is pending';
+      } else if (sbiStatus === 'FAIL' || sbiStatus === 'failed' || sbiStatus === 'FAILED') {
+        transactionId = input.transactionId || input.gatewayResponse?.atrn || input.gatewayResponse?.rawFields?.[1] || orderId;
+        paymentMode = 'sbi';
+        bankName = 'SBI Gateway';
+        isSuccess = false;
+        statusVal = 'FAILED';
+        apiResponse = input.gatewayResponse || { status: sbiStatus };
+        failureReason = 'SBI payment failed';
       } else {
-        const pId = input.getepayPaymentId || input.paymentOrderId || orderId;
+        const pId = input.paymentOrderId || orderId;
         try {
-          const getepayRes = await GetepayAdapter.verifyPayment(pId);
-          apiResponse = getepayRes;
-          if (getepayRes.txnStatus !== 'SUCCESS' && getepayRes.paymentStatus !== 'SUCCESS') {
-            if (!config.MOCK_PAYMENT) {
-              isSuccess = false;
-              failureReason = `Getepay payment not successful: ${getepayRes.txnStatus || getepayRes.paymentStatus}`;
-            }
+          const sbiRes = await SbiAdapter.verifyPayment(pId, parseFloat(payment.amount));
+          apiResponse = sbiRes;
+          if (sbiRes.status === 'SUCCESS') {
+            isSuccess = true;
+            statusVal = 'SUCCESS';
+          } else if (sbiRes.status === 'PENDING') {
+            isSuccess = false;
+            statusVal = 'PENDING';
+            failureReason = 'SBI payment is pending';
+          } else {
+            isSuccess = false;
+            statusVal = 'FAILED';
+            failureReason = `SBI payment not successful: ${sbiRes.status}`;
           }
-          transactionId = getepayRes.getepayTxnId || pId;
-          paymentMode = 'getepay';
-          bankName = 'Getepay Gateway';
+          transactionId = sbiRes.atrn || pId;
+          paymentMode = 'sbi';
+          bankName = 'SBI Gateway';
         } catch (err: any) {
           if (!config.MOCK_PAYMENT) {
             isSuccess = false;
-            failureReason = `Getepay verification failed: ${err.message}`;
-            if (err.response?.data) {
-              apiResponse = err.response.data;
-            }
+            statusVal = 'FAILED';
+            failureReason = `SBI verification failed: ${err.message}`;
           }
         }
       }
     } else {
       transactionId = input.transactionId || `TXN${Date.now()}`;
+      statusVal = 'completed';
     }
 
     if (!isSuccess) {
+      const dbStatus = statusVal === 'PENDING' ? 'PENDING' : 'FAILED';
       await paymentRepository.updateStatus(payment.id, {
-        status: 'failed',
+        status: dbStatus,
         transactionId,
         paymentMode,
         bankName,
@@ -527,7 +629,7 @@ export class PaymentService {
         paymentOrderId: payment.paymentOrderId,
         transactionId,
         amount: parseFloat(payment.amount),
-        paymentStatus: 'failed',
+        paymentStatus: dbStatus,
         paymentMode,
         bankName,
         paymentDate: new Date().toISOString(),
@@ -536,7 +638,7 @@ export class PaymentService {
       throw new AppError(failureReason, 400);
     }
 
-    const status = 'completed';
+    const status = statusVal;
 
     const updatedPayment = await paymentRepository.updateStatus(payment.id, {
       status,
@@ -564,7 +666,7 @@ export class PaymentService {
         paymentOrderId: payment.paymentOrderId,
         transactionId: updatedPayment.transactionId,
         amount: parseFloat(payment.amount),
-        paymentStatus: 'completed',
+        paymentStatus: status === 'SUCCESS' ? 'completed' : 'completed',
         paymentMode: updatedPayment.paymentMode,
         bankName: updatedPayment.bankName,
       });
@@ -651,22 +753,35 @@ export class PaymentService {
 
     // Double check if any pending payments succeeded at the gateway
     for (const payment of payments) {
-      if (payment.status === 'pending' && payment.paymentOrderId) {
+      if ((payment.status === 'pending' || payment.status === 'INITIATED' || payment.status === 'PENDING') && payment.paymentOrderId) {
         try {
-          const gateway = process.env.PAYMENT_GATEWAY || 'getepay';
-          if (gateway === 'getepay') {
-            console.log(`[Requery] Querying Getepay status for pending payment order ID: ${payment.paymentOrderId}`);
-            const getepayRes = await GetepayAdapter.verifyPayment(payment.paymentOrderId);
-            if (getepayRes.txnStatus === 'SUCCESS' || getepayRes.paymentStatus === 'SUCCESS') {
-              console.log(`[Requery] Payment verified as SUCCESS. Updating database record...`);
+          const gateway = process.env.PAYMENT_GATEWAY || 'sbi';
+          // if (gateway === 'getepay') {
+          //   console.log(`[Requery] Querying Getepay status for pending payment order ID: ${payment.paymentOrderId}`);
+          //   const getepayRes = await GetepayAdapter.verifyPayment(payment.paymentOrderId);
+          //   if (getepayRes.txnStatus === 'SUCCESS' || getepayRes.paymentStatus === 'SUCCESS') {
+          //     console.log(`[Requery] Payment verified as SUCCESS. Updating database record...`);
+          //     await this.verifyPayment({
+          //       paymentOrderId: payment.paymentOrderId,
+          //       getepayPaymentId: getepayRes.getepayTxnId || payment.paymentOrderId,
+          //       transactionId: getepayRes.getepayTxnId || payment.paymentOrderId,
+          //       gatewayResponse: getepayRes,
+          //     });
+          //     payment.status = 'completed';
+          //     payment.transactionId = getepayRes.getepayTxnId || payment.paymentOrderId;
+          //   }
+          if (gateway === 'sbi') {
+            console.log(`[Requery] Querying SBI status for pending payment order ID: ${payment.paymentOrderId}`);
+            const sbiRes = await SbiAdapter.verifyPayment(payment.paymentOrderId, parseFloat(payment.amount));
+            if (sbiRes.status === 'SUCCESS') {
+              console.log(`[Requery] SBI Payment verified as SUCCESS. Updating database record...`);
               await this.verifyPayment({
                 paymentOrderId: payment.paymentOrderId,
-                getepayPaymentId: getepayRes.getepayTxnId || payment.paymentOrderId,
-                transactionId: getepayRes.getepayTxnId || payment.paymentOrderId,
-                gatewayResponse: getepayRes,
+                transactionId: sbiRes.atrn || payment.paymentOrderId,
+                gatewayResponse: sbiRes,
               });
-              payment.status = 'completed';
-              payment.transactionId = getepayRes.getepayTxnId || payment.paymentOrderId;
+              payment.status = 'SUCCESS';
+              payment.transactionId = sbiRes.atrn || payment.paymentOrderId;
             }
           }
         } catch (err) {

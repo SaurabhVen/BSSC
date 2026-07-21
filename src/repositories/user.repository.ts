@@ -218,10 +218,10 @@ export class UserRepository {
     }
   }
 
-  async updateCandidate(candidateId: string, updates: Partial<Candidate>): Promise<void> {
+  async updateCandidate(candidateId: string, updates: Partial<Candidate>, txClient?: any): Promise<void> {
     try {
-      const db = getDb();
-      await db.transaction(async (tx) => {
+      const db = txClient || getDb();
+      const executeUpdates = async (tx: any) => {
         const coreUpdates: any = {};
         if (updates.alternateNumber !== undefined) coreUpdates.alternateNumber = updates.alternateNumber;
         if (updates.mobileNumber !== undefined) coreUpdates.mobileNumber = updates.mobileNumber;
@@ -248,7 +248,8 @@ export class UserRepository {
           'domicileCertificateIssueDate', 'categoryCertificateNumber', 'categoryCertificateAuthority',
           'categoryCertificateIssueDate', 'pwdCertificateNumber', 'pwdCertificateAuthority',
           'pwdCertificateIssueDate', 'disTypePersist', 'isScribeRequired', 'organizationName',
-          'hasPostExperience', 'governmentIdNumber'
+          'hasPostExperience', 'governmentIdNumber', 'serviceFromDate', 'serviceToDate',
+          'contractualFromDate', 'contractualToDate', 'isOwnScribe', 'typeOfExOfficer'
         ];
 
         for (const field of metaFields) {
@@ -263,7 +264,15 @@ export class UserRepository {
             .set({ ...metaUpdates, updatedAt: new Date() })
             .where(eq(candidateMetadata.candidateId, candidateId));
         }
-      });
+      };
+
+      if (txClient) {
+        await executeUpdates(txClient);
+      } else {
+        await db.transaction(async (tx: any) => {
+          await executeUpdates(tx);
+        });
+      }
     } catch (err) {
       throw new DatabaseError('Failed to update candidate profile', err as Error);
     }

@@ -109,6 +109,7 @@ export const candidateMetadata = pgTable(
     disabilityType: varchar('disability_type', { length: 50 }),
     pwd40Percent: boolean('pwd_40_percent').default(false).notNull(),
     isExServiceman: boolean('is_ex_serviceman').default(false).notNull(),
+    typeOfExOfficer: integer('type_of_ex_officer').references(() => typeOfExOfficers.id),
     isBiharGovtEmp: boolean('is_bihar_govt_emp').default(false).notNull(),
     isContractualEmp: boolean('is_contractual_emp').default(false).notNull(),
     bsscAttempts: integer('bssc_attempts').default(1).notNull(),
@@ -133,6 +134,11 @@ export const candidateMetadata = pgTable(
 
     disTypePersist: varchar('dis_type_persist', { length: 50 }),
     isScribeRequired: boolean('is_scribe_required').default(false).notNull(),
+    serviceFromDate: timestamp('service_from_date'),
+    serviceToDate: timestamp('service_to_date'),
+    contractualFromDate: timestamp('contractual_from_date'),
+    contractualToDate: timestamp('contractual_to_date'),
+    isOwnScribe: boolean('is_own_scribe').default(false).notNull(),
 
     organizationName: varchar('organization_name', { length: 200 }),
     hasPostExperience: boolean('has_post_experience').default(false).notNull(),

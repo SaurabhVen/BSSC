@@ -499,6 +499,7 @@ export class AuthController {
 
       isExServiceman: rc.isExServiceman,
       exServicemanYears: rc.isExServiceman ? (rc.exServicemanYears ?? null) : null,
+      typeOfExOfficer: rc.isExServiceman ? (rc.typeOfExOfficer ?? null) : null,
 
       isSportsQuota: rc.isSportsQuota,
       sportsLevel: rc.isSportsQuota ? (rc.sportsLevel ?? null) : null,
@@ -518,6 +519,11 @@ export class AuthController {
         ? (rc.domicileCertificateIssueDate ?? null)
         : null,
 
+      serviceFromDate: rc.serviceFromDate ?? null,
+      serviceToDate: rc.serviceToDate ?? null,
+      contractualFromDate: rc.contractualFromDate ?? null,
+      contractualToDate: rc.contractualToDate ?? null,
+      isownscribe: rc.isownscribe ?? null,
       isLocallyResident: rc.isLocallyResident,
       localDistrictId: rc.isLocallyResident ? (rc.localDistrictId ?? null) : null,
 
@@ -649,6 +655,7 @@ export class AuthController {
       disabilityType: (rawBody as any).disabilityType || (rawBody as any).disability_type || null,
       pwd40Percent: mappedReservation.pwd40Percent === 'YES' || mappedReservation.pwd40Percent === true || mappedReservation.pwd40Percent === 'true',
       isExServiceman: mappedReservation.isExServiceman === 'YES' || mappedReservation.isExServiceman === true || mappedReservation.isExServiceman === 'true',
+      typeOfExOfficer: mappedReservation.typeOfExOfficer ? parseInt(String(mappedReservation.typeOfExOfficer), 10) : null,
       isBiharGovtEmp: mappedReservation.biharGovtEmp === 'YES' || mappedReservation.biharGovtEmp === true || mappedReservation.biharGovtEmp === 'true',
       isContractualEmp: mappedReservation.contractualEmp === 'YES' || mappedReservation.contractualEmp === true || mappedReservation.contractualEmp === 'true',
       bsscAttempts: mappedReservation.bsscAttempts ? parseInt(String(mappedReservation.bsscAttempts), 10) || 0 : 0,
@@ -676,6 +683,12 @@ export class AuthController {
 
       organizationName: (rawBody as any).organizationName || (rawBody as any).organization_name || null,
       hasPostExperience: (rawBody as any).hasPostExperience === 'YES' || (rawBody as any).hasPostExperience === true || (rawBody as any).has_post_experience === 'YES',
+
+      serviceFromDate: parseControllerDate(mappedReservation.serviceFromDate || (rawBody as any).serviceFromDate),
+      serviceToDate: parseControllerDate(mappedReservation.serviceToDate || (rawBody as any).serviceToDate),
+      contractualFromDate: parseControllerDate(mappedReservation.contractualFromDate || (rawBody as any).contractualFromDate),
+      contractualToDate: parseControllerDate(mappedReservation.contractualToDate || (rawBody as any).contractualToDate),
+      isOwnScribe: (rawBody as any).isownscribe === 'YES' || (rawBody as any).isownscribe === true || (rawBody as any).isownscribe === 'true',
     });
 
     const updatedDraft = await applicationService.getOrCreateDraft(candidate.id);
