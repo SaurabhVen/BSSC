@@ -46,7 +46,7 @@ package:
 
 provider:
   name: aws
-  runtime: nodejs24.x
+  runtime: nodejs20.x
   region: ${opt:region, 'us-east-2'}
   stage: ${opt:stage, 'dev'}
   deploymentBucket:
@@ -57,9 +57,9 @@ provider:
   versionFunctions: false
   vpc:
     securityGroupIds:
-      - ${env:SECURITY_GROUP_ID, 'sg-0813f46da8ff12906'}
+      - ${env:SECURITY_GROUP_ID, 'sg-0adf473dd8941772f'}
     subnetIds:
-      - ${env:SUBNET_ID, 'subnet-02343312243a19ab9'}
+      - ${env:SUBNET_ID, 'subnet-06f1debbf555ab7a4'}
   httpApi:
     cors:
       allowedOrigins:
