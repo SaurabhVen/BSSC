@@ -57,9 +57,11 @@ provider:
   versionFunctions: false
   vpc:
     securityGroupIds:
-      - ${env:SECURITY_GROUP_ID, 'sg-0adf473dd8941772f'}
+      - sg-0adf473dd8941772f
     subnetIds:
-      - ${env:SUBNET_ID, 'subnet-06f1debbf555ab7a4'}
+      - subnet-06f1debbf555ab7a4
+      - subnet-0460a171c41f70be4
+      - subnet-0278347682147b0f3
   httpApi:
     cors:
       allowedOrigins:
