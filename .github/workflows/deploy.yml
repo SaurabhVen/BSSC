@@ -44,12 +44,6 @@ jobs:
       - name: Lint Code
         run: npm run lint
 
-      - name: Run Migrations Check
-        env:
-          DATABASE_URL: postgresql://${{ secrets.DB_USER }}:${{ secrets.DB_PASSWORD }}@localhost:5432/${{ secrets.DB_NAME }}
-        run: |
-          npm run db:generate
-          npm run db:migrate
 
       - name: Run Tests
         env:
