@@ -3,10 +3,10 @@ name: CI/CD Pipeline
 on:
   push:
     branches:
-      - main
+      - DevVTl
   pull_request:
     branches:
-      - main
+      - DevVTl
 
 jobs:
   lint-and-test:
@@ -64,7 +64,7 @@ jobs:
   deploy:
     name: Deploy to AWS
     needs: lint-and-test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    if: github.ref == 'refs/heads/DevVTl' && github.event_name == 'push'
     runs-on: ubuntu-latest
 
     steps:
@@ -84,7 +84,7 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          aws-region: ap-south-1
 
       - name: Deploy Serverless Service
         run: npx serverless deploy --stage prod
@@ -97,6 +97,8 @@ jobs:
           S3_BUCKET: ${{ secrets.S3_BUCKET }}
           RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
           RAZORPAY_SECRET: ${{ secrets.RAZORPAY_SECRET }}
+          SECURITY_GROUP_ID: ${{ secrets.SECURITY_GROUP_ID }}
+          SUBNET_ID: ${{ secrets.SUBNET_ID }}
           MOCK_COGNITO: 'false'
           MOCK_S3: 'false'
           MOCK_PAYMENT: 'false'
