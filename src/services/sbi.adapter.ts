@@ -8,6 +8,7 @@ export class SbiAdapter {
     const mid = process.env.SBI_MID || config.SBI_MID || '1000605';
     const key = process.env.SBI_KEY || config.SBI_KEY || 'pWhMnIEMc4q6hKdi2Fx50Ii8CKAoSIqv9ScSpwuMHM4=';
     const url = process.env.SBI_URL || config.SBI_URL || 'https://test.epay.sbiuat.bank.in/secure/AggregatorHostedListener';
+
     const requeryUrl = process.env.SBI_REQUERY_URL || config.SBI_REQUERY_URL || 'https://test.epay.sbiuat.bank.in/payagg/statusQuery/getStatusQuery';
 
     if (!mid || !key || !url) {

@@ -849,10 +849,10 @@ export class ApplicationService {
         caste: s1.caste || s0.caste || '',
         casteId: String(s1.casteId || s1.subCategory || s0.casteId || s0.subCategory || ''),
         mainCategory: s1.mainCategory || s0.mainCategory || (s1.categoryId ? Number(s1.categoryId) : null) || (s0.categoryId ? Number(s0.categoryId) : null) || null,
-        subCategory: s1.subCategory || s0.subCategory || (s1.casteId ? Number(s1.casteId) : null) || (s0.casteId ? Number(s0.casteId) : null) || null,
+        // subCategory: s1.subCategory || s0.subCategory || (s1.casteId ? Number(s1.casteId) : null) || (s0.casteId ? Number(s0.casteId) : null) || null,
         subSubCategoryId: s1.subSubCategoryId || s0.subSubCategoryId || null,
-        mainCategoryId: s1.mainCategoryId || s0.mainCategoryId || (s1.categoryId ? Number(s1.categoryId) : null) || (s0.categoryId ? Number(s0.categoryId) : null) || null,
-        subCategoryId: s1.subCategoryId || s0.subCategoryId || (s1.casteId ? Number(s1.casteId) : null) || (s0.casteId ? Number(s0.casteId) : null) || null,
+        // mainCategoryId: s1.mainCategoryId || s0.mainCategoryId || (s1.categoryId ? Number(s1.categoryId) : null) || (s0.categoryId ? Number(s0.categoryId) : null) || null,
+        // subCategoryId: s1.subCategoryId || s0.subCategoryId || (s1.casteId ? Number(s1.casteId) : null) || (s0.casteId ? Number(s0.casteId) : null) || null,
         reservationCategory: s1.reservationCategory || {
           isLocallyResident: s1.isLocallyResident || s0.isLocallyResident || false,
           localDistrictId: s1.localDistrictId || s0.localDistrictId || null,
@@ -867,8 +867,8 @@ export class ApplicationService {
           categoryCertificateAuthority: s1.categoryCertificateAuthority || s0.categoryCertificateAuthority || null,
           categoryCertificateIssueDate: s1.categoryCertificateIssueDate || s0.categoryCertificateIssueDate || null,
           isPwd: s1.isPwd || s0.isPwd || false,
-          pwdType: s1.pwdType || s0.pwdType || null,
-          pwdPercentage: s1.pwdPercentage || s0.pwdPercentage || null,
+          // pwdType: s1.pwdType || s0.pwdType || null,
+          // pwdPercentage: s1.pwdPercentage || s0.pwdPercentage || null,
           pwdCertificateNumber: s1.pwdCertificateNumber || s0.pwdCertificateNumber || null,
           pwdCertificateAuthority: s1.pwdCertificateAuthority || s0.pwdCertificateAuthority || null,
           pwdCertificateIssueDate: s1.pwdCertificateIssueDate || s0.pwdCertificateIssueDate || null,
@@ -959,7 +959,7 @@ export class ApplicationService {
 
       // Reconstruct step0 for frontend output
       stepDataMap[0] = {
-        ...s1, // has personalInfo, address, and flat fields
+        //...s1, // has personalInfo, address, and flat fields
         ...s0, // Cognito fields take precedence
         personalInfo: s1.personalInfo || s0.personalInfo || {
           fullName: s0.fullName || (s1.personalInfo && s1.personalInfo.fullName) || '',

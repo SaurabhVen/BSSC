@@ -92,14 +92,19 @@ export class PaymentService {
           //   }
           // } else 
           if (gateway === 'sbi') {
-            const sbiRes = await SbiAdapter.verifyPayment(payment.paymentOrderId, parseFloat(payment.amount));
-            if (sbiRes.status === 'SUCCESS') {
-              await this.verifyPayment({
-                paymentOrderId: payment.paymentOrderId,
-                transactionId: sbiRes.atrn || payment.paymentOrderId,
-                gatewayResponse: sbiRes,
-              });
-              payment.status = 'SUCCESS';
+            try {
+              const sbiRes = await SbiAdapter.verifyPayment(payment.paymentOrderId, parseFloat(payment.amount));
+              if (sbiRes.status === 'SUCCESS') {
+                await this.verifyPayment({
+                  paymentOrderId: payment.paymentOrderId,
+                  transactionId: sbiRes.atrn || payment.paymentOrderId,
+                  gatewayResponse: sbiRes,
+                });
+                payment.status = 'SUCCESS';
+              }
+            } catch (sbiErr) {
+              // SBI firewall may block this call until IP is whitelisted — safe to ignore
+              console.warn(`[Requery] SBI status check skipped (IP not whitelisted):`, (sbiErr as any).message);
             }
           }
         } catch (err) {
@@ -771,17 +776,22 @@ export class PaymentService {
           //     payment.transactionId = getepayRes.getepayTxnId || payment.paymentOrderId;
           //   }
           if (gateway === 'sbi') {
-            console.log(`[Requery] Querying SBI status for pending payment order ID: ${payment.paymentOrderId}`);
-            const sbiRes = await SbiAdapter.verifyPayment(payment.paymentOrderId, parseFloat(payment.amount));
-            if (sbiRes.status === 'SUCCESS') {
-              console.log(`[Requery] SBI Payment verified as SUCCESS. Updating database record...`);
-              await this.verifyPayment({
-                paymentOrderId: payment.paymentOrderId,
-                transactionId: sbiRes.atrn || payment.paymentOrderId,
-                gatewayResponse: sbiRes,
-              });
-              payment.status = 'SUCCESS';
-              payment.transactionId = sbiRes.atrn || payment.paymentOrderId;
+            try {
+              console.log(`[Requery] Querying SBI status for order: ${payment.paymentOrderId}`);
+              const sbiRes = await SbiAdapter.verifyPayment(payment.paymentOrderId, parseFloat(payment.amount));
+              if (sbiRes.status === 'SUCCESS') {
+                console.log(`[Requery] SBI Payment SUCCESS. Updating DB...`);
+                await this.verifyPayment({
+                  paymentOrderId: payment.paymentOrderId,
+                  transactionId: sbiRes.atrn || payment.paymentOrderId,
+                  gatewayResponse: sbiRes,
+                });
+                payment.status = 'SUCCESS';
+                payment.transactionId = sbiRes.atrn || payment.paymentOrderId;
+              }
+            } catch (sbiErr) {
+              // SBI firewall may block this call until IP is whitelisted — safe to ignore
+              console.warn(`[Requery] SBI status check skipped (IP not whitelisted):`, (sbiErr as any).message);
             }
           }
         } catch (err) {
@@ -847,7 +857,7 @@ export class PaymentService {
     <div class="header">
       <div>
         <h1>BSSC</h1>
-        <div>Jharkhand Staff Selection Commission</div>
+        <div>Bihar Staff Selection Commission</div>
       </div>
       <div class="meta">
         <div style="font-size: 20px; font-weight: bold; color: #333; margin-bottom: 10px;">INVOICE</div>
