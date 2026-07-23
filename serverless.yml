@@ -55,12 +55,7 @@ provider:
   timeout: 29
   logRetentionInDays: 14
   versionFunctions: false
-  vpc:
-    securityGroupIds:
-      - sg-0adf473dd8941772f
-    subnetIds:
-      - subnet-0460a171c41f70be4
-      - subnet-0278347682147b0f3
+
   httpApi:
     cors:
       allowedOrigins:

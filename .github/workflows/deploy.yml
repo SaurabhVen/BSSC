@@ -91,8 +91,7 @@ jobs:
           S3_BUCKET: ${{ secrets.S3_BUCKET }}
           RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID }}
           RAZORPAY_SECRET: ${{ secrets.RAZORPAY_SECRET }}
-          SECURITY_GROUP_ID: ${{ secrets.SECURITY_GROUP_ID }}
-          SUBNET_ID: ${{ secrets.SUBNET_ID }}
+
           MOCK_COGNITO: 'false'
           MOCK_S3: 'false'
           MOCK_PAYMENT: 'false'
