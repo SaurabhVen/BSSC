@@ -27,6 +27,7 @@ import {
   candidateStep5Schema,
   candidateStep6Schema,
   type CandidateRegisterInput,
+  forgotRegistrationNumberSchema,
 } from '../validators/auth';
 import { applicationService } from '../services/application.service';
 import { documentService } from '../services/document.service';
@@ -52,6 +53,7 @@ import {
 } from '../database/schema';
 import { eq, asc, or, inArray, and } from 'drizzle-orm';
 import { calculateBSSCAge, getBSSCAgeLimits, checkBSSCEligibility } from '../utils/age';
+import { generateUUID } from '../utils/crypto';
 
 interface UnifiedCandidate {
   dob?: string;
@@ -497,6 +499,7 @@ export class AuthController {
 
       isExServiceman: rc.isExServiceman,
       exServicemanYears: rc.isExServiceman ? (rc.exServicemanYears ?? null) : null,
+      typeOfExOfficer: rc.isExServiceman ? (rc.typeOfExOfficer ?? null) : null,
 
       isSportsQuota: rc.isSportsQuota,
       sportsLevel: rc.isSportsQuota ? (rc.sportsLevel ?? null) : null,
@@ -516,6 +519,11 @@ export class AuthController {
         ? (rc.domicileCertificateIssueDate ?? null)
         : null,
 
+      serviceFromDate: rc.serviceFromDate ?? null,
+      serviceToDate: rc.serviceToDate ?? null,
+      contractualFromDate: rc.contractualFromDate ?? null,
+      contractualToDate: rc.contractualToDate ?? null,
+      isownscribe: rc.isownscribe ?? null,
       isLocallyResident: rc.isLocallyResident,
       localDistrictId: rc.isLocallyResident ? (rc.localDistrictId ?? null) : null,
 
@@ -538,6 +546,79 @@ export class AuthController {
 
     const draft = await applicationService.getOrCreateDraft(candidate.id);
 
+    const previouslyRegistered = (rawBody as any).previouslyRegistered || (rawBody as any).previously_registered || candidate.previouslyRegistered;
+    const oldRegNo = (rawBody as any).oldRegistrationNumber || (rawBody as any).old_registration_number || candidate.oldRegistrationNumber;
+
+    if (previouslyRegistered === 'YES' || oldRegNo) {
+      if (!oldRegNo) {
+        throw new ValidationError(
+          [{ field: 'oldRegistrationNumber', message: 'Registration number is required for previously registered candidates' }],
+          'Registration number is required'
+        );
+      }
+
+      const regIdNum = parseInt(oldRegNo.toString().trim(), 10);
+      if (!isNaN(regIdNum)) {
+        const { paidCandidateRepository } = await import('../repositories/paidCandidate.repository');
+        const paidCandidate = await paidCandidateRepository.findByRegId(regIdNum);
+        if (!paidCandidate) {
+          throw new ValidationError(
+            [{ field: 'oldRegistrationNumber', message: 'Registration number is incorrect or not found' }],
+            'Registration number is incorrect'
+          );
+        }
+
+        // Validate Candidate's name (fullName)
+        const dbFullName = paidCandidate.fullName || '';
+        const inputFullName = mappedPersonalInfo.fullName || '';
+        if (dbFullName.trim().toLowerCase() !== inputFullName.trim().toLowerCase()) {
+          throw new ValidationError(
+            [{ field: 'fullName', message: 'Candidate name is incorrect' }],
+            'Candidate name is incorrect'
+          );
+        }
+
+        // Validate Father's name
+        const dbFatherName = paidCandidate.fatherName || '';
+        const inputFatherName = mappedPersonalInfo.fatherName || '';
+        if (dbFatherName.trim().toLowerCase() !== inputFatherName.trim().toLowerCase()) {
+          throw new ValidationError(
+            [{ field: 'fatherName', message: "Father's name is incorrect" }],
+            "Father's name is incorrect"
+          );
+        }
+
+        // Validate Mother's name
+        const dbMotherName = paidCandidate.motherName || '';
+        const inputMotherName = mappedPersonalInfo.motherName || '';
+        if (dbMotherName.trim().toLowerCase() !== inputMotherName.trim().toLowerCase()) {
+          throw new ValidationError(
+            [{ field: 'motherName', message: "Mother's name is incorrect" }],
+            "Mother's name is incorrect"
+          );
+        }
+
+        // If verified, auto-complete the payment status in the database so that they skip the payment page.
+        console.log(`[candidateStep1] Auto-completing payment for pre-paid candidate: ${regIdNum}`);
+        const { paymentService } = await import('../services/payment.service');
+        const payments = await paymentService.getPaymentStatus(draft.applicationId, candidate.id);
+        const completedPayment = payments.find((p) => p.status === 'completed');
+        if (!completedPayment) {
+          const { paymentRepository } = await import('../repositories/common.repository');
+          const paymentOrderId = `free_auto_${generateUUID().substring(0, 8).toUpperCase()}`;
+          await paymentRepository.create({
+            applicationId: draft.applicationId,
+            paymentOrderId,
+            amount: '0.00',
+            currency: 'INR',
+            status: 'pending',
+            paymentMode: 'exempt',
+          });
+          await paymentService.completeFreePayment(paymentOrderId);
+        }
+      }
+    }
+
     // Save Step 0 (Personal Details)
     await applicationService.saveStep(
       draft.applicationId,
@@ -551,7 +632,7 @@ export class AuthController {
     );
 
     // Save Step 1 (Reservation Details)
-    const result = await applicationService.saveStep(
+    await applicationService.saveStep(
       draft.applicationId,
       candidate.id,
       1,
@@ -574,6 +655,7 @@ export class AuthController {
       disabilityType: (rawBody as any).disabilityType || (rawBody as any).disability_type || null,
       pwd40Percent: mappedReservation.pwd40Percent === 'YES' || mappedReservation.pwd40Percent === true || mappedReservation.pwd40Percent === 'true',
       isExServiceman: mappedReservation.isExServiceman === 'YES' || mappedReservation.isExServiceman === true || mappedReservation.isExServiceman === 'true',
+      typeOfExOfficer: mappedReservation.typeOfExOfficer ? parseInt(String(mappedReservation.typeOfExOfficer), 10) : null,
       isBiharGovtEmp: mappedReservation.biharGovtEmp === 'YES' || mappedReservation.biharGovtEmp === true || mappedReservation.biharGovtEmp === 'true',
       isContractualEmp: mappedReservation.contractualEmp === 'YES' || mappedReservation.contractualEmp === true || mappedReservation.contractualEmp === 'true',
       bsscAttempts: mappedReservation.bsscAttempts ? parseInt(String(mappedReservation.bsscAttempts), 10) || 0 : 0,
@@ -601,12 +683,24 @@ export class AuthController {
 
       organizationName: (rawBody as any).organizationName || (rawBody as any).organization_name || null,
       hasPostExperience: (rawBody as any).hasPostExperience === 'YES' || (rawBody as any).hasPostExperience === true || (rawBody as any).has_post_experience === 'YES',
+
+      serviceFromDate: parseControllerDate(mappedReservation.serviceFromDate || (rawBody as any).serviceFromDate),
+      serviceToDate: parseControllerDate(mappedReservation.serviceToDate || (rawBody as any).serviceToDate),
+      contractualFromDate: parseControllerDate(mappedReservation.contractualFromDate || (rawBody as any).contractualFromDate),
+      contractualToDate: parseControllerDate(mappedReservation.contractualToDate || (rawBody as any).contractualToDate),
+      isOwnScribe: (rawBody as any).isownscribe === 'YES' || (rawBody as any).isownscribe === true || (rawBody as any).isownscribe === 'true',
     });
+
+    const updatedDraft = await applicationService.getOrCreateDraft(candidate.id);
 
     return response.success(200, {
       message: 'Candidate personal and reservation details (Step 1) saved successfully',
       data: {
-        ...result,
+        applicationId: updatedDraft.applicationId,
+        savedStep: 1,
+        currentStep: updatedDraft.currentStep,
+        status: updatedDraft.status,
+        updatedAt: new Date(),
         savedData: {
           personalInfo: mappedPersonalInfo,
           reservationCategory: mappedReservation,
@@ -1802,6 +1896,17 @@ export class AuthController {
     const result = await otpService.resendOtp(input);
     return response.success(200, { message: 'OTP resent', ...result });
   }
+
+  async forgotRegistrationNumber(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
+  const { body } = parseEvent(event);
+  const input = validate(forgotRegistrationNumberSchema, body);
+  
+  await authService.forgotRegistrationNumber(input);
+  
+  return response.success(200, {
+    message: 'If the email is registered, your registration number has been sent to your email address.',
+  });
+}
 }
 
 export const authController = new AuthController();

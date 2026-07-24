@@ -183,6 +183,34 @@
       "when": 1784217461926,
       "tag": "0025_unusual_zarda",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1784355945557,
+      "tag": "0026_giant_lady_mastermind",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "6",
+      "when": 1784381064324,
+      "tag": "0027_clean_squirrel_girl",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "6",
+      "when": 1784616268103,
+      "tag": "0028_grey_doctor_octopus",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1784617120871,
+      "tag": "0029_complete_turbo",
+      "breakpoints": true
     }
   ]
 }

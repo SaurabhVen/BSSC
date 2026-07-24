@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>SBI Payment Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; background: #f0f4f8; }
+    .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); max-width: 520px; width: 100%; }
+    h2 { color: #1a3d7c; margin-top: 0; }
+    .info { background: #e8f4fd; border-left: 4px solid #1a3d7c; padding: 12px; margin: 10px 0; border-radius: 4px; font-size: 14px; }
+    .btn { background: #1a3d7c; color: white; border: none; padding: 14px 28px; border-radius: 8px; font-size: 16px; cursor: pointer; width: 100%; margin-top: 16px; }
+    .btn:hover { background: #0d2a5e; }
+    .warning { background: #fff3cd; border: 1px solid #ffc107; color: #856404; padding: 10px; border-radius: 6px; margin-top: 12px; font-size: 14px; }
+    label { font-weight: bold; color: #444; font-size: 13px; display: block; margin-top: 10px; }
+    input[type=text] { width: 100%; margin: 4px 0 10px; padding: 8px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 11px; font-family: monospace; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>🏦 SBI Payment Gateway Test</h2>
+    <div class="info">
+      <b>Order ID:</b> rcpt_dcd114e109d740a7a_1784628279515<br>
+      <b>Amount:</b> ₹100.00<br>
+      <b>MID:</b> 1000112
+    </div>
+
+    <label>SBI Payment URL</label>
+    <input type="text" value="https://test.epay.sbiuat.bank.in/secure/AggregatorHostedListener" readonly />
+
+    <label>EncryptTrans</label>
+    <input type="text" value="iDI814y0YVjTv2LR9xUGn31zS0S67v6R5ygBzwrxQhOWryC16hf7hJvh5gbjbEX1wtDR6GRc/4BFY0u3duFWoljXoN/Vzp2tnZqMyauG5U6FPBtyj2hStLd0UkqkSGA+XozPULz6JOZcDkncoHiimTjvG42KdWaiB8LtkXuicBNI2xXuVgLO2HSgB6ncg8n452uTODY0oYHXdTcKmaxIWufEFmP0fcle9Y82gMf80vn77dyAwGaS0gtahalk7QZtnaCz4H5ZM/Ir3eRF9QzDvbAmh1oS4Zctw5AI+KF+mYVs0Cc1npZbeNe7Od/WV5vqD/LQ3ERhGeVvdOpv2yqqb5qgcCAmZ/wOMa4bWTOHoME=" readonly />
+
+    <div class="warning">
+      ⚠️ This encrypted data may already be expired. Get a fresh <code>encData</code> from your API for a valid test.
+    </div>
+
+    <form id="sbiForm" method="POST" action="https://test.epay.sbiuat.bank.in/secure/AggregatorHostedListener" target="_blank">
+      <input type="hidden" name="EncryptTrans" value="iDI814y0YVjTv2LR9xUGn31zS0S67v6R5ygBzwrxQhOWryC16hf7hJvh5gbjbEX1wtDR6GRc/4BFY0u3duFWoljXoN/Vzp2tnZqMyauG5U6FPBtyj2hStLd0UkqkSGA+XozPULz6JOZcDkncoHiimTjvG42KdWaiB8LtkXuicBNI2xXuVgLO2HSgB6ncg8n452uTODY0oYHXdTcKmaxIWufEFmP0fcle9Y82gMf80vn77dyAwGaS0gtahalk7QZtnaCz4H5ZM/Ir3eRF9QzDvbAmh1oS4Zctw5AI+KF+mYVs0Cc1npZbeNe7Od/WV5vqD/LQ3ERhGeVvdOpv2yqqb5qgcCAmZ/wOMa4bWTOHoME=" />
+      <input type="hidden" name="merchIdVal" value="1000112" />
+      <button type="submit" class="btn">🚀 Submit to SBI Payment Page (New Tab)</button>
+    </form>
+  </div>
+</body>
+</html>

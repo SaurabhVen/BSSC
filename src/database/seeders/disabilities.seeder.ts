@@ -4,11 +4,11 @@ import { eq } from 'drizzle-orm';
 
 const DISABILITIES = [
   { code: 'vi', name: 'Visual Impairment' },
-  { code: 'dd', name: 'Deaf and Hard of Hearing' },
-  { code: 'pcep', name: 'Locomotor Disability / Cerebral Palsy' },
+  { code: 'hi', name: 'Hearing Impairment' },
+  { code: 'oh', name: 'Orthopedic Handicap' },
   {
-    code: 'AIMLD',
-    name: 'Autism, Intellectual Disability, Specific Learning Disability, Mental Illness',
+    code: 'md/mud',
+    name: ' Mental/multiple disability',
   },
 ];
 

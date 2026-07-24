@@ -156,6 +156,7 @@ export class UserRepository {
           id: data.id,
           userId: data.userId,
           registrationNumber: data.registrationNumber,
+          oldRegistrationNumber: (data as any).oldRegistrationNumber,
           dateOfBirth: data.dateOfBirth,
           mobileNumber: data.mobileNumber,
           alternateNumber: data.alternateNumber,
@@ -217,10 +218,10 @@ export class UserRepository {
     }
   }
 
-  async updateCandidate(candidateId: string, updates: Partial<Candidate>): Promise<void> {
+  async updateCandidate(candidateId: string, updates: Partial<Candidate>, txClient?: any): Promise<void> {
     try {
-      const db = getDb();
-      await db.transaction(async (tx) => {
+      const db = txClient || getDb();
+      const executeUpdates = async (tx: any) => {
         const coreUpdates: any = {};
         if (updates.alternateNumber !== undefined) coreUpdates.alternateNumber = updates.alternateNumber;
         if (updates.mobileNumber !== undefined) coreUpdates.mobileNumber = updates.mobileNumber;
@@ -228,6 +229,8 @@ export class UserRepository {
         if (updates.mobileVerified !== undefined) coreUpdates.mobileVerified = updates.mobileVerified;
         if (updates.emailVerified !== undefined) coreUpdates.emailVerified = updates.emailVerified;
         if (updates.registrationNumber !== undefined) coreUpdates.registrationNumber = updates.registrationNumber;
+        if (updates.oldRegistrationNumber !== undefined) coreUpdates.oldRegistrationNumber = updates.oldRegistrationNumber;
+        if (updates.previouslyRegistered !== undefined) coreUpdates.previouslyRegistered = updates.previouslyRegistered;
 
         if (Object.keys(coreUpdates).length > 0) {
           await tx
@@ -245,7 +248,8 @@ export class UserRepository {
           'domicileCertificateIssueDate', 'categoryCertificateNumber', 'categoryCertificateAuthority',
           'categoryCertificateIssueDate', 'pwdCertificateNumber', 'pwdCertificateAuthority',
           'pwdCertificateIssueDate', 'disTypePersist', 'isScribeRequired', 'organizationName',
-          'hasPostExperience'
+          'hasPostExperience', 'governmentIdNumber', 'serviceFromDate', 'serviceToDate',
+          'contractualFromDate', 'contractualToDate', 'isOwnScribe', 'typeOfExOfficer'
         ];
 
         for (const field of metaFields) {
@@ -260,7 +264,15 @@ export class UserRepository {
             .set({ ...metaUpdates, updatedAt: new Date() })
             .where(eq(candidateMetadata.candidateId, candidateId));
         }
-      });
+      };
+
+      if (txClient) {
+        await executeUpdates(txClient);
+      } else {
+        await db.transaction(async (tx: any) => {
+          await executeUpdates(tx);
+        });
+      }
     } catch (err) {
       throw new DatabaseError('Failed to update candidate profile', err as Error);
     }

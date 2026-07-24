@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { gatewayPaymentRepository } from '../repositories/gatewayPayment.repository';
-import { GetepayAdapter } from './getepay.adapter';
+// import { GetepayAdapter } from './getepay.adapter';
+import { SbiAdapter } from './sbi.adapter';
 import { AppError, NotFoundError } from '../errors/AppError';
 import { generateUUID } from '../utils/crypto';
 import config from '../config';
@@ -51,7 +52,7 @@ export class GatewayPaymentService {
       gatewayId,
       amount: input.amount.toString(),
       currency: input.currency,
-      paymentStatus: 'pending',
+      paymentStatus: gatewayName === 'sbi' ? 'INITIATED' : 'pending',
     });
 
     // 3. Log request
@@ -65,33 +66,65 @@ export class GatewayPaymentService {
     // 4. Gateway Implementation
 
 
-    if (gatewayName === 'getepay') {
-      // Getepay specific logic
-      const order = await GetepayAdapter.createOrder(input.amount, `rcpt_${transactionId}`, {
-        email: 'test@gmail.com',
-        phone: '1234567890',
-        name: 'Candidate'
-      });
+    if (gatewayName === 'sbi') {
+      const order = SbiAdapter.createOrder(input.amount, `rcpt_${transactionId}`);
+      const htmlForm = `<!DOCTYPE html>
+<html>
+<head>
+    <title>Redirecting to SBI...</title>
+</head>
+<body>
+    <form id="sbiForm" method="POST" action="${order.paymentUrl}">
+        <input type="hidden" name="EncryptTrans" value="${order.encData}" />
+        <input type="hidden" name="merchIdVal" value="${order.merchantId}" />
+    </form>
+    <script type="text/javascript">
+        document.getElementById('sbiForm').submit();
+    </script>
+</body>
+</html>`;
+
       return {
         success: true,
         transactionId,
-        gatewayOrderId: order.paymentId || order.getepayTxnId,
+        gatewayOrderId: `sbi_${transactionId}`,
         amount: input.amount,
         currency: input.currency,
         paymentUrl: order.paymentUrl,
+        encData: order.encData,
+        merchIdVal: order.merchantId,
+        sbiPayment: true,
+        htmlForm,
       };
     }
 
-    if (gatewayName === 'easebuzz') {
-      // Easebuzz specific logic
-      const accessKey = process.env.EASEBUZZ_KEY || 'easebuzz_dummy_access_key';
-      return {
-        success: true,
-        transactionId,
-        accessKey,
-        paymentUrl: `https://pay.easebuzz.in/pay/${accessKey}`,
-      };
-    }
+    // if (gatewayName === 'getepay') {
+    //   // Getepay specific logic
+    //   const order = await GetepayAdapter.createOrder(input.amount, `rcpt_${transactionId}`, {
+    //     email: 'test@gmail.com',
+    //     phone: '1234567890',
+    //     name: 'Candidate'
+    //   });
+    //   return {
+    //     success: true,
+    //     transactionId,
+    //     gatewayOrderId: order.paymentId || order.getepayTxnId,
+    //     amount: input.amount,
+    //     currency: input.currency,
+    //     paymentUrl: order.paymentUrl,
+    //   };
+    // }
+
+    // if (gatewayName === 'easebuzz') {
+    //   // Easebuzz specific logic
+    //   const accessKey = process.env.EASEBUZZ_KEY || 'easebuzz_dummy_access_key';
+    //   return {
+    //     success: true,
+    //     transactionId,
+    //     accessKey,
+    //     paymentUrl: `https://pay.easebuzz.in/pay/${accessKey}`,
+    //   };
+    // }
 
     throw new AppError('Unsupported payment gateway', 400);
   }
@@ -112,24 +145,50 @@ export class GatewayPaymentService {
       responsePayload: input.gatewayResponse,
     });
 
-    let status = 'failed';
+    let status = 'FAILED';
 
     // Dynamic verification based on gateway
     const gatewayName = process.env.ACTIVE_PAYMENT_GATEWAY || 'getepay';
 
-    if (gatewayName === 'getepay' && input.getepay_payment_id) {
-      try {
-        const getepayRes = await GetepayAdapter.verifyPayment(input.getepay_payment_id);
-        if (getepayRes.txnStatus === 'SUCCESS' || getepayRes.paymentStatus === 'SUCCESS' || config.MOCK_PAYMENT) {
-          status = 'completed';
+    if (gatewayName === 'sbi') {
+      const sbiStatus = input.gatewayResponse?.status || input.gatewayResponse?.rawFields?.[2];
+      if (sbiStatus === 'SUCCESS' || sbiStatus === 'completed') {
+        status = 'SUCCESS';
+      } else if (sbiStatus === 'PENDING' || sbiStatus === 'pending') {
+        status = 'PENDING';
+      } else if (sbiStatus === 'FAIL' || sbiStatus === 'failed' || sbiStatus === 'FAILED') {
+        status = 'FAILED';
+      } else {
+        const orderId = input.getepay_payment_id || transaction.transactionId;
+        try {
+          const sbiRes = await SbiAdapter.verifyPayment(orderId, parseFloat(transaction.amount));
+          if (sbiRes.status === 'SUCCESS' || config.MOCK_PAYMENT) {
+            status = 'SUCCESS';
+          } else if (sbiRes.status === 'PENDING') {
+            status = 'PENDING';
+          } else {
+            status = 'FAILED';
+          }
+        } catch (err) {
+          console.error('SBI Verification Error:', err);
+          status = 'FAILED';
         }
-      } catch (err) {
-        console.error('Getepay Verification Error:', err);
       }
-    } else if (gatewayName === 'easebuzz' && input.easebuzz_status === 'success') {
-      // Implement Easebuzz hash verification
-      status = 'completed';
     }
+
+    // if (gatewayName === 'getepay' && input.getepay_payment_id) {
+    //   try {
+    //     const getepayRes = await GetepayAdapter.verifyPayment(input.getepay_payment_id);
+    //     if (getepayRes.txnStatus === 'SUCCESS' || getepayRes.paymentStatus === 'SUCCESS' || config.MOCK_PAYMENT) {
+    //       status = 'completed';
+    //     }
+    //   } catch (err) {
+    //     console.error('Getepay Verification Error:', err);
+    //   }
+    // } else if (gatewayName === 'easebuzz' && input.easebuzz_status === 'success') {
+    //   // Implement Easebuzz hash verification
+    //   status = 'completed';
+    // }
 
     await gatewayPaymentRepository.updateTransactionStatus(
       transaction_id,
@@ -138,7 +197,7 @@ export class GatewayPaymentService {
     );
 
     return {
-      success: status === 'completed',
+      success: status === 'completed' || status === 'SUCCESS',
       message: `Payment ${status}`,
       status,
       transactionId: transaction_id,

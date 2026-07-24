@@ -127,6 +127,10 @@ export interface PaymentInitiateResult {
   };
   paymentStatus?: string;
   isFree?: boolean;
+  encData?: string;
+  merchIdVal?: string;
+  sbiPayment?: boolean;
+  htmlForm?: string;
 }
 
 export interface PaymentVerifyResult {

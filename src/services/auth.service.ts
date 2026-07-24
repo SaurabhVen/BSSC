@@ -7,6 +7,12 @@ import {
   generateRegistrationNumber,
   generateRandomToken,
 } from '../utils/crypto';
+import { forgotRegistrationNumberSchema, type ForgotRegistrationNumberInput } from '../validators/auth';
+import { users, candidates } from '../database/schema';
+import { eq } from 'drizzle-orm';
+import { getDb } from '../database/drizzle';
+import { notificationService } from './notification.service';
+
 import { verifyCaptchaText } from '../utils/captcha';
 import {
   cognitoLogin,
@@ -360,6 +366,11 @@ export class AuthService {
       'is_scribe_required',
       'organization_name',
       'has_post_experience',
+      'serviceFromDate',
+      'serviceToDate',
+      'contractualFromDate',
+      'contractualToDate',
+      'isownscribe',
     ];
 
     for (const key of customKeys) {
@@ -972,6 +983,41 @@ export class AuthService {
       },
     };
   }
+
+  async forgotRegistrationNumber(input: ForgotRegistrationNumberInput): Promise<void> {
+  const db = getDb();
+  
+  // 1. Find User and Candidate in Database
+  const candidateRecord = await db
+    .select({
+      fullName: users.fullName,
+      registrationNumber: candidates.registrationNumber,
+    })
+    .from(users)
+    .innerJoin(candidates, eq(users.id, candidates.userId))
+    .where(eq(users.email, input.email.toLowerCase().trim()))
+    .limit(1);
+  const candidate = candidateRecord[0];
+  if (!candidate || !candidate.registrationNumber) {
+    throw new NotFoundError('No candidate profile or registration number found for this email address.');
+  }
+  // 2. Prepare the Email Template
+  const subject = 'Your BSSC Candidate Portal Registration Number';
+  const body = `
+    <html>
+      <body>
+        <p>Dear ${candidate.fullName || 'Candidate'},</p>
+        <p>We received a request to retrieve your Registration Number for the BSSC Candidate Portal.</p>
+        <p>Your Registration Number is: <strong>${candidate.registrationNumber}</strong></p>
+        <p>Please keep this information safe. You will need it along with your password to log in and track your application status.</p>
+        <p>If you did not make this request, please ignore this email.</p>
+        <p>Best Regards,<br/>BSSC Portal Administration Team</p>
+      </body>
+    </html>
+  `;
+  // 3. Send the Email using SES (via NotificationService)
+  await notificationService.sendEmail(input.email, subject, body);
+}
 
   // ── Logout ────────────────────────────────────────────────────
 

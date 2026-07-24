@@ -50,6 +50,23 @@ export class PaymentController {
       feeCategory: input.feeCategory || 'general',
     });
 
+    const acceptHeader = event.headers?.accept || event.headers?.Accept || '';
+    const isHtmlRequested = acceptHeader.includes('text/html') || body?.html === true || body?.html === 'true' || body?.redirect === true || body?.redirect === 'true';
+
+    if (result.sbiPayment && result.htmlForm && isHtmlRequested) {
+      const base64 = Buffer.from(result.htmlForm).toString('base64');
+      return {
+        statusCode: 200,
+        headers: {
+          'Content-Type': 'text/html',
+          'Access-Control-Allow-Origin': event.headers?.origin || event.headers?.Origin || '*',
+          'Access-Control-Allow-Credentials': 'true',
+        },
+        body: base64,
+        isBase64Encoded: true,
+      };
+    }
+
     return response.created({
       message: 'Payment initiated',
       data: result,

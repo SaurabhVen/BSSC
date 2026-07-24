@@ -39,6 +39,7 @@ export const registerSchema = z
     email: emailSchema,
     password: passwordSchema,
     confirmPassword: z.string().optional(),
+    oldRegistrationNumber: z.string().optional().nullable(),
     fullName: z.string().min(1).max(200),
     dateOfBirth: z
       .string()
@@ -181,6 +182,18 @@ export const resendOtpSchema = z.object({
   otpRequestId: z.string().min(1, 'OTP Request ID is required'),
 });
 
+
+export const forgotRegistrationNumberSchema = z.object({
+  email: z
+    .string()
+    .email('Invalid email address')
+    .max(255)
+    .toLowerCase()
+    .trim(),
+});
+
+export type ForgotRegistrationNumberInput = z.infer<typeof forgotRegistrationNumberSchema>;
+
 // ── Candidate Step 1 Schema ────────────────────────────────────
 
 export const candidateAddressSchema = z.object({
@@ -257,12 +270,18 @@ export const candidateStep1Schema = z.object({
       pwdCertificateIssueDate: z.string().optional().or(z.literal('')),
       isExServiceman: z.boolean(),
       exServicemanYears: z.number().int().min(0).optional(),
+      typeOfExOfficer: z.number().int().nullable().optional(),
       isSportsQuota: z.boolean(),
       sportsLevel: z.string().optional(),
       sportsAchievement: z.string().optional(),
       sportsCertificateNumber: z.string().optional(),
       sportsCertificateAuthority: z.string().optional(),
       sportsCertificateIssueDate: z.string().optional().or(z.literal('')),
+      serviceFromDate: z.string().optional().nullable(),
+      serviceToDate: z.string().optional().nullable(),
+      contractualFromDate: z.string().optional().nullable(),
+      contractualToDate: z.string().optional().nullable(),
+      isownscribe: z.union([z.boolean(), z.string()]).optional().nullable(),
       declaration: z.literal(true, {
         errorMap: () => ({
           message: 'You must agree to the declaration to proceed.',
@@ -386,6 +405,7 @@ export const candidateStep1Schema = z.object({
       pwdCertificateIssueDate: z.string().nullable().default(''),
       isExServiceman: z.boolean().default(false),
       exServicemanYears: z.number().nullable().default(null),
+      typeOfExOfficer: z.number().nullable().default(null),
       biharGovtEmp: z.union([z.boolean(), z.string()]).optional().nullable(),
       isSportsQuota: z.boolean().default(false),
       sportsLevel: z.string().nullable().default(''),
@@ -393,6 +413,11 @@ export const candidateStep1Schema = z.object({
       sportsCertificateNumber: z.string().nullable().default(''),
       sportsCertificateAuthority: z.string().nullable().default(''),
       sportsCertificateIssueDate: z.string().nullable().default(''),
+      serviceFromDate: z.string().optional().nullable().default(null),
+      serviceToDate: z.string().optional().nullable().default(null),
+      contractualFromDate: z.string().optional().nullable().default(null),
+      contractualToDate: z.string().optional().nullable().default(null),
+      isownscribe: z.union([z.boolean(), z.string()]).optional().nullable().default(null),
       declaration: z.boolean().default(true),
     })
     .default({}),

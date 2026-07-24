@@ -1,0 +1,217 @@
+diff --git a/src/services/application.service.ts b/src/services/application.service.ts
+index 2609335..0865b8b 100644
+--- a/src/services/application.service.ts
++++ b/src/services/application.service.ts
+@@ -90,7 +90,8 @@ const normalizeStepDataDates = (data: any): void => {
+     'sportsCertificateIssueDate', 'sportsIssueDate',
+     'serviceFromDate', 'serviceToDate',
+     'contractualFromDate', 'contractualToDate',
+-    'debarredFromDate', 'debarredToDate'
++    'debarredFromDate', 'debarredToDate',
++    'certIssueDate'
+   ];
+ 
+   for (const key of Object.keys(data)) {
+@@ -147,9 +148,9 @@ export class ApplicationService {
+         step3: stepDataMap[3] ?? null,
+         step4: stepDataMap[4] ?? null,
+         step5: stepDataMap[5] ?? null,
+-        step6: stepDataMap[6] ?? null,
+-        step7: stepDataMap[7] ?? null,
+-        step8: stepDataMap[8] ?? null,
++        // step6: stepDataMap[6] ?? null,
++        // step7: stepDataMap[7] ?? null,
++        // step8: stepDataMap[8] ?? null,
+       },
+     };
+   }
+@@ -216,24 +217,24 @@ export class ApplicationService {
+             ? String(((Number(obtained) / Number(total)) * 100).toFixed(2))
+             : (q.percentage ? String(q.percentage) : '0');
+ 
+-          qualifications.push({
+-            level: dbLevel,
+-            degree: degree,
+-            boardUniversity: q.boardUniversity || 'N/A',
+-            totalMarks: total ? String(total) : '0',
+-            obtainedMarks: obtained || '0',
+-            marksObtained: obtained || '0',
+-            percentage: percentageVal,
+-            specialization: q.subject || null,
+-            passingYear: q.certIssueDate ? String(q.certIssueDate).split('-')[0] : null,
+-            certNumber: q.certNumber || '',
+-            certIssueDate: q.certIssueDate || null,
+-          });
++          //   qualifications.push({
++          //     level: dbLevel,
++          //     degree: degree,
++          //     boardUniversity: q.boardUniversity || 'N/A',
++          //     totalMarks: total ? String(total) : '0',
++          //     obtainedMarks: obtained || '0',
++          //     marksObtained: obtained || '0',
++          //     percentage: percentageVal,
++          //     specialization: q.subject || null,
++          //     passingYear: q.certIssueDate ? String(q.certIssueDate).split('-')[0] : null,
++          //     certNumber: q.certNumber || '',
++          //     certIssueDate: q.certIssueDate || null,
++          //   });
+         }
+       }
+-      if (qualifications.length > 0) {
+-        (data as any).qualifications = qualifications;
+-      }
++      // if (qualifications.length > 0) {
++      //   (data as any).qualifications = qualifications;
++      // }
+     }
+ 
+     const schema = STEP_SCHEMAS[stepNumber as StepNumber];
+@@ -300,8 +301,10 @@ export class ApplicationService {
+       );
+     }
+ 
+-    const referenceNumber = `BSSC${Date.now().toString(36).toUpperCase()}`;
+-    return applicationRepository.submit(applicationId, referenceNumber);
++    await this.unifiedFinalSubmit(applicationId, candidateId);
++    const updated = await applicationRepository.findById(applicationId);
++    if (!updated) throw new NotFoundError('Application not found after submission');
++    return updated;
+   }
+ 
+   // ── Get Application Status ────────────────────────────────────
+@@ -476,6 +479,27 @@ export class ApplicationService {
+             .limit(1);
+           const dbUser = dbUserRows[0];
+ 
++          // Fetch category list to map string-based categories/castes to database bigserial catIds
++          const categoriesList = await db
++            .select({
++              catId: categories.catId,
++              catValue: categories.catValue,
++            })
++            .from(categories);
++          const catValueToIdMap = new Map(
++            categoriesList
++              .filter((c) => c.catValue)
++              .map((c) => [c.catValue!.toLowerCase().trim(), c.catId])
++          );
++
++          const catVal = candidate.category ? candidate.category.toLowerCase().trim() : '';
++          const parsedCat = parseInt(catVal, 10);
++          const mainCategory = !isNaN(parsedCat) ? parsedCat : (catValueToIdMap.get(catVal) || null);
++
++          const casteVal = candidate.caste ? candidate.caste.toLowerCase().trim() : '';
++          const parsedCaste = parseInt(casteVal, 10);
++          const subCategory = !isNaN(parsedCaste) ? parsedCaste : (catValueToIdMap.get(casteVal) || null);
++
+           const dobFormatted = candidate.dateOfBirth
+             ? new Date(candidate.dateOfBirth).toISOString().split('T')[0].split('-').reverse().join('-')
+             : '';
+@@ -494,8 +518,8 @@ export class ApplicationService {
+             domicileCertificateAuthority: candidate.domicileCertificateAuthority,
+             domicileCertificateIssueDate: candidate.domicileCertificateIssueDate ? new Date(candidate.domicileCertificateIssueDate).toISOString().split('T')[0] : null,
+ 
+-            mainCategory: candidate.category ? parseInt(candidate.category, 10) : null,
+-            subCategory: candidate.caste ? parseInt(candidate.caste, 10) : null,
++            mainCategory: mainCategory,
++            subCategory: subCategory,
+             categoryCertificateNumber: candidate.categoryCertificateNumber,
+             categoryCertificateAuthority: candidate.categoryCertificateAuthority,
+             categoryCertificateIssueDate: candidate.categoryCertificateIssueDate ? new Date(candidate.categoryCertificateIssueDate).toISOString().split('T')[0] : null,
+@@ -509,7 +533,7 @@ export class ApplicationService {
+ 
+             isExServiceman: candidate.isExServiceman === true,
+             exServicemanYears: 0,
+-            isNccCadet: candidate.isNccCadet === true ? 'YES' : 'NO',
++            servicePeriod: candidate.servicePeriod || '',
+             biharGovtEmp: candidate.isBiharGovtEmp === true ? 'YES' : 'NO',
+             bsscAttempts: candidate.bsscAttempts ? String(candidate.bsscAttempts) : '0',
+             contractualEmp: candidate.isContractualEmp === true ? 'YES' : 'NO',
+@@ -570,10 +594,48 @@ export class ApplicationService {
+           const limits = getBSSCAgeLimits(String(cat), gender, isPwd, isExServiceman, exServicemanYears, isGovtServant);
+           maxAgeVal = limits.maxAge;
+ 
+-          const ok = checkBSSCEligibility(dobDate, limits.minAge, limits.maxAge, '2025-08-01');
++          // Check if candidate qualified on or before 2022-08-01 for carry-forward check
++          let qualifiedPre2022 = false;
++          const step2 = stepDataMap[2] as any;
++          if (step2) {
++            if (Array.isArray(step2.qualifications)) {
++              const grad = step2.qualifications.find((q: any) => q.level === 'graduation');
++              if (grad && grad.passingYear) {
++                qualifiedPre2022 = Number(grad.passingYear) <= 2022;
++              }
++            } else if (step2.graduation && step2.graduation.passingYear) {
++              qualifiedPre2022 = Number(step2.graduation.passingYear) <= 2022;
++            }
++          }
++
++          // Reference date for ex-serviceman check is time of application (submissionDate or current date)
++          let refDateForMax = new Date('2025-08-01');
++          if (isExServiceman) {
++            refDateForMax = new Date();
++            if (candidateId) {
++              const appsList = await db
++                .select({ submissionDate: applications.submissionDate })
++                .from(applications)
++                .where(eq(applications.candidateId, candidateId))
++                .limit(1);
++              if (appsList.length > 0 && appsList[0].submissionDate) {
++                refDateForMax = new Date(appsList[0].submissionDate);
++              }
++            }
++          }
++
++          const isMinAgeEligible = checkBSSCEligibility(dobDate, limits.minAge, 150, '2025-08-01');
++          const isMaxAgeEligibleBase = checkBSSCEligibility(dobDate, 0, limits.maxAge, refDateForMax);
++          const isMaxAgeEligibleCarryForward = checkBSSCEligibility(dobDate, 0, limits.maxAge, '2022-08-01') && qualifiedPre2022;
++
++          const ok = isMinAgeEligible && (isMaxAgeEligibleBase || isMaxAgeEligibleCarryForward);
+           if (!ok) {
+             ageOk = false;
+-            ageMsg = `Candidate must be between ${limits.minAge} and ${limits.maxAge} years old as of 01-08-2025.`;
++            if (!isMinAgeEligible) {
++              ageMsg = `Candidate must be at least ${limits.minAge} years old as of 01-08-2025.`;
++            } else {
++              ageMsg = `Candidate exceeds the maximum age limit of ${limits.maxAge} years.`;
++            }
+           }
+         }
+       }
+@@ -877,13 +939,11 @@ export class ApplicationService {
+           disabilityType: s0.disabilityType || s0.pwdType || s0.natureOfDisability || (s0.reservationCategory && s0.reservationCategory.pwdType ? String(s0.reservationCategory.pwdType) : null) || null,
+           pwd40Percent: s0.pwd40Percent === 'YES' || s0.pwd40Percent === true || s0.pwd40Percent === 'yes' || s0.isMin40PercentPwD === 'YES' || s0.isMin40PercentPwD === true || s0.disabilityPercent === 'YES' || (s0.reservationCategory && (s0.reservationCategory.pwdPercentage !== undefined && s0.reservationCategory.pwdPercentage >= 40)),
+           isExServiceman: s0.isExServiceman === 'YES' || s0.isExServiceman === true || s0.isExsm === 'YES' || s0.isExsm === true || s0.exServiceman === 'YES' || s0.exServiceman === true || (s0.reservationCategory && (s0.reservationCategory.isExServiceman === true || s0.reservationCategory.isExServiceman === 'YES')),
+-          isNccCadet: s0.nccCadet === 'YES' || s0.nccCadet === true || s0.isNcc === 'YES' || s0.isNcc === true,
+           isBiharGovtEmp: s0.biharGovtEmp === 'YES' || s0.biharGovtEmp === true || s0.isBiharGovt === 'YES' || s0.isBiharGovt === true || s0.biharGovtEmployee === 'YES' || s0.biharGovtEmployee === true,
+           isContractualEmp: s0.contractualEmp === 'YES' || s0.contractualEmp === true || s0.isContractual === 'YES' || s0.isContractual === true || s0.contractualEmployee === 'YES' || s0.contractualEmployee === true,
+           bsscAttempts: s0.numberOfAttempts ? parseInt(String(s0.numberOfAttempts), 10) || 0 : (s0.bsscAttempts ? parseInt(String(s0.bsscAttempts), 10) || 1 : 1),
+           nonCreamyLayer: s0.nonCreamyLayer === 'YES' || s0.nonCreamyLayer === true || s0.isNonCreamyLayer === 'YES' || s0.isNonCreamyLayer === true,
+           servicePeriod: s0.servicePeriod || null,
+-          nccCertNo: s0.nccCertNo || null,
+           postName: s0.postName || s0.nameOfPost || null,
+           hasAgreement: s0.hasAgreement === 'YES' || s0.hasAgreement === true || s0.hasAgreement === 'yes' || s0.agreementCircular === 'YES' || s0.agreementCircular === true,
+           contractualPeriod: s0.contractualPeriod || null,
+@@ -944,13 +1004,11 @@ export class ApplicationService {
+           disabilityType: s1.disabilityType || s1.pwdType || s1.natureOfDisability || (s1.reservationCategory && s1.reservationCategory.pwdType ? String(s1.reservationCategory.pwdType) : null) || null,
+           pwd40Percent: s1.pwd40Percent === 'YES' || s1.pwd40Percent === true || s1.pwd40Percent === 'yes' || s1.isMin40PercentPwD === 'YES' || s1.isMin40PercentPwD === true || s1.disabilityPercent === 'YES' || (s1.reservationCategory && (s1.reservationCategory.pwdPercentage !== undefined && s1.reservationCategory.pwdPercentage >= 40)),
+           isExServiceman: s1.isExServiceman === 'YES' || s1.isExServiceman === true || s1.isExsm === 'YES' || s1.isExsm === true || s1.exServiceman === 'YES' || s1.exServiceman === true || (s1.reservationCategory && (s1.reservationCategory.isExServiceman === true || s1.reservationCategory.isExServiceman === 'YES')),
+-          isNccCadet: s1.nccCadet === 'YES' || s1.nccCadet === true || s1.isNcc === 'YES' || s1.isNcc === true,
+           isBiharGovtEmp: s1.biharGovtEmp === 'YES' || s1.biharGovtEmp === true || s1.isBiharGovt === 'YES' || s1.isBiharGovt === true || s1.biharGovtEmployee === 'YES' || s1.biharGovtEmployee === true,
+           isContractualEmp: s1.contractualEmp === 'YES' || s1.contractualEmp === true || s1.isContractual === 'YES' || s1.isContractual === true || s1.contractualEmployee === 'YES' || s1.contractualEmployee === true,
+           bsscAttempts: s1.numberOfAttempts ? parseInt(String(s1.numberOfAttempts), 10) || 0 : (s1.bsscAttempts ? parseInt(String(s1.bsscAttempts), 10) || 1 : 1),
+           nonCreamyLayer: s1.nonCreamyLayer === 'YES' || s1.nonCreamyLayer === true || s1.isNonCreamyLayer === 'YES' || s1.isNonCreamyLayer === true,
+           servicePeriod: s1.servicePeriod || null,
+-          nccCertNo: s1.nccCertNo || null,
+           postName: s1.postName || s1.nameOfPost || null,
+           hasAgreement: s1.hasAgreement === 'YES' || s1.hasAgreement === true || s1.hasAgreement === 'yes' || s1.agreementCircular === 'YES' || s1.agreementCircular === true,
+           contractualPeriod: s1.contractualPeriod || null,
+@@ -1131,7 +1189,7 @@ export class ApplicationService {
+         tenthMarksheet: 'tenthMarksheet',
+         twelfthMarksheet: 'twelfthMarksheet',
+         graduationMarksheet: 'graduationMarksheet',
+-       // postGraduationCertificate: 'postGraduationCertificate',
++        // postGraduationCertificate: 'postGraduationCertificate',
+       };
+ 
+       for (const [key, docType] of Object.entries(docMapping)) {
