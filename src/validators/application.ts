@@ -15,19 +15,19 @@ export const step1Schema = z.object({
   dateOfBirth: z.string().min(1, 'Date of birth is required'),
   gender: z.string().min(1, 'Gender is required').max(50),
   nationality: z.string().min(1, 'Nationality is required').max(100),
-  
+
   // Mobile validation: exactly 10 digits
   mobileNo: z.string().regex(/^\d{10}$/, 'Mobile number must be exactly 10 digits'),
   mobileNumber: z.string().optional().nullable(),
   confirmMobileNo: z.string().regex(/^\d{10}$/, 'Mobile number must be exactly 10 digits').optional().nullable().or(z.literal('')),
-  
+
   emailId: z.string().min(1, 'Email ID is required'),
-  
+
   // Custom Registration Fields
   oldRegistrationNumber: z.string().optional().nullable(),
   previouslyRegistered: z.string().optional().nullable(),
   governmentIdNumber: z.string().max(50).optional().nullable().or(z.literal('')),
-  
+
   // Domicile Details
   isBiharDomicile: z.boolean().default(false).optional(),
   domicileOfBihar: z.string().optional().nullable(),
@@ -109,7 +109,7 @@ export const step1Schema = z.object({
   idProofNo: z.string().optional().nullable().or(z.literal('')),
   typeOfPhotoIdProof: z.string().optional().nullable().or(z.literal('')),
   hasAadharCard: z.string().optional().nullable().or(z.literal('')),
-  
+
   // Pincode validation: exactly 6 digits (if filled)
   permPinCode: z.string().regex(/^\d{6}$/, 'Pincode must be exactly 6 digits').optional().nullable().or(z.literal('')),
   corrPinCode: z.string().regex(/^\d{6}$/, 'Pincode must be exactly 6 digits').optional().nullable().or(z.literal('')),
@@ -120,7 +120,7 @@ export const step1Schema = z.object({
   permDistrictId: z.union([z.string(), z.number()]).optional().nullable(),
   permState: z.string().optional().nullable().or(z.literal('')),
   permStateId: z.union([z.string(), z.number()]).optional().nullable(),
-  
+
   corrVillage: z.string().optional().nullable().or(z.literal('')),
   corrPoliceStation: z.string().optional().nullable().or(z.literal('')),
   corrPostOffice: z.string().optional().nullable().or(z.literal('')),

@@ -24,7 +24,7 @@ const EBC_CATEGORIES = [
   "Khangar / खंगर",
   "Khatik / खटिक",
   "Khelta / खेलटा",
-  "Gorhi (Chhabi) / गोड़ी (छावी)",
+  "Gorhi (Chhabi) / गोड़ी (छावी)",
   "Gangai (Ganesh) / गंगई (गणेश)",
   "Gangota / गंगोता",
   "Gandharb / गंधर्व",
@@ -46,14 +46,14 @@ const EBC_CATEGORIES = [
   "Nai / नाई",
   "Namsudar / नामशुद्र",
   "Pandi / पाण्डी",
-  "Pal (Bherihar, Gareri) / पाल (भेड़िहार, गड़ेरी)",
+  "Pal (Bherihar, Gareri) / पाल (भेड़िहार, गड़ेरी)",
   "Pradhan / प्रधान",
   "Pingania / पिनगनिया",
   "Pahira / पहिरा",
   "Bari / वारी",
   "Beldar / बेलदार",
   "Bind / बिन्द",
-  "Shekhra / शेखड़ा",
+  "Shekhra / शेखड़ा",
   "Bagdi / बागदी",
   "Bhuiyar / भुईयार",
   "Bhar / भार",
@@ -77,7 +77,7 @@ const EBC_CATEGORIES = [
   "Abdal / अबदल",
   "Kasab (Kasai) (Muslim) / कसाब (कसाई) (मुस्लिम)",
   "Chik (Muslim) / चीक (मुस्लिम)",
-  "Dafali (Muslim) / डफाली (मुस्लिम)",
+  "Dafali (Muslim) / डणाली (मुस्लिम)",
   "Dhunia (Muslim) / धुनिया (मुस्लिम)",
   "Dhobi (Muslim) / धोबी (मुस्लिम)",
   "Nut (Muslim) / नट (मुस्लिम)",
@@ -91,7 +91,7 @@ const EBC_CATEGORIES = [
   "Saeen/Fakir/Diwan/Madar (Muslim) / साई/फकीर/दिवान/मदार (मुस्लिम)",
   "Momin (Muslim) (Julaha, Ansari) / मोमिन (मुस्लिम) (जुलाहा, अंसारी)",
   "Amat / अमात",
-  "Churihar (Muslim) / चूड़ीहार (मुस्लिम)",
+  "Churihar (Muslim) / चूड़ीहार (मुस्लिम)",
   "Prajapati (Kumhar) / प्रजापति (कुम्हार)",
   "Raeen or Kunjara (Muslim) / राईन या कुंजरा (मुस्लिम)",
   "Soyar / सोयर",
@@ -107,8 +107,8 @@ const EBC_CATEGORIES = [
   "Rangrej (Muslim) / रंगरेज (मुस्लिम)",
   "Sinduria Bania, Kaithal Vaishya, Kath Bania / सिंदुरिया बनिया, कैथल वैश्य, कथबनिया",
   "Mukeri (Muslim) / मुकेरी (मुस्लिम)",
-  "Itfarosh, Itafarosh, Gadheri, Itpaj Ibrahimi (Muslim) / ईटफरोश, ईटाफरोश, गदहेड़ी, ईटपज इब्राहिमी (मुस्लिम)",
-  "Barhi / बढ़ई",
+  "Itfarosh, Itafarosh, Gadheri, Itpaj Ibrahimi (Muslim) / ईटफरोश, ईटाफरोश, गदहेड़ी, ईटपज इब्राहिमी (मुस्लिम)",
+  "Barhi / बढ़ई",
   "Patwa / पटवा",
   "Kamar (Lohar and Karmkar) / कमार (लोहार और कर्मकार)",
   "Dewhar / देवहार",
@@ -116,14 +116,14 @@ const EBC_CATEGORIES = [
   "Haluwai / हलुवाई",
   "Pairgha, Parihar / पैरघा, परिहार",
   "Jaga / जागा",
-  "Laheri / लहेड़ी",
+  "Laheri / लहेड़ी",
   "Rajbanshi (Risia, Deshiya or Polia) / राजवंशी (रिसिया, देशिया या पोलिया)",
   "Kulhaiya / कुल्हैया",
   "Awadh Bania / अवध बनिया",
   "Barai, Tamoli (Chaurasia) / बरई, तमोली (चौरसिया)",
   "Teli / तेली",
   "Dangi / दांगी"
-]
+];
 
 const EBC_BC_SUBCATEGORIES = [
   { value: "kagji", label: "Kagji / कागजी" },
@@ -218,6 +218,19 @@ const ST_SUBCATEGORIES = [
   { value: "bathudi", label: "Bathudi / बठुडी" }
 ];
 
+const EWS_SUBCATEGORIES = [
+  { value: "others", label: "अन्य / Others" },
+  { value: "brahman", label: "ब्राह्मण / Brahman" },
+  { value: "rajput", label: "राजपूत / Rajput" },
+  { value: "bhoomihar", label: "भूमिहार / Bhoomihar" },
+  { value: "kayasth", label: "कायस्थ / Kayasth" },
+  { value: "saiyad", label: "सैयद / Saiyad" },
+  { value: "sheikh", label: "शेख / Sheikh" },
+  { value: "pathan", label: "पठान / Pathan" },
+  { value: "khatri", label: "खत्री / Khatri" },
+  { value: "sindhi", label: "सिंधी / Sindhi" }
+];
+
 const CATEGORY_DATA = [
   {
     value: 'ebc1',
@@ -238,6 +251,11 @@ const CATEGORY_DATA = [
     value: 'st',
     label: 'Scheduled Tribe (ST) / अनुसूचित जनजाति',
     subCategories: ST_SUBCATEGORIES,
+  },
+  {
+    value: 'ews',
+    label: 'Economically Weaker Section (EWS) / आर्थिक रूप से कमजोर वर्ग',
+    subCategories: EWS_SUBCATEGORIES,
   },
   {
     value: 'unreserved',

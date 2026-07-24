@@ -578,9 +578,9 @@ export class ApplicationService {
 
           // Only call Cognito if one of these fields is null AND dbUser.email is available
           if (
-            (fetchedServiceFromDate === null || fetchedServiceToDate === null || 
-             fetchedContractualFromDate === null || fetchedContractualToDate === null || 
-             fetchedTypeOfExOfficer === null) && 
+            (fetchedServiceFromDate === null || fetchedServiceToDate === null ||
+              fetchedContractualFromDate === null || fetchedContractualToDate === null ||
+              fetchedTypeOfExOfficer === null) &&
             dbUser?.email
           ) {
             try {

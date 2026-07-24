@@ -560,57 +560,30 @@ export class PaymentService {
     // }
 
     if (gateway === 'sbi') {
-      const sbiStatus = input.paymentStatus || (input.gatewayResponse?.status as string) || (input.gatewayResponse?.rawFields?.[2] as string);
-      
-      if (sbiStatus === 'SUCCESS' || sbiStatus === 'completed') {
-        transactionId = input.transactionId || input.gatewayResponse?.atrn || input.gatewayResponse?.rawFields?.[1] || orderId;
+      const pId = input.paymentOrderId || orderId;
+      try {
+        const sbiRes = await SbiAdapter.verifyPayment(pId, parseFloat(payment.amount));
+        apiResponse = sbiRes;
+        if (sbiRes.status === 'SUCCESS') {
+          isSuccess = true;
+          statusVal = 'SUCCESS';
+        } else if (sbiRes.status === 'PENDING') {
+          isSuccess = false;
+          statusVal = 'PENDING';
+          failureReason = 'SBI payment is pending';
+        } else {
+          isSuccess = false;
+          statusVal = 'FAILED';
+          failureReason = `SBI payment not successful: ${sbiRes.status}`;
+        }
+        transactionId = sbiRes.atrn || pId;
         paymentMode = 'sbi';
         bankName = 'SBI Gateway';
-        isSuccess = true;
-        statusVal = 'SUCCESS';
-        apiResponse = input.gatewayResponse || { status: sbiStatus };
-      } else if (sbiStatus === 'PENDING' || sbiStatus === 'pending') {
-        transactionId = input.transactionId || input.gatewayResponse?.atrn || input.gatewayResponse?.rawFields?.[1] || orderId;
-        paymentMode = 'sbi';
-        bankName = 'SBI Gateway';
-        isSuccess = false;
-        statusVal = 'PENDING';
-        apiResponse = input.gatewayResponse || { status: sbiStatus };
-        failureReason = 'SBI payment is pending';
-      } else if (sbiStatus === 'FAIL' || sbiStatus === 'failed' || sbiStatus === 'FAILED') {
-        transactionId = input.transactionId || input.gatewayResponse?.atrn || input.gatewayResponse?.rawFields?.[1] || orderId;
-        paymentMode = 'sbi';
-        bankName = 'SBI Gateway';
-        isSuccess = false;
-        statusVal = 'FAILED';
-        apiResponse = input.gatewayResponse || { status: sbiStatus };
-        failureReason = 'SBI payment failed';
-      } else {
-        const pId = input.paymentOrderId || orderId;
-        try {
-          const sbiRes = await SbiAdapter.verifyPayment(pId, parseFloat(payment.amount));
-          apiResponse = sbiRes;
-          if (sbiRes.status === 'SUCCESS') {
-            isSuccess = true;
-            statusVal = 'SUCCESS';
-          } else if (sbiRes.status === 'PENDING') {
-            isSuccess = false;
-            statusVal = 'PENDING';
-            failureReason = 'SBI payment is pending';
-          } else {
-            isSuccess = false;
-            statusVal = 'FAILED';
-            failureReason = `SBI payment not successful: ${sbiRes.status}`;
-          }
-          transactionId = sbiRes.atrn || pId;
-          paymentMode = 'sbi';
-          bankName = 'SBI Gateway';
-        } catch (err: any) {
-          if (!config.MOCK_PAYMENT) {
-            isSuccess = false;
-            statusVal = 'FAILED';
-            failureReason = `SBI verification failed: ${err.message}`;
-          }
+      } catch (err: any) {
+        if (!config.MOCK_PAYMENT) {
+          isSuccess = false;
+          statusVal = 'FAILED';
+          failureReason = `SBI verification failed: ${err.message}`;
         }
       }
     } else {

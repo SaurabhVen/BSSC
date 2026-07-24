@@ -28,6 +28,7 @@ import {
   candidateStep6Schema,
   type CandidateRegisterInput,
   forgotRegistrationNumberSchema,
+  verifyPreviousRegistrationSchema,
 } from '../validators/auth';
 import { applicationService } from '../services/application.service';
 import { documentService } from '../services/document.service';
@@ -233,7 +234,9 @@ export class AuthController {
   }
 
   // ── POST /auth/register ───────────────────────────────────────
-
+  // Note: Registration is now handled directly via AWS Cognito from frontend.
+  // This endpoint is unused and can be safely removed or kept commented.
+  /*
   async register(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
     const { body } = parseEvent(event);
     const input = validate(registerSchema, body);
@@ -249,9 +252,12 @@ export class AuthController {
       email: result.email,
     });
   }
+  */
 
   // ── POST /auth/candidate/register ─────────────────────────────
-
+  // Note: Registration is now handled directly via AWS Cognito from frontend.
+  // This endpoint is unused and can be safely removed or kept commented.
+  /*
   async candidateRegister(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
     const { body } = parseEvent(event);
 
@@ -266,6 +272,7 @@ export class AuthController {
       emailVerified: true,
     });
   }
+  */
 
   // ── POST /auth/candidate/step-1 ───────────────────────────────
 
@@ -275,7 +282,7 @@ export class AuthController {
 
     // Normalize flat payload if necessary
     let body = rawBody;
-    if (rawBody && typeof rawBody === 'object' && !rawBody.personalInfo && rawBody.fullName) {
+    if (rawBody && typeof rawBody === 'object' && (rawBody.fullName || rawBody.applicantName) && (rawBody.fatherName || rawBody.motherName || rawBody.permDistrict || !rawBody.personalInfo)) {
       body = {
         personalInfo: {
           fullName: rawBody.fullName,
@@ -352,7 +359,7 @@ export class AuthController {
       };
     }
 
-    // Pre-calculate age if it is falsy (0, null, undefined) before validation
+    // Normalize nested payload if it comes in the saved response format
     if (
       body &&
       typeof body === 'object' &&
@@ -360,6 +367,11 @@ export class AuthController {
       typeof body.personalInfo === 'object'
     ) {
       const pi = body.personalInfo as any;
+      if (!pi.fathersName && pi.fatherName !== undefined) pi.fathersName = pi.fatherName;
+      if (!pi.dob && pi.dateOfBirth !== undefined) pi.dob = pi.dateOfBirth;
+      if (!pi.permanentAddress && pi.address?.permanent) pi.permanentAddress = pi.address.permanent;
+      if (!pi.correspondenceAddress && pi.address?.correspondence) pi.correspondenceAddress = pi.address.correspondence;
+
       if (pi.dob && typeof pi.dob === 'string') {
         let parsedDobStr = pi.dob;
         if (pi.dob.match(/^\d{2}-\d{2}-\d{4}$/)) {
@@ -529,19 +541,19 @@ export class AuthController {
 
       declaration: rc.declaration,
 
-      // Additional BSSC properties from flat body/rawBody
-      biharGovtEmp: rc.biharGovtEmp || (rawBody as any).biharGovtEmployee || (rawBody as any).biharGovtEmp || 'NO',
-      bsscAttempts: (rawBody as any).numberOfAttempts || (rawBody as any).bsscAttempts || '0',
-      contractualEmp: (rawBody as any).contractualEmployee || (rawBody as any).contractualEmp || 'NO',
-      nonCreamyLayer: (rawBody as any).isNonCreamyLayer || (rawBody as any).nonCreamyLayer || 'NO',
-      pwd40Percent: (rawBody as any).disabilityPercent || (rawBody as any).pwd40Percent || 'NO',
-      contractualPeriod: (rawBody as any).contractualPeriod || '0-0-0',
-      postName: (rawBody as any).nameOfPost || (rawBody as any).postName || '',
-      hasAgreement: (rawBody as any).agreementCircular || (rawBody as any).hasAgreement || 'NO',
-      officeName: (rawBody as any).officeName || '',
-      officeOrderNo: (rawBody as any).officeOrderNo || '',
-      isFreedomFighter: (rawBody as any).isFreedomFighter || 'NO',
-      isDebarred: (rawBody as any).isDebarred || 'NO',
+      // Additional BSSC properties from flat body/rawBody or nested reservationCategory
+      biharGovtEmp: rc.biharGovtEmp || (rawBody as any).reservationCategory?.biharGovtEmp || (rawBody as any).biharGovtEmployee || (rawBody as any).biharGovtEmp || 'NO',
+      bsscAttempts: (rawBody as any).reservationCategory?.bsscAttempts || (rawBody as any).numberOfAttempts || (rawBody as any).bsscAttempts || '0',
+      contractualEmp: (rawBody as any).reservationCategory?.contractualEmp || (rawBody as any).contractualEmployee || (rawBody as any).contractualEmp || 'NO',
+      nonCreamyLayer: (rawBody as any).reservationCategory?.nonCreamyLayer || (rawBody as any).isNonCreamyLayer || (rawBody as any).nonCreamyLayer || 'NO',
+      pwd40Percent: (rawBody as any).reservationCategory?.pwd40Percent || (rawBody as any).disabilityPercent || (rawBody as any).pwd40Percent || 'NO',
+      contractualPeriod: (rawBody as any).reservationCategory?.contractualPeriod || (rawBody as any).contractualPeriod || '0-0-0',
+      postName: (rawBody as any).reservationCategory?.postName || (rawBody as any).nameOfPost || (rawBody as any).postName || '',
+      hasAgreement: (rawBody as any).reservationCategory?.hasAgreement || (rawBody as any).agreementCircular || (rawBody as any).hasAgreement || 'NO',
+      officeName: (rawBody as any).reservationCategory?.officeName || (rawBody as any).officeName || '',
+      officeOrderNo: (rawBody as any).reservationCategory?.officeOrderNo || (rawBody as any).officeOrderNo || '',
+      isFreedomFighter: (rawBody as any).reservationCategory?.isFreedomFighter || (rawBody as any).isFreedomFighter || 'NO',
+      isDebarred: (rawBody as any).reservationCategory?.isDebarred || (rawBody as any).isDebarred || 'NO',
     };
 
     const draft = await applicationService.getOrCreateDraft(candidate.id);
@@ -568,10 +580,12 @@ export class AuthController {
           );
         }
 
+        const normalizeName = (name: string) => name.replace(/\s+/g, ' ').trim().toLowerCase();
+
         // Validate Candidate's name (fullName)
         const dbFullName = paidCandidate.fullName || '';
         const inputFullName = mappedPersonalInfo.fullName || '';
-        if (dbFullName.trim().toLowerCase() !== inputFullName.trim().toLowerCase()) {
+        if (normalizeName(dbFullName) !== normalizeName(inputFullName)) {
           throw new ValidationError(
             [{ field: 'fullName', message: 'Candidate name is incorrect' }],
             'Candidate name is incorrect'
@@ -581,7 +595,7 @@ export class AuthController {
         // Validate Father's name
         const dbFatherName = paidCandidate.fatherName || '';
         const inputFatherName = mappedPersonalInfo.fatherName || '';
-        if (dbFatherName.trim().toLowerCase() !== inputFatherName.trim().toLowerCase()) {
+        if (normalizeName(dbFatherName) !== normalizeName(inputFatherName)) {
           throw new ValidationError(
             [{ field: 'fatherName', message: "Father's name is incorrect" }],
             "Father's name is incorrect"
@@ -591,7 +605,7 @@ export class AuthController {
         // Validate Mother's name
         const dbMotherName = paidCandidate.motherName || '';
         const inputMotherName = mappedPersonalInfo.motherName || '';
-        if (dbMotherName.trim().toLowerCase() !== inputMotherName.trim().toLowerCase()) {
+        if (normalizeName(dbMotherName) !== normalizeName(inputMotherName)) {
           throw new ValidationError(
             [{ field: 'motherName', message: "Mother's name is incorrect" }],
             "Mother's name is incorrect"
@@ -626,8 +640,8 @@ export class AuthController {
       0,
       {
         ...rawBody,
-        personalInfo: mappedPersonalInfo,
-        ...mappedPersonalInfo
+        //personalInfo: mappedPersonalInfo,
+        //...mappedPersonalInfo
       }
     );
 
@@ -638,8 +652,8 @@ export class AuthController {
       1,
       {
         ...rawBody,
-        reservationCategory: mappedReservation,
-        ...mappedReservation
+        //reservationCategory: mappedReservation,
+        //...mappedReservation
       }
     );
     // Update candidates table with all parsed candidate details using repository
@@ -785,6 +799,114 @@ export class AuthController {
     });
   }
   */
+
+  async verifyPreviousRegistration(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
+    const user = await authenticate(event);
+    const { body } = parseEvent(event);
+    
+    const input = validate(verifyPreviousRegistrationSchema, body);
+    
+    const candidate = await userRepository.findCandidateByUserId(user.userId);
+    if (!candidate) throw new NotFoundError('Candidate profile not found');
+
+    const draft = await applicationService.getOrCreateDraft(candidate.id);
+
+    const oldRegNo = input.oldRegistrationNumber;
+
+    if (!oldRegNo) {
+      throw new ValidationError(
+        [{ field: 'oldRegistrationNumber', message: 'Registration number is required' }],
+        'Registration number is required'
+      );
+    }
+
+    const regIdNum = parseInt(oldRegNo.toString().trim(), 10);
+    if (isNaN(regIdNum)) {
+      throw new ValidationError(
+        [{ field: 'oldRegistrationNumber', message: 'Registration number is invalid' }],
+        'Registration number is invalid'
+      );
+    }
+
+    const { paidCandidateRepository } = await import('../repositories/paidCandidate.repository');
+    const paidCandidate = await paidCandidateRepository.findByRegId(regIdNum);
+    if (!paidCandidate) {
+      throw new ValidationError(
+        [{ field: 'oldRegistrationNumber', message: 'Registration number is incorrect or not found' }],
+        'Registration number is incorrect'
+      );
+    }
+
+    const step0DataRaw = await applicationService.getStepData(draft.applicationId, candidate.id, 0 as any);
+    const step1DataRaw = await applicationService.getStepData(draft.applicationId, candidate.id, 1 as any);
+    const step0Data = (step0DataRaw || {}) as any;
+    const step1Data = (step1DataRaw || {}) as any;
+    const personalInfo = (step0Data?.personalInfo || {}) as any;
+    const cand = candidate as any;
+
+    const normalizeName = (name: string) => name ? name.replace(/\s+/g, ' ').trim().toLowerCase() : '';
+
+    // Validate Candidate's name (fullName)
+    const dbFullName = paidCandidate.fullName || '';
+    const inputFullName = personalInfo?.fullName || step0Data?.fullName || step1Data?.fullName || cand?.fullName || '';
+    if (normalizeName(dbFullName) !== normalizeName(inputFullName)) {
+      throw new ValidationError(
+        [{ field: 'fullName', message: 'Candidate name is incorrect' }],
+        'Candidate name is incorrect'
+      );
+    }
+
+    // Validate Father's name
+    const dbFatherName = paidCandidate.fatherName || '';
+    const inputFatherName = personalInfo?.fatherName || step0Data?.fatherName || step1Data?.fatherName || '';
+    if (normalizeName(dbFatherName) !== normalizeName(inputFatherName)) {
+      throw new ValidationError(
+        [{ field: 'fatherName', message: "Father's name is incorrect" }],
+        "Father's name is incorrect"
+      );
+    }
+
+    // Validate Mother's name
+    const dbMotherName = paidCandidate.motherName || '';
+    const inputMotherName = personalInfo?.motherName || step0Data?.motherName || step1Data?.motherName || '';
+    if (normalizeName(dbMotherName) !== normalizeName(inputMotherName)) {
+      throw new ValidationError(
+        [{ field: 'motherName', message: "Mother's name is incorrect" }],
+        "Mother's name is incorrect"
+      );
+    }
+
+    // If verified, auto-complete the payment status in the database so that they skip the payment page.
+    const { paymentService } = await import('../services/payment.service');
+    const payments = await paymentService.getPaymentStatus(draft.applicationId, candidate.id);
+    const completedPayment = payments.find((p: any) => p.status === 'completed');
+    if (!completedPayment) {
+      const { paymentRepository } = await import('../repositories/common.repository');
+      const paymentOrderId = `free_auto_${generateUUID().substring(0, 8).toUpperCase()}`;
+      await paymentRepository.create({
+        applicationId: draft.applicationId,
+        paymentOrderId,
+        amount: '0.00',
+        currency: 'INR',
+        status: 'pending',
+        paymentMode: 'exempt',
+      });
+      await paymentService.completeFreePayment(paymentOrderId);
+    }
+
+    await userRepository.updateCandidate(candidate.id, {
+      previouslyRegistered: 'YES',
+      oldRegistrationNumber: oldRegNo.toString(),
+    });
+
+    return response.success(200, {
+      message: 'Previous registration verified successfully. Payment has been exempted.',
+      data: {
+        verified: true,
+        paymentExempted: true
+      },
+    });
+  }
 
   async candidateStep2(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
     const user = await authenticate(event);
@@ -1898,15 +2020,15 @@ export class AuthController {
   }
 
   async forgotRegistrationNumber(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
-  const { body } = parseEvent(event);
-  const input = validate(forgotRegistrationNumberSchema, body);
-  
-  await authService.forgotRegistrationNumber(input);
-  
-  return response.success(200, {
-    message: 'If the email is registered, your registration number has been sent to your email address.',
-  });
-}
+    const { body } = parseEvent(event);
+    const input = validate(forgotRegistrationNumberSchema, body);
+
+    await authService.forgotRegistrationNumber(input);
+
+    return response.success(200, {
+      message: 'If the email is registered, your registration number has been sent to your email address.',
+    });
+  }
 }
 
 export const authController = new AuthController();

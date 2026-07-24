@@ -985,25 +985,25 @@ export class AuthService {
   }
 
   async forgotRegistrationNumber(input: ForgotRegistrationNumberInput): Promise<void> {
-  const db = getDb();
-  
-  // 1. Find User and Candidate in Database
-  const candidateRecord = await db
-    .select({
-      fullName: users.fullName,
-      registrationNumber: candidates.registrationNumber,
-    })
-    .from(users)
-    .innerJoin(candidates, eq(users.id, candidates.userId))
-    .where(eq(users.email, input.email.toLowerCase().trim()))
-    .limit(1);
-  const candidate = candidateRecord[0];
-  if (!candidate || !candidate.registrationNumber) {
-    throw new NotFoundError('No candidate profile or registration number found for this email address.');
-  }
-  // 2. Prepare the Email Template
-  const subject = 'Your BSSC Candidate Portal Registration Number';
-  const body = `
+    const db = getDb();
+
+    // 1. Find User and Candidate in Database
+    const candidateRecord = await db
+      .select({
+        fullName: users.fullName,
+        registrationNumber: candidates.registrationNumber,
+      })
+      .from(users)
+      .innerJoin(candidates, eq(users.id, candidates.userId))
+      .where(eq(users.email, input.email.toLowerCase().trim()))
+      .limit(1);
+    const candidate = candidateRecord[0];
+    if (!candidate || !candidate.registrationNumber) {
+      throw new NotFoundError('No candidate profile or registration number found for this email address.');
+    }
+    // 2. Prepare the Email Template
+    const subject = 'Your BSSC Candidate Portal Registration Number';
+    const body = `
     <html>
       <body>
         <p>Dear ${candidate.fullName || 'Candidate'},</p>
@@ -1015,9 +1015,9 @@ export class AuthService {
       </body>
     </html>
   `;
-  // 3. Send the Email using SES (via NotificationService)
-  await notificationService.sendEmail(input.email, subject, body);
-}
+    // 3. Send the Email using SES (via NotificationService)
+    await notificationService.sendEmail(input.email, subject, body);
+  }
 
   // ── Logout ────────────────────────────────────────────────────
 

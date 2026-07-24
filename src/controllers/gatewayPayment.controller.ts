@@ -116,6 +116,8 @@ export class GatewayPaymentController {
     //     console.error('Error processing Getepay webhook:', err);
     //   }
     // } 
+
+
     if (gateway === 'sbi' && body) {
       try {
         const encryptedText = body.pushRespData || body.encData;
@@ -226,7 +228,8 @@ export class GatewayPaymentController {
 
       //     frontendUrl = `${baseUrl}/application?txn=${transactionId}`;
       //   }
-      if (parsedBody && parsedBody.encData) {
+
+     if (parsedBody && parsedBody.encData) {
         // Decrypt SBI response
         try {
           const sbiKey = process.env.SBI_KEY || config.SBI_KEY || '';

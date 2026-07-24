@@ -481,10 +481,16 @@ export const verifyJwt = async (token: string): Promise<JwtPayload> => {
       throw new Error('Your session is invalid or has expired. Please log in again to continue.');
     }
     const issuer = decoded.payload.iss;
-    if (!issuer.startsWith(`https://cognito-idp.${config.AWS_REGION}.amazonaws.com/`)) {
+    const expectedIssuer = `https://cognito-idp.${config.AWS_REGION}.amazonaws.com/${config.COGNITO_USER_POOL_ID}`;
+    if (issuer !== expectedIssuer) {
       throw new Error(
         'We encountered an issue verifying your secure session. Please log in again.'
       );
+    }
+
+    const clientId = decoded.payload.client_id || decoded.payload.aud;
+    if (clientId !== config.COGNITO_CLIENT_ID) {
+       throw new Error('Invalid token audience.');
     }
     const client = getJwksClient(issuer);
     const signingKey = await getSigningKey(client, decoded.header.kid);

@@ -194,6 +194,12 @@ export const forgotRegistrationNumberSchema = z.object({
 
 export type ForgotRegistrationNumberInput = z.infer<typeof forgotRegistrationNumberSchema>;
 
+export const verifyPreviousRegistrationSchema = z.object({
+  oldRegistrationNumber: z.union([z.string(), z.number()]).transform(String),
+});
+
+export type VerifyPreviousRegistrationInput = z.infer<typeof verifyPreviousRegistrationSchema>;
+
 // ── Candidate Step 1 Schema ────────────────────────────────────
 
 export const candidateAddressSchema = z.object({

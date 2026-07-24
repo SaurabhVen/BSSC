@@ -76,6 +76,7 @@ export class PaymentController {
   // ── POST /payment/verify ──────────────────────────────────────
 
   async verify(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
+    const user = await authenticate(event);
     const { body } = parseEvent(event);
     const input = validate(verifyPaymentSchema, body);
     const result = await paymentService.verifyPayment(input);

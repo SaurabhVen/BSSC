@@ -190,16 +190,15 @@ export class OtpService {
         const subject = 'Email Verification OTP for BSSC Examination Registration';
         const html = `
           <p>Dear Candidate,</p>
-          <p>Thank you for initiating the registration process for the BSSC Examination under the Jharkhand Staff Selection Commission (BSSC).</p>
+          <p>Thank you for initiating the registration process for the BSSC Examination under the Bihar Staff Selection Commission (BSSC).</p>
           <p>To verify your email address and proceed with the registration, please use the following One-Time Password (OTP):</p>
           <p><b>OTP: ${newOtpCode}</b></p>
           <p>This OTP is valid for 10 minutes. Please do not share this OTP with anyone. If you did not initiate this request, please ignore this email.</p>
-          <p>Best Regards,<br/>Jharkhand Staff Selection Commission (BSSC)<br/>(This is an auto-generated email. Please do not reply.)</p>
+          <p>Best Regards,<br/>Bihar Staff Selection Commission (BSSC)<br/>(This is an auto-generated email. Please do not reply.)</p>
         `;
         await sendEmail({ to: otpRecord.recipient, subject, html });
       }
     }
-
     return {
       otpRequestId: newOtpRequestId,
       expiresInSeconds: OTP_EXPIRY_SECONDS,

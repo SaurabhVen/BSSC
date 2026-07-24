@@ -1,7 +1,7 @@
 import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { documentService } from '../services/document.service';
 import { userRepository } from '../repositories/user.repository';
-import documentRepository from '../repositories/document.repository';
+import { documentRepository } from '../repositories/common.repository';
 import { response } from '../helpers/response';
 import { parseEvent } from '../helpers/request';
 import { authenticate } from '../middleware/auth';
