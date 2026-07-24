@@ -70,19 +70,7 @@ export class DocumentService {
       throw new AppError(`File size exceeds limit. Maximum allowed: 3 MB`, 422);
     }
 
-    const now = new Date();
-    const year = now.getFullYear().toString();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-
-    let s3Folder = 'document';
-    if (['photograph', 'live_photo'].includes(input.documentType)) {
-      s3Folder = 'photo';
-    } else if (['signature_english', 'signature_hindi', 'signature'].includes(input.documentType)) {
-      s3Folder = 'signature';
-    }
-
-    const fileKey = `candidates/${year}/${month}/${day}/${input.candidateId}/${s3Folder}/${generateUUID()}-${input.fileName}`;
+    const fileKey = `candidates/${input.candidateId}/${input.documentType}/${generateUUID()}-${input.fileName}`;
     let fileUrl: string;
     let uploadUrl: string;
 
@@ -149,19 +137,7 @@ export class DocumentService {
       throw new AppError(`File size exceeds limit. Maximum allowed: ${sizeStr}`, 422);
     }
 
-    const now = new Date();
-    const year = now.getFullYear().toString();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
-
-    let s3Folder = 'document';
-    if (['photograph', 'live_photo'].includes(input.documentType)) {
-      s3Folder = 'photo';
-    } else if (['signature_english', 'signature_hindi', 'signature'].includes(input.documentType)) {
-      s3Folder = 'signature';
-    }
-
-    const fileKey = `candidates/${year}/${month}/${day}/${input.candidateId}/${s3Folder}/${generateUUID()}-${input.fileName}`;
+    const fileKey = `candidates/${input.candidateId}/${input.documentType}/${generateUUID()}-${input.fileName}`;
     let fileUrl: string;
 
     if (config.MOCK_S3) {

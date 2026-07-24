@@ -1,4 +1,4 @@
-import { eq, lt, and, or } from 'drizzle-orm';
+import { eq, lt, and } from 'drizzle-orm';
 import { getDb } from '../database/drizzle';
 import {
   otps,
@@ -259,14 +259,7 @@ export class PaymentRepository {
       const allPending = await db
         .select()
         .from(payments)
-        .where(
-          or(
-            eq(payments.status, 'pending'),
-            eq(payments.status, 'initiated'),
-            eq(payments.status, 'INITIATED'),
-            eq(payments.status, 'PENDING')
-          )
-        );
+        .where(eq(payments.status, 'pending'));
 
       for (const p of allPending) {
         const appPrefix = p.applicationId.substring(0, 20).replace(/-/g, '');

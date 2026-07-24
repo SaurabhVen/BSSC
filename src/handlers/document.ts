@@ -21,11 +21,3 @@ export const getPresignedUrl = errorHandler((event: APIGatewayProxyEventV2, _ctx
 export const deleteDocument = errorHandler((event: APIGatewayProxyEventV2, _ctx: Context) =>
   documentController.delete(event)
 );
-
-export const getUploadPresignedUrl = errorHandler((event: APIGatewayProxyEventV2, _ctx: Context) =>
-  documentController.getUploadPresignedUrl(event)
-);
-
-export const getPublicUploadPresignedUrl = errorHandler((event: APIGatewayProxyEventV2, _ctx: Context) =>
-  documentController.getPublicUploadPresignedUrl(event)
-);

@@ -4,7 +4,6 @@ import { getDb } from '../database/drizzle';
 import { calculateBSSCAge, getBSSCAgeLimits, checkBSSCEligibility } from '../utils/age';
 import { eq, and, inArray } from 'drizzle-orm';
 import { generateApplicationHtml } from '../utils/pdf';
-import { cognitoAdminGetUser } from '../utils/cognito';
 import {
   candidateQualifications,
   candidatePostPreferences,
@@ -17,7 +16,6 @@ import {
   districts,
   finalSubmissions,
   users,
-  typeOfExOfficers,
 } from '../database/schema';
 import { documentRepository } from '../repositories/common.repository';
 import { documentService } from './document.service';
@@ -106,18 +104,6 @@ const normalizeStepDataDates = (data: any): void => {
     }
   }
 };
-
-const COGNITO_KEYS = new Set([
-  'fullName', 'emailId', 'mobileNumber', 'mobileNo', 'dateOfBirth', 'dob', 'gender', 'age',
-  'domicileOfBihar', 'isBiharDomicile',
-  'mainCategory', 'categoryId', 'category',
-  'subCategory', 'casteId', 'caste',
-  'isPwd', 'disability', 'pwdType', 'natureOfDisability', 'pwdPercentage', 'disabilityPercent', 'pwd40Percent', 'isMin40PercentPwD', 'isScribeRequired',
-  'isExServiceman', 'exServiceman', 'exServicemanYears', 'officerType', 'typeOfExOfficer', 'servicePeriod',
-  'biharGovtEmployee', 'biharGovtEmp', 'numberOfAttempts', 'bsscAttempts', 'contractualEmployee', 'contractualEmp', 'organizationName', 'hasPostExperience', 'nameOfPost', 'postName', 'agreementCircular', 'hasAgreement', 'contractualPeriod', 'disTypePersist', 'natureOfDisabilityType',
-  'nonCreamyLayer', 'isNonCreamyLayer',
-  'registrationNumber', 'previouslyRegistered', 'governmentIdNumber', 'oldRegistrationNumber'
-]);
 
 export class ApplicationService {
   // ── Get or Create Draft ───────────────────────────────────────
@@ -256,51 +242,7 @@ export class ApplicationService {
       validate(schema as any, data);
     }
 
-    // Sanitize data before database write to clean up step0 / step1 duplication (Cognito partitioning)
-    let dbData = data;
-    if (stepNumber === 0) {
-      dbData = {};
-      for (const [key, val] of Object.entries(data)) {
-        if (COGNITO_KEYS.has(key)) {
-          dbData[key] = val;
-        }
-      }
-      // Also extract Cognito keys from nested reservationCategory object if present
-      if (data.reservationCategory && typeof data.reservationCategory === 'object') {
-        const rc = data.reservationCategory as any;
-        for (const [key, val] of Object.entries(rc)) {
-          if (COGNITO_KEYS.has(key)) {
-            dbData[key] = val;
-          }
-        }
-      }
-    } else if (stepNumber === 1) {
-      dbData = { ...data };
-      for (const key of COGNITO_KEYS) {
-        delete dbData[key];
-      }
-      // Also remove Cognito keys from nested reservationCategory object if present
-      if (dbData.reservationCategory && typeof dbData.reservationCategory === 'object') {
-        const rc = { ...dbData.reservationCategory } as any;
-        for (const key of COGNITO_KEYS) {
-          delete rc[key];
-        }
-        dbData.reservationCategory = rc;
-      }
-    }
-
-    await applicationRepository.upsertStepData(applicationId, stepNumber, dbData);
-
-    if (
-      (stepNumber === 0 || stepNumber === 1) &&
-      ('oldRegistrationNumber' in data || 'previouslyRegistered' in data || 'governmentIdNumber' in data)
-    ) {
-      await userRepository.updateCandidate(candidateId, {
-        ...('oldRegistrationNumber' in data ? { oldRegistrationNumber: data.oldRegistrationNumber ? String(data.oldRegistrationNumber) : null } : {}),
-        ...('previouslyRegistered' in data ? { previouslyRegistered: data.previouslyRegistered ? String(data.previouslyRegistered) : null } : {}),
-        ...('governmentIdNumber' in data ? { governmentIdNumber: data.governmentIdNumber ? String(data.governmentIdNumber) : null } : {}),
-      });
-    }
+    await applicationRepository.upsertStepData(applicationId, stepNumber, data);
 
     const completedSteps = Array.from(new Set([...application.completedSteps, stepNumber]));
     const nextStep = Math.max(application.currentStep, stepNumber + 1);
@@ -327,13 +269,8 @@ export class ApplicationService {
     if (application.candidateId !== candidateId)
       throw new ForbiddenError('Application does not belong to this candidate');
 
-    const stepDataRows = await applicationRepository.getAllStepData(applicationId);
-    const stepDataMap: Record<number, Record<string, unknown>> = {};
-    for (const row of stepDataRows) {
-      stepDataMap[row.stepNumber] = row.data;
-    }
-    await this.enrichStepData(stepDataMap, candidateId);
-    return stepDataMap[stepNumber] ?? null;
+    const stepData = await applicationRepository.getStepData(applicationId, stepNumber);
+    return stepData?.data ?? null;
   }
 
   // ── Submit Application ────────────────────────────────────────
@@ -524,15 +461,10 @@ export class ApplicationService {
       return;
     }
 
-    let candidateRecord: any = null;
-    if (candidateId) {
-      candidateRecord = await userRepository.findCandidateById(candidateId);
-    }
-
-    // Fetch candidate and user details from DB to build/merge step0 dynamically from Cognito data
-    if (candidateId && candidateRecord) {
+    // Fetch candidate and user details from DB to build step0 dynamically if it is missing
+    if (!stepDataMap[0] && candidateId) {
       try {
-        const candidate = candidateRecord;
+        const candidate = await userRepository.findCandidateById(candidateId);
 
         if (candidate) {
           const dbUserRows = await db
@@ -567,92 +499,7 @@ export class ApplicationService {
             ? new Date(candidate.dateOfBirth).toISOString().split('T')[0].split('-').reverse().join('-')
             : '';
 
-          // If any of the newly added custom keys are null in DB, try to fetch them dynamically from Cognito as auto-healing fallback
-          let shouldUpdateDB = false;
-          let fetchedServiceFromDate = candidate.serviceFromDate;
-          let fetchedServiceToDate = candidate.serviceToDate;
-          let fetchedContractualFromDate = candidate.contractualFromDate;
-          let fetchedContractualToDate = candidate.contractualToDate;
-          let fetchedIsOwnScribe = candidate.isOwnScribe;
-          let fetchedTypeOfExOfficer = candidate.typeOfExOfficer;
-
-          // Only call Cognito if one of these fields is null AND dbUser.email is available
-          if (
-            (fetchedServiceFromDate === null || fetchedServiceToDate === null || 
-             fetchedContractualFromDate === null || fetchedContractualToDate === null || 
-             fetchedTypeOfExOfficer === null) && 
-            dbUser?.email
-          ) {
-            try {
-              const cognitoUser = await cognitoAdminGetUser(dbUser.email);
-              if (cognitoUser && Array.isArray(cognitoUser.UserAttributes)) {
-                const attrs: Record<string, string> = {};
-                for (const attr of cognitoUser.UserAttributes as any[]) {
-                  if (attr.Name && attr.Value) {
-                    attrs[attr.Name] = attr.Value;
-                  }
-                }
-
-                if (fetchedServiceFromDate === null && attrs['custom:serviceFromDate']) {
-                  fetchedServiceFromDate = new Date(attrs['custom:serviceFromDate']);
-                  shouldUpdateDB = true;
-                }
-                if (fetchedServiceToDate === null && attrs['custom:serviceToDate']) {
-                  fetchedServiceToDate = new Date(attrs['custom:serviceToDate']);
-                  shouldUpdateDB = true;
-                }
-                if (fetchedContractualFromDate === null && attrs['custom:contractualFromDate']) {
-                  fetchedContractualFromDate = new Date(attrs['custom:contractualFromDate']);
-                  shouldUpdateDB = true;
-                }
-                if (fetchedContractualToDate === null && attrs['custom:contractualToDate']) {
-                  fetchedContractualToDate = new Date(attrs['custom:contractualToDate']);
-                  shouldUpdateDB = true;
-                }
-                if (fetchedTypeOfExOfficer === null && attrs['custom:officer_type']) {
-                  const oType = attrs['custom:officer_type'].trim();
-                  const parsedInt = parseInt(oType, 10);
-                  if (!isNaN(parsedInt)) {
-                    fetchedTypeOfExOfficer = parsedInt;
-                    shouldUpdateDB = true;
-                  } else {
-                    const exOfficerList = await db
-                      .select()
-                      .from(typeOfExOfficers)
-                      .where(eq(typeOfExOfficers.name, oType))
-                      .limit(1);
-                    if (exOfficerList.length > 0) {
-                      fetchedTypeOfExOfficer = exOfficerList[0].id;
-                      shouldUpdateDB = true;
-                    }
-                  }
-                }
-                if (attrs['custom:isownscribe'] !== undefined) {
-                  const val = attrs['custom:isownscribe'] === 'YES' || attrs['custom:isownscribe'] === 'true';
-                  if (fetchedIsOwnScribe !== val) {
-                    fetchedIsOwnScribe = val;
-                    shouldUpdateDB = true;
-                  }
-                }
-              }
-            } catch (cognitoErr) {
-              console.error('Auto-healing: failed to retrieve user from Cognito:', dbUser.email, cognitoErr);
-            }
-          }
-
-          if (shouldUpdateDB) {
-            console.log(`Auto-healing candidate metadata for candidate: ${candidate.id}`);
-            await userRepository.updateCandidate(candidate.id, {
-              serviceFromDate: fetchedServiceFromDate,
-              serviceToDate: fetchedServiceToDate,
-              contractualFromDate: fetchedContractualFromDate,
-              contractualToDate: fetchedContractualToDate,
-              isOwnScribe: fetchedIsOwnScribe,
-              typeOfExOfficer: fetchedTypeOfExOfficer,
-            });
-          }
-
-          const cognitoData = {
+          stepDataMap[0] = {
             fullName: dbUser?.fullName || '',
             emailId: dbUser?.email || '',
             mobileNumber: candidate.mobileNumber || '',
@@ -681,8 +528,6 @@ export class ApplicationService {
 
             isExServiceman: candidate.isExServiceman === true,
             exServicemanYears: 0,
-            typeOfExOfficer: fetchedTypeOfExOfficer,
-            officerType: fetchedTypeOfExOfficer ? String(fetchedTypeOfExOfficer) : '',
             servicePeriod: candidate.servicePeriod || '',
             biharGovtEmp: candidate.isBiharGovtEmp === true ? 'YES' : 'NO',
             bsscAttempts: candidate.bsscAttempts ? String(candidate.bsscAttempts) : '0',
@@ -695,25 +540,12 @@ export class ApplicationService {
             disTypePersist: candidate.disTypePersist || '',
             isScribeRequired: candidate.isScribeRequired === true ? 'YES' : 'NO',
             nonCreamyLayer: candidate.nonCreamyLayer === true ? 'YES' : 'NO',
-            serviceFromDate: fetchedServiceFromDate ? new Date(fetchedServiceFromDate).toISOString().split('T')[0] : null,
-            serviceToDate: fetchedServiceToDate ? new Date(fetchedServiceToDate).toISOString().split('T')[0] : null,
-            contractualFromDate: fetchedContractualFromDate ? new Date(fetchedContractualFromDate).toISOString().split('T')[0] : null,
-            contractualToDate: fetchedContractualToDate ? new Date(fetchedContractualToDate).toISOString().split('T')[0] : null,
-            isownscribe: fetchedIsOwnScribe === true ? 'YES' : 'NO',
             sportsLevel: null,
             sportsAchievement: null,
             sportsCertificateNumber: null,
             sportsCertificateAuthority: null,
             sportsCertificateIssueDate: null,
-            isSportsQuota: false,
-            previouslyRegistered: candidate.previouslyRegistered || 'NO',
-            governmentIdNumber: candidate.governmentIdNumber || null,
-            oldRegistrationNumber: candidate.oldRegistrationNumber || null
-          };
-
-          stepDataMap[0] = {
-            ...(stepDataMap[0] || {}),
-            ...cognitoData
+            isSportsQuota: false
           };
         }
       } catch (err) {
@@ -721,20 +553,18 @@ export class ApplicationService {
       }
     }
 
-    // Reconstruct stepDataMap[1] from stepDataMap[0] and stepDataMap[1] to ensure all expected flat BSSC fields are present
+    // Reconstruct stepDataMap[1] from stepDataMap[0] to ensure all expected flat BSSC fields are present
     if (stepDataMap[0]) {
       const s0 = stepDataMap[0] as any;
-      const s1 = stepDataMap[1] as any || {};
+      const hasAadhar = s0.identityType === 'aadhaar' || s0.hasAadharCard === 'YES' || s0.hasAadharCard === true || s0.aadharCardNumber || s0.identityNumber ? true : false;
 
-      const hasAadhar = s0.identityType === 'aadhaar' || s0.hasAadharCard === 'YES' || s0.hasAadharCard === true || s0.aadharCardNumber || s0.identityNumber || s1.hasAadharCard === 'YES' || s1.aadharCardNumber ? true : false;
-
-      const perm = s1.address?.permanent || s0.address?.permanent || {};
-      const corr = s1.address?.correspondence || s0.address?.correspondence || {};
+      const perm = s0.address?.permanent || {};
+      const corr = s0.address?.correspondence || {};
 
       let ageOk = true;
       let ageMsg = 'Age is within eligible limits';
       let maxAgeVal = 37;
-      const dobStr = s0.dateOfBirth || s0.dob || s1.dateOfBirth || s1.dob || (s0.personalInfo && s0.personalInfo.dob) || (s1.personalInfo && s1.personalInfo.dob);
+      const dobStr = s0.dateOfBirth || s0.dob || (s0.personalInfo && s0.personalInfo.dob);
       if (dobStr) {
         let dobDate: Date | null = null;
         if (typeof dobStr === 'string' && dobStr.includes('-')) {
@@ -749,7 +579,7 @@ export class ApplicationService {
         }
 
         if (dobDate && !isNaN(dobDate.getTime())) {
-          const rawCat = s1.mainCategory || s1.category || s1.categoryId || s0.mainCategory || s0.category || s0.categoryId || (s1.reservationCategory && s1.reservationCategory.mainCategory ? String(s1.reservationCategory.mainCategory) : 'unreserved');
+          const rawCat = s0.mainCategory || s0.category || s0.categoryId || (s0.reservationCategory && s0.reservationCategory.mainCategory ? String(s0.reservationCategory.mainCategory) : 'unreserved');
           let catValue = 'unreserved';
           if (rawCat) {
             const cleanCat = String(rawCat).trim();
@@ -767,11 +597,11 @@ export class ApplicationService {
             }
           }
 
-          const gender = s0.gender || s1.gender || (s0.personalInfo && s0.personalInfo.gender) || (s1.personalInfo && s1.personalInfo.gender) || 'male';
-          const isPwd = s1.isPwd === 'YES' || s1.isPwd === true || s1.disability === 'YES' || s1.disability === true || s0.isPwd === 'YES' || s0.isPwd === true || s0.disability === 'YES' || s0.disability === true;
-          const isExServiceman = s1.isExServiceman === 'YES' || s1.isExServiceman === true || s1.exServiceman === 'YES' || s1.exServiceman === true || s0.isExServiceman === 'YES' || s0.isExServiceman === true || s0.exServiceman === 'YES' || s0.exServiceman === true;
-          const exServicemanYears = s1.exServicemanYears ? Number(s1.exServicemanYears) : (s0.exServicemanYears ? Number(s0.exServicemanYears) : 0);
-          const isGovtServant = s1.biharGovtEmp === 'YES' || s1.biharGovtEmp === true || s1.isBiharGovt === 'YES' || s1.isBiharGovt === true || s1.biharGovtEmployee === 'YES' || s1.biharGovtEmployee === true || s0.biharGovtEmp === 'YES' || s0.biharGovtEmp === true || s0.isBiharGovt === 'YES' || s0.isBiharGovt === true || s0.biharGovtEmployee === 'YES' || s0.biharGovtEmployee === true;
+          const gender = s0.gender || (s0.personalInfo && s0.personalInfo.gender) || 'male';
+          const isPwd = s0.isPwd === 'YES' || s0.isPwd === true || s0.disability === 'YES' || s0.disability === true;
+          const isExServiceman = s0.isExServiceman === 'YES' || s0.isExServiceman === true || s0.exServiceman === 'YES' || s0.exServiceman === true;
+          const exServicemanYears = s0.exServicemanYears ? Number(s0.exServicemanYears) : 0;
+          const isGovtServant = s0.biharGovtEmp === 'YES' || s0.biharGovtEmp === true || s0.isBiharGovt === 'YES' || s0.isBiharGovt === true || s0.biharGovtEmployee === 'YES' || s0.biharGovtEmployee === true;
 
           const limits = getBSSCAgeLimits(catValue, gender, isPwd, isExServiceman, exServicemanYears, isGovtServant);
           maxAgeVal = limits.maxAge;
@@ -822,165 +652,97 @@ export class ApplicationService {
         }
       }
 
-      // Reconstruct step1 for BSSC compatibility
       stepDataMap[1] = {
-        applicationId: s1.applicationId || s0.applicationId || '',
-        fullName: s0.fullName || s1.fullName || (s1.personalInfo && s1.personalInfo.fullName) || (s0.personalInfo && s0.personalInfo.fullName) || '',
-        fatherName: s1.fatherName || s1.fathersName || s0.fatherName || s0.fathersName || (s1.personalInfo && (s1.personalInfo.fatherName || s1.personalInfo.fathersName)) || (s0.personalInfo && (s0.personalInfo.fatherName || s0.personalInfo.fathersName)) || '',
-        motherName: s1.motherName || s0.motherName || (s1.personalInfo && s1.personalInfo.motherName) || (s0.personalInfo && s0.personalInfo.motherName) || '',
-        gender: (s0.gender || s1.gender || (s1.personalInfo && s1.personalInfo.gender) || (s0.personalInfo && s0.personalInfo.gender) || 'MALE').toUpperCase(),
-        dateOfBirth: s0.dateOfBirth || s0.dob || s1.dateOfBirth || s1.dob || (s1.personalInfo && s1.personalInfo.dob) || (s0.personalInfo && s0.personalInfo.dob) || '',
-        nationality: s1.nationality || s0.nationality || (s1.personalInfo && s1.personalInfo.nationality) || (s0.personalInfo && s0.personalInfo.nationality) || 'Indian',
-        nationalityId: s1.nationalityId || s0.nationalityId || '1',
-        otherNationality: s1.otherNationality || s0.otherNationality || '',
-        emailId: s0.emailId || s1.emailId || (s1.personalInfo && s1.personalInfo.emailId) || (s0.personalInfo && s0.personalInfo.emailId) || '',
-        mobileNo: s0.mobileNumber || s0.mobileNo || s1.mobileNumber || s1.mobileNo || (s1.personalInfo && s1.personalInfo.mobileNumber) || (s0.personalInfo && s0.personalInfo.mobileNumber) || '',
-        confirmMobileNo: s1.confirmMobileNo || s0.confirmMobileNo || s0.mobileNo || s0.mobileNumber || s1.mobileNo || s1.mobileNumber || (s1.personalInfo && s1.personalInfo.mobileNumber) || (s0.personalInfo && s0.personalInfo.mobileNumber) || '',
-        identificationMarkEn: s1.identificationMarkEn || s1.identificationMark1 || s0.identificationMarkEn || s0.identificationMark1 || (s1.personalInfo && s1.personalInfo.identificationMark1) || (s0.personalInfo && s0.personalInfo.identificationMark1) || '',
-        identificationMarkEn2: s1.identificationMarkEn2 || s1.identificationMark2 || s0.identificationMarkEn2 || s0.identificationMark2 || (s1.personalInfo && s1.personalInfo.identificationMark2) || (s0.personalInfo && s0.personalInfo.identificationMark2) || '',
-        isMarried: s1.isMarried || s0.isMarried || (s1.maritalStatus === 'unmarried' || s1.personalInfo?.maritalStatus === 'unmarried' || s0.maritalStatus === 'unmarried' || s0.personalInfo?.maritalStatus === 'unmarried' ? 'NO' : 'YES') || 'NO',
-        spouseName: s1.spouseName || s0.spouseName || (s1.personalInfo && s1.personalInfo.spouseName) || (s0.personalInfo && s0.personalInfo.spouseName) || '',
-        domicileOfBihar: (s1.isBiharDomicile === true || s1.isBiharDomicile === 'YES' || s1.domicileOfBihar === 'YES' || s1.domicileOfBihar === true || s0.isBiharDomicile === true || s0.isBiharDomicile === 'YES' || s0.domicileOfBihar === 'YES' || s0.domicileOfBihar === true) ? 'YES' : 'NO',
-        domicileCertNo: s1.domicileCertNo || s1.domicileCertificateNumber || s0.domicileCertNo || s0.domicileCertificateNumber || '',
-        domicileIssueDate: s1.domicileIssueDate || s1.domicileCertificateIssueDate || s0.domicileIssueDate || s0.domicileCertificateIssueDate || '',
-        domicileAuthority: s1.domicileAuthority || s1.domicileCertificateAuthority || s0.domicileAuthority || s0.domicileCertificateAuthority || '',
-        category: s1.category || s0.category || '',
-        categoryId: String(s1.categoryId || s1.mainCategory || s0.categoryId || s0.mainCategory || ''),
-        caste: s1.caste || s0.caste || '',
-        casteId: String(s1.casteId || s1.subCategory || s0.casteId || s0.subCategory || ''),
-        mainCategory: s1.mainCategory || s0.mainCategory || (s1.categoryId ? Number(s1.categoryId) : null) || (s0.categoryId ? Number(s0.categoryId) : null) || null,
-        // subCategory: s1.subCategory || s0.subCategory || (s1.casteId ? Number(s1.casteId) : null) || (s0.casteId ? Number(s0.casteId) : null) || null,
-        subSubCategoryId: s1.subSubCategoryId || s0.subSubCategoryId || null,
-        // mainCategoryId: s1.mainCategoryId || s0.mainCategoryId || (s1.categoryId ? Number(s1.categoryId) : null) || (s0.categoryId ? Number(s0.categoryId) : null) || null,
-        // subCategoryId: s1.subCategoryId || s0.subCategoryId || (s1.casteId ? Number(s1.casteId) : null) || (s0.casteId ? Number(s0.casteId) : null) || null,
-        reservationCategory: s1.reservationCategory || {
-          isLocallyResident: s1.isLocallyResident || s0.isLocallyResident || false,
-          localDistrictId: s1.localDistrictId || s0.localDistrictId || null,
-          isBiharDomicile: s1.isBiharDomicile || s0.isBiharDomicile || false,
-          domicileCertificateNumber: s1.domicileCertificateNumber || s0.domicileCertificateNumber || null,
-          domicileCertificateAuthority: s1.domicileCertificateAuthority || s0.domicileCertificateAuthority || null,
-          domicileCertificateIssueDate: s1.domicileCertificateIssueDate || s0.domicileCertificateIssueDate || null,
-          mainCategory: s1.mainCategory || s0.mainCategory || (s1.categoryId ? Number(s1.categoryId) : null) || (s0.categoryId ? Number(s0.categoryId) : null) || null,
-          subCategory: s1.subCategory || s0.subCategory || (s1.casteId ? Number(s1.casteId) : null) || (s0.casteId ? Number(s0.casteId) : null) || null,
-          subSubCategoryId: s1.subSubCategoryId || s0.subSubCategoryId || null,
-          categoryCertificateNumber: s1.categoryCertificateNumber || s0.categoryCertificateNumber || null,
-          categoryCertificateAuthority: s1.categoryCertificateAuthority || s0.categoryCertificateAuthority || null,
-          categoryCertificateIssueDate: s1.categoryCertificateIssueDate || s0.categoryCertificateIssueDate || null,
-          isPwd: s1.isPwd || s0.isPwd || false,
-          // pwdType: s1.pwdType || s0.pwdType || null,
-          // pwdPercentage: s1.pwdPercentage || s0.pwdPercentage || null,
-          pwdCertificateNumber: s1.pwdCertificateNumber || s0.pwdCertificateNumber || null,
-          pwdCertificateAuthority: s1.pwdCertificateAuthority || s0.pwdCertificateAuthority || null,
-          pwdCertificateIssueDate: s1.pwdCertificateIssueDate || s0.pwdCertificateIssueDate || null,
-          isExServiceman: s1.isExServiceman || s0.isExServiceman || false,
-          exServicemanYears: s1.exServicemanYears || s0.exServicemanYears || null,
-          typeOfExOfficer: s1.typeOfExOfficer || s0.typeOfExOfficer || (s1.officerType ? parseInt(s1.officerType, 10) : null) || (s0.officerType ? parseInt(s0.officerType, 10) : null) || null,
-          isSportsQuota: s1.isSportsQuota || s0.isSportsQuota || false,
-          sportsLevel: s1.sportsLevel || s0.sportsLevel || null,
-          sportsAchievement: s1.sportsAchievement || s0.sportsAchievement || null,
-          serviceFromDate: s1.serviceFromDate || s0.serviceFromDate || null,
-          serviceToDate: s1.serviceToDate || s0.serviceToDate || null,
-          contractualFromDate: s1.contractualFromDate || s0.contractualFromDate || null,
-          contractualToDate: s1.contractualToDate || s0.contractualToDate || null,
-          isownscribe: s1.isownscribe || s0.isownscribe || null,
-        },
-        isNonCreamyLayer: (s1.nonCreamyLayer === 'YES' || s1.nonCreamyLayer === true || s0.nonCreamyLayer === 'YES' || s0.nonCreamyLayer === true) ? 'YES' : 'NO',
-        categoryCertNo: s1.categoryCertNo || s1.categoryCertificateNumber || s0.categoryCertNo || s0.categoryCertificateNumber || '',
-        categoryIssueDate: s1.categoryIssueDate || s1.categoryCertificateIssueDate || s0.categoryIssueDate || s0.categoryCertificateIssueDate || '',
-        categoryAuthority: s1.categoryAuthority || s1.categoryCertificateAuthority || s0.categoryAuthority || s0.categoryCertificateAuthority || '',
-        categoryAuthorityOther: s1.categoryAuthorityOther || s0.categoryAuthorityOther || '',
-        disability: (s1.isPwd === true || s1.isPwd === 'YES' || s1.disability === 'YES' || s1.disability === true || s0.isPwd === true || s0.isPwd === 'YES' || s0.disability === 'YES' || s0.disability === true) ? 'YES' : 'NO',
-        natureOfDisability: s1.natureOfDisability || s1.disabilityType || s1.pwdType || s0.natureOfDisability || s0.disabilityType || s0.pwdType || '',
-        natureOfDisabilityType: s1.natureOfDisabilityType || s1.disTypePersist || s0.natureOfDisabilityType || s0.disTypePersist || '',
-        disabilityPercent: s1.disabilityPercent || String(s1.pwdPercentage || '') || s0.disabilityPercent || String(s0.pwdPercentage || ''),
-        isMin40PercentPwD: (s1.pwd40Percent === 'YES' || s1.pwd40Percent === true || s1.isMin40PercentPwD === 'YES' || s1.isMin40PercentPwD === true || s0.pwd40Percent === 'YES' || s0.pwd40Percent === true || s0.isMin40PercentPwD === 'YES' || s0.isMin40PercentPwD === true) ? 'YES' : 'NO',
-        disabilityCertNo: s1.disabilityCertNo || s1.pwdCertificateNumber || s0.disabilityCertNo || s0.pwdCertificateNumber || '',
-        disabilityIssueDate: s1.disabilityIssueDate || s1.pwdCertificateIssueDate || s0.disabilityIssueDate || s0.pwdCertificateIssueDate || '',
-        disabilityAuthority: s1.disabilityAuthority || s1.pwdCertificateAuthority || s0.disabilityAuthority || s0.pwdCertificateAuthority || '',
-        disabilityAuthorityOther: s1.disabilityAuthorityOther || s0.disabilityAuthorityOther || '',
-        isScribeRequired: (s1.isScribeRequired === 'YES' || s1.isScribeRequired === true || s0.isScribeRequired === 'YES' || s0.isScribeRequired === true) ? 'YES' : 'NO',
-        isownscribe: (s1.isownscribe === 'YES' || s1.isownscribe === true || s0.isownscribe === 'YES' || s0.isownscribe === true) ? 'YES' : 'NO',
-        exServiceman: (s1.isExServiceman === true || s1.isExServiceman === 'YES' || s1.exServiceman === 'YES' || s1.exServiceman === true || s0.isExServiceman === true || s0.isExServiceman === 'YES' || s0.exServiceman === 'YES' || s0.exServiceman === true) ? 'YES' : 'NO',
-        officerType: String(s1.officerType || s1.typeOfExOfficer || s0.officerType || s0.typeOfExOfficer || ''),
-        typeOfExOfficer: s1.typeOfExOfficer || s0.typeOfExOfficer || (s1.officerType ? parseInt(s1.officerType, 10) : null) || (s0.officerType ? parseInt(s0.officerType, 10) : null) || null,
-        serviceFromDate: s1.serviceFromDate || s0.serviceFromDate || '',
-        serviceToDate: s1.serviceToDate || s0.serviceToDate || '',
-        wardOfFreedomFighter: (s1.wardOfFreedomFighter === 'YES' || s1.wardOfFreedomFighter === true || s1.isFreedomFighter === 'YES' || s1.isFreedomFighter === true || s0.wardOfFreedomFighter === 'YES' || s0.wardOfFreedomFighter === true || s0.isFreedomFighter === 'YES' || s0.isFreedomFighter === true) ? 'YES' : 'NO',
-        freedomFighterCertNo: s1.freedomFighterCertNo || s0.freedomFighterCertNo || '',
-        freedomFighterAuthority: s1.freedomFighterAuthority || s0.freedomFighterAuthority || '',
-        biharGovtEmployee: (s1.biharGovtEmployee === 'YES' || s1.biharGovtEmployee === true || s1.biharGovtEmp === 'YES' || s1.biharGovtEmp === true || s0.biharGovtEmployee === 'YES' || s0.biharGovtEmployee === true || s0.biharGovtEmp === 'YES' || s0.biharGovtEmp === true) ? 'YES' : 'NO',
-        numberOfAttempts: String(s1.numberOfAttempts || s1.bsscAttempts || s0.numberOfAttempts || s0.bsscAttempts || '0'),
-        contractualEmployee: (s1.contractualEmployee === 'YES' || s1.contractualEmployee === true || s1.contractualEmp === 'YES' || s1.contractualEmp === true || s0.contractualEmployee === 'YES' || s0.contractualEmployee === true || s0.contractualEmp === 'YES' || s0.contractualEmp === true) ? 'YES' : 'NO',
-        organizationName: s1.organizationName || s0.organizationName || '',
-        hasPostExperience: (s1.hasPostExperience === 'YES' || s1.hasPostExperience === true || s0.hasPostExperience === 'YES' || s0.hasPostExperience === true) ? 'YES' : 'NO',
-        nameOfPost: s1.nameOfPost || s1.postName || s0.nameOfPost || s0.postName || '',
-        agreementCircular: s1.agreementCircular || (s1.hasAgreement === 'YES' || s1.hasAgreement === true ? 'YES' : 'NO') || s0.agreementCircular || (s0.hasAgreement === 'YES' || s0.hasAgreement === true ? 'YES' : 'NO'),
-        departmentName: s1.departmentName || s0.departmentName || '',
-        officeOrderNo: s1.officeOrderNo || s0.officeOrderNo || '',
-        contractualFromDate: s1.contractualFromDate || s0.contractualFromDate || '',
-        contractualToDate: s1.contractualToDate || s0.contractualToDate || '',
-        isDebarred: (s1.isDebarred === 'YES' || s1.isDebarred === true || s0.isDebarred === 'YES' || s0.isDebarred === true) ? 'YES' : 'NO',
-        debarredFromDate: s1.debarredFromDate || s0.debarredFromDate || '',
-        debarredToDate: s1.debarredToDate || s0.debarredToDate || '',
-        debarmentReason: s1.debarmentReason || s0.debarmentReason || '',
+        applicationId: s0.applicationId || '',
+        fullName: s0.fullName || (s0.personalInfo && s0.personalInfo.fullName) || '',
+        fatherName: s0.fatherName || s0.fathersName || (s0.personalInfo && (s0.personalInfo.fatherName || s0.personalInfo.fathersName)) || '',
+        motherName: s0.motherName || (s0.personalInfo && s0.personalInfo.motherName) || '',
+        gender: (s0.gender || (s0.personalInfo && s0.personalInfo.gender) || 'MALE').toUpperCase(),
+        dateOfBirth: s0.dateOfBirth || s0.dob || (s0.personalInfo && s0.personalInfo.dob) || '',
+        nationality: s0.nationality || (s0.personalInfo && s0.personalInfo.nationality) || 'Indian',
+        nationalityId: s0.nationalityId || '1',
+        otherNationality: s0.otherNationality || '',
+        emailId: s0.emailId || (s0.personalInfo && s0.personalInfo.emailId) || '',
+        mobileNo: s0.mobileNo || s0.mobileNumber || (s0.personalInfo && s0.personalInfo.mobileNumber) || '',
+        confirmMobileNo: s0.confirmMobileNo || s0.mobileNo || s0.mobileNumber || (s0.personalInfo && s0.personalInfo.mobileNumber) || '',
+        identificationMarkEn: s0.identificationMarkEn || s0.identificationMark1 || (s0.personalInfo && s0.personalInfo.identificationMark1) || '',
+        identificationMarkEn2: s0.identificationMarkEn2 || s0.identificationMark2 || (s0.personalInfo && s0.personalInfo.identificationMark2) || '',
+        isMarried: s0.isMarried || (s0.maritalStatus === 'unmarried' || s0.personalInfo?.maritalStatus === 'unmarried' ? 'NO' : 'YES') || 'NO',
+        spouseName: s0.spouseName || (s0.personalInfo && s0.personalInfo.spouseName) || '',
+        domicileOfBihar: (s0.isBiharDomicile === true || s0.isBiharDomicile === 'YES' || s0.domicileOfBihar === 'YES' || s0.domicileOfBihar === true) ? 'YES' : 'NO',
+        domicileCertNo: s0.domicileCertNo || s0.domicileCertificateNumber || '',
+        domicileIssueDate: s0.domicileIssueDate || s0.domicileCertificateIssueDate || '',
+        domicileAuthority: s0.domicileAuthority || s0.domicileCertificateAuthority || '',
+        category: s0.category || '',
+        categoryId: String(s0.categoryId || s0.mainCategory || ''),
+        caste: s0.caste || '',
+        casteId: String(s0.casteId || s0.subCategory || ''),
+        isNonCreamyLayer: (s0.nonCreamyLayer === 'YES' || s0.nonCreamyLayer === true) ? 'YES' : 'NO',
+        categoryCertNo: s0.categoryCertNo || s0.categoryCertificateNumber || '',
+        categoryIssueDate: s0.categoryIssueDate || s0.categoryCertificateIssueDate || '',
+        categoryAuthority: s0.categoryAuthority || s0.categoryCertificateAuthority || '',
+        categoryAuthorityOther: s0.categoryAuthorityOther || '',
+        disability: (s0.isPwd === true || s0.isPwd === 'YES' || s0.disability === 'YES' || s0.disability === true) ? 'YES' : 'NO',
+        natureOfDisability: s0.natureOfDisability || s0.disabilityType || s0.pwdType || '',
+        natureOfDisabilityType: s0.natureOfDisabilityType || s0.disTypePersist || '',
+        disabilityPercent: s0.disabilityPercent || String(s0.pwdPercentage || ''),
+        isMin40PercentPwD: (s0.pwd40Percent === 'YES' || s0.pwd40Percent === true || s0.isMin40PercentPwD === 'YES' || s0.isMin40PercentPwD === true) ? 'YES' : 'NO',
+        disabilityCertNo: s0.disabilityCertNo || s0.pwdCertificateNumber || '',
+        disabilityIssueDate: s0.disabilityIssueDate || s0.pwdCertificateIssueDate || '',
+        disabilityAuthority: s0.disabilityAuthority || s0.pwdCertificateAuthority || '',
+        disabilityAuthorityOther: s0.disabilityAuthorityOther || '',
+        isScribeRequired: (s0.isScribeRequired === 'YES' || s0.isScribeRequired === true) ? 'YES' : 'NO',
+        exServiceman: (s0.isExServiceman === true || s0.isExServiceman === 'YES' || s0.exServiceman === 'YES' || s0.exServiceman === true) ? 'YES' : 'NO',
+        officerType: String(s0.officerType || s0.typeOfExOfficer || ''),
+        serviceFromDate: s0.serviceFromDate || '',
+        serviceToDate: s0.serviceToDate || '',
+        wardOfFreedomFighter: (s0.wardOfFreedomFighter === 'YES' || s0.wardOfFreedomFighter === true || s0.isFreedomFighter === 'YES' || s0.isFreedomFighter === true) ? 'YES' : 'NO',
+        freedomFighterCertNo: s0.freedomFighterCertNo || '',
+        freedomFighterAuthority: s0.freedomFighterAuthority || '',
+        biharGovtEmployee: (s0.biharGovtEmployee === 'YES' || s0.biharGovtEmployee === true || s0.biharGovtEmp === 'YES' || s0.biharGovtEmp === true) ? 'YES' : 'NO',
+        numberOfAttempts: String(s0.numberOfAttempts || s0.bsscAttempts || '0'),
+        contractualEmployee: (s0.contractualEmployee === 'YES' || s0.contractualEmployee === true || s0.contractualEmp === 'YES' || s0.contractualEmp === true) ? 'YES' : 'NO',
+        organizationName: s0.organizationName || '',
+        hasPostExperience: (s0.hasPostExperience === 'YES' || s0.hasPostExperience === true) ? 'YES' : 'NO',
+        nameOfPost: s0.nameOfPost || s0.postName || '',
+        agreementCircular: s0.agreementCircular || (s0.hasAgreement === 'YES' || s0.hasAgreement === true ? 'YES' : 'NO'),
+        departmentName: s0.departmentName || '',
+        officeOrderNo: s0.officeOrderNo || '',
+        contractualFromDate: s0.contractualFromDate || '',
+        contractualToDate: s0.contractualToDate || '',
+        isDebarred: (s0.isDebarred === 'YES' || s0.isDebarred === true) ? 'YES' : 'NO',
+        debarredFromDate: s0.debarredFromDate || '',
+        debarredToDate: s0.debarredToDate || '',
+        debarmentReason: s0.debarmentReason || '',
         hasAadharCard: hasAadhar ? 'YES' : 'NO',
-        aadharCardNumber: s0.aadharCardNumber || s0.identityNumber || s1.aadharCardNumber || s1.identityNumber || '',
-        typeOfPhotoIdProof: s0.typeOfPhotoIdProof || s0.identityType || s1.typeOfPhotoIdProof || s1.identityType || 'aadhaar',
-        idProofNo: s0.idProofNo || s0.identityNumber || s1.idProofNo || s1.identityNumber || '',
+        aadharCardNumber: s0.aadharCardNumber || s0.identityNumber || '',
+        typeOfPhotoIdProof: s0.typeOfPhotoIdProof || s0.identityType || 'aadhaar',
+        idProofNo: s0.idProofNo || s0.identityNumber || '',
 
-        permVillage: s1.permVillage || perm.street || perm.cityOrVillage || perm.city || s0.permVillage || '',
-        permPoliceStation: s1.permPoliceStation || s0.permPoliceStation || '',
-        permPostOffice: s1.permPostOffice || perm.post || s0.permPostOffice || '',
-        permDistrict: s1.permDistrict || perm.district || s0.permDistrict || '',
-        permDistrictId: s1.permDistrictId || s0.permDistrictId || '',
-        permState: s1.permState || perm.state || s0.permState || '',
-        permStateId: s1.permStateId || s0.permStateId || '',
-        permPinCode: s1.permPinCode || perm.pincode || s0.permPinCode || '',
+        permVillage: s0.permVillage || perm.street || perm.cityOrVillage || perm.city || '',
+        permPoliceStation: s0.permPoliceStation || '',
+        permPostOffice: s0.permPostOffice || perm.post || '',
+        permDistrict: s0.permDistrict || perm.district || '',
+        permDistrictId: s0.permDistrictId || '',
+        permState: s0.permState || perm.state || '',
+        permStateId: s0.permStateId || '',
+        permPinCode: s0.permPinCode || perm.pincode || '',
 
-        corrVillage: s1.corrVillage || corr.street || corr.cityOrVillage || corr.city || s0.corrVillage || '',
-        corrPoliceStation: s1.corrPoliceStation || s0.corrPoliceStation || '',
-        corrPostOffice: s1.corrPostOffice || corr.post || s0.corrPostOffice || '',
-        corrDistrict: s1.corrDistrict || corr.district || s0.corrDistrict || '',
-        corrDistrictId: s1.corrDistrictId || s0.corrDistrictId || '',
-        corrState: s1.corrState || corr.state || s0.corrState || '',
-        corrStateId: s1.corrStateId || s0.corrStateId || '',
-        corrPinCode: s1.corrPinCode || corr.pincode || s0.corrPinCode || '',
+        corrVillage: s0.corrVillage || corr.street || corr.cityOrVillage || corr.city || '',
+        corrPoliceStation: s0.corrPoliceStation || '',
+        corrPostOffice: s0.corrPostOffice || corr.post || '',
+        corrDistrict: s0.corrDistrict || corr.district || '',
+        corrDistrictId: s0.corrDistrictId || '',
+        corrState: s0.corrState || corr.state || '',
+        corrStateId: s0.corrStateId || '',
+        corrPinCode: s0.corrPinCode || corr.pincode || '',
 
-        sameAsPermanent: s1.sameAsPermanent === true || corr.sameAsPermanent === true || s0.sameAsPermanent === true,
+        sameAsPermanent: s0.sameAsPermanent === true || corr.sameAsPermanent === true,
         ageEligibility: {
           ok: ageOk,
           message: ageMsg,
           effectiveMaxAge: maxAgeVal
-        },
-        previouslyRegistered: candidateRecord?.previouslyRegistered || s1.previouslyRegistered || s0.previouslyRegistered || 'NO',
-        governmentIdNumber: candidateRecord?.governmentIdNumber || s1.governmentIdNumber || s0.governmentIdNumber || null,
-        oldRegistrationNumber: candidateRecord?.oldRegistrationNumber || s1.oldRegistrationNumber || s0.oldRegistrationNumber || null
-      };
-
-      // Reconstruct step0 for frontend output
-      stepDataMap[0] = {
-        //...s1, // has personalInfo, address, and flat fields
-        ...s0, // Cognito fields take precedence
-        personalInfo: s1.personalInfo || s0.personalInfo || {
-          fullName: s0.fullName || (s1.personalInfo && s1.personalInfo.fullName) || '',
-          fatherName: s1.fatherName || s0.fatherName || '',
-          motherName: s1.motherName || s0.motherName || '',
-          dateOfBirth: s0.dateOfBirth || s1.dateOfBirth || '',
-          age: s0.age || s1.age || 0,
-          gender: s0.gender || s1.gender || 'MALE',
-          maritalStatus: s1.maritalStatus || s0.maritalStatus || 'unmarried',
-          spouseName: s1.spouseName || s0.spouseName || '',
-          nationality: s1.nationality || s0.nationality || 'Indian',
-          identityType: s0.identityType || s1.identityType || 'aadhaar',
-          identityNumber: s0.identityNumber || s0.aadharCardNumber || s1.identityNumber || s1.aadharCardNumber || '',
-          identificationMark1: s1.identificationMark1 || s0.identificationMark1 || '',
-          identificationMark2: s1.identificationMark2 || s0.identificationMark2 || '',
-          mobileNumber: s0.mobileNumber || s1.mobileNumber || '',
-          alternateNumber: s1.alternateNumber || s0.alternateNumber || '',
-          emailId: s0.emailId || s1.emailId || '',
-          address: s1.address || s0.address || { permanent: perm, correspondence: corr }
-        },
-        address: s1.address || s0.address || { permanent: perm, correspondence: corr }
+        }
       };
     }
 
@@ -1080,7 +842,6 @@ export class ApplicationService {
         districtId = Number(reservationCategory.localDistrictId);
       }
 
-      let districtNameVal = '';
       if (districtId !== null) {
         try {
           const districtList = await db
@@ -1093,26 +854,10 @@ export class ApplicationService {
             .limit(1);
           if (districtList.length > 0) {
             reservationCategory.localDistrictName = districtList[0].districtName;
-            districtNameVal = districtList[0].districtName;
           }
         } catch (err) {
           console.error('Failed to resolve district name in enrichStepData:', err);
         }
-      }
-
-      // Also enrich fields inside the nested reservationCategory object if present
-      if (reservationCategory.reservationCategory && typeof reservationCategory.reservationCategory === 'object') {
-        const rc = { ...reservationCategory.reservationCategory } as any;
-        if (catId !== null) {
-          rc.mainCategoryName = reservationCategory.mainCategoryName;
-        }
-        if (subCatId !== null) {
-          rc.subCategoryName = reservationCategory.subCategoryName;
-        }
-        if (districtId !== null) {
-          rc.localDistrictName = districtNameVal;
-        }
-        reservationCategory.reservationCategory = rc;
       }
 
       stepDataMap[1] = reservationCategory;
@@ -1162,8 +907,8 @@ export class ApplicationService {
 
     normalizeStepDataDates(stepDataMap);
   }
-  async finalSubmitLegacy(applicationId: string, candidateId: string, txClient?: any): Promise<any> {
-    const db = txClient || getDb();
+  async finalSubmitLegacy(applicationId: string, candidateId: string): Promise<any> {
+    const db = getDb();
     const app = await applicationRepository.findById(applicationId);
     if (!app) throw new NotFoundError('Application not found');
     if (app.candidateId !== candidateId) throw new ForbiddenError('Not your application');
@@ -1173,46 +918,6 @@ export class ApplicationService {
     for (const row of stepDataRows) {
       stepDataMap[row.stepNumber] = row.data as Record<string, any>;
     }
-    await this.enrichStepData(stepDataMap, candidateId);
-
-    // Store the constructed payload in final_submissions table for auditing/history
-    try {
-      const payload: Record<string, any> = {};
-      for (const row of stepDataRows) {
-        payload[`step${row.stepNumber}`] = row.data;
-      }
-      const existing = await db
-        .select()
-        .from(finalSubmissions)
-        .where(
-          and(
-            eq(finalSubmissions.applicationId, applicationId),
-            eq(finalSubmissions.candidateId, candidateId)
-          )
-        )
-        .limit(1);
-
-      if (existing.length === 0) {
-        await db.insert(finalSubmissions).values({
-          applicationId,
-          candidateId,
-          payload,
-        });
-      } else {
-        await db
-          .update(finalSubmissions)
-          .set({ payload })
-          .where(
-            and(
-              eq(finalSubmissions.applicationId, applicationId),
-              eq(finalSubmissions.candidateId, candidateId)
-            )
-          );
-      }
-    } catch (e) {
-      console.error("Failed to insert or update finalSubmissions table in finalSubmitLegacy:", e);
-    }
-
     // Process Step 0 -> Candidates table
     if (stepDataMap[0]) {
       const s0 = stepDataMap[0];
@@ -1221,7 +926,7 @@ export class ApplicationService {
       let dobDate: Date | null = null;
       if (dobStr) {
         if (typeof dobStr === 'string' && dobStr.includes('-')) {
-
+          
           const parts = dobStr.split('-');
           if (parts[0].length === 2) {
             dobDate = new Date(`${parts[2]}-${parts[1]}-${parts[0]}`);
@@ -1272,13 +977,7 @@ export class ApplicationService {
 
         organizationName: s0.organizationName || null,
         hasPostExperience: s0.hasPostExperience === 'YES' || s0.hasPostExperience === true || s0.hasPostExperience === 'yes',
-
-        serviceFromDate: parseServiceDate(s0.serviceFromDate || (s0.reservationCategory && s0.reservationCategory.serviceFromDate)),
-        serviceToDate: parseServiceDate(s0.serviceToDate || (s0.reservationCategory && s0.reservationCategory.serviceToDate)),
-        contractualFromDate: parseServiceDate(s0.contractualFromDate || (s0.reservationCategory && s0.reservationCategory.contractualFromDate)),
-        contractualToDate: parseServiceDate(s0.contractualToDate || (s0.reservationCategory && s0.reservationCategory.contractualToDate)),
-        isOwnScribe: s0.isownscribe === 'YES' || s0.isownscribe === true || s0.isownscribe === 'yes' || (s0.reservationCategory && (s0.reservationCategory.isownscribe === 'YES' || s0.reservationCategory.isownscribe === true)),
-      }, db);
+      });
     }
 
     // Process Step 1 -> Candidates table (for BSSC flat payload and extra details)
@@ -1338,13 +1037,7 @@ export class ApplicationService {
 
         organizationName: s1.organizationName || null,
         hasPostExperience: s1.hasPostExperience === 'YES' || s1.hasPostExperience === true || s1.hasPostExperience === 'yes',
-
-        serviceFromDate: parseServiceDate(s1.serviceFromDate || (s1.reservationCategory && s1.reservationCategory.serviceFromDate)),
-        serviceToDate: parseServiceDate(s1.serviceToDate || (s1.reservationCategory && s1.reservationCategory.serviceToDate)),
-        contractualFromDate: parseServiceDate(s1.contractualFromDate || (s1.reservationCategory && s1.reservationCategory.contractualFromDate)),
-        contractualToDate: parseServiceDate(s1.contractualToDate || (s1.reservationCategory && s1.reservationCategory.contractualToDate)),
-        isOwnScribe: s1.isownscribe === 'YES' || s1.isownscribe === true || s1.isownscribe === 'yes' || (s1.reservationCategory && (s1.reservationCategory.isownscribe === 'YES' || s1.reservationCategory.isownscribe === true)),
-      }, db);
+      });
     }
 
     // Determine whether this application is using BSSC step numbers (educational details in step 3) or JSSC step numbers (educational details in step 2)
@@ -1558,7 +1251,7 @@ export class ApplicationService {
 
     try {
       // Generate and upload HTML
-      const htmlString = await this.generateHtml(applicationId, candidateId, true);
+      const htmlString = await this.generateHtml(applicationId, candidateId);
       const s3Url = await documentService.uploadGeneratedHtml(
         candidateId,
         Buffer.from(htmlString),
@@ -1588,53 +1281,27 @@ export class ApplicationService {
       payload[`step${row.stepNumber}`] = row.data;
     }
 
-    // Wrap the entire final submission mapping and auditing logic in a transaction
-    return await db.transaction(async (tx) => {
-      // 1. Store the constructed payload in final_submissions table
-      try {
-        const existing = await tx
-          .select()
-          .from(finalSubmissions)
-          .where(
-            and(
-              eq(finalSubmissions.applicationId, applicationId),
-              eq(finalSubmissions.candidateId, candidateId)
-            )
-          )
-          .limit(1);
+    // 1. Store the constructed payload in final_submissions table
+    try {
+      await db.insert(finalSubmissions).values({
+        applicationId,
+        candidateId,
+        payload,
+      });
+    } catch (e) {
+      console.error("Failed to insert into finalSubmissions table, maybe it doesn't exist yet:", e);
+    }
 
-        if (existing.length === 0) {
-          await tx.insert(finalSubmissions).values({
-            applicationId,
-            candidateId,
-            payload,
-          });
-        } else {
-          await tx
-            .update(finalSubmissions)
-            .set({ payload })
-            .where(
-              and(
-                eq(finalSubmissions.applicationId, applicationId),
-                eq(finalSubmissions.candidateId, candidateId)
-              )
-            );
-        }
-      } catch (e) {
-        console.error("Failed to insert or update finalSubmissions table in unifiedFinalSubmit:", e);
-      }
-
-      // 2. Call legacy submit to map data into existing tables, passing the transaction context
-      return this.finalSubmitLegacy(applicationId, candidateId, tx);
-    });
+    // 2. Call legacy submit to map data into existing tables
+    return this.finalSubmitLegacy(applicationId, candidateId);
   }
 
-  async generateHtml(applicationId: string, candidateId: string, bypassSubmitCheck = false): Promise<string> {
+  async generateHtml(applicationId: string, candidateId: string): Promise<string> {
     const application = await applicationRepository.findById(applicationId);
     if (!application) throw new NotFoundError('Application not found');
     if (application.candidateId !== candidateId)
       throw new ForbiddenError('Application does not belong to this candidate');
-    if (!bypassSubmitCheck && !application.isSubmitted)
+    if (!application.isSubmitted)
       throw new AppError(
         'You can only view or print the application preview after it has been fully submitted.',
         422

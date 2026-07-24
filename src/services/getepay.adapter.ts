@@ -1,4 +1,3 @@
-/*
 import crypto from 'crypto';
 import axios from 'axios';
 import config from '../config';
@@ -166,4 +165,3 @@ export class GetepayAdapter {
     }
   }
 }
-*/

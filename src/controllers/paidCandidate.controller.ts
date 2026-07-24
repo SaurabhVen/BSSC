@@ -14,23 +14,17 @@ export class PaidCandidateController {
       regId: body?.regId || body?.regid || body?.registrationNumber || body?.RegId,
       fathername: body?.fathername || body?.fatherName,
       mothername: body?.mothername || body?.motherName,
-      fullname: body?.fullname || body?.fullName || body?.candidateName || body?.candidatename,
     });
 
     const candidate = await paidCandidateService.getCandidate(
       input.regId,
       input.fathername,
-      input.mothername,
-      input.fullname
+      input.mothername
     );
 
     return response.success(200, {
       message: 'Candidate fetched successfully',
-      data: {
-        ...candidate,
-        paymentStatus: 'completed',
-        redirectStep: 3,
-      },
+      data: candidate,
     });
   }
 }

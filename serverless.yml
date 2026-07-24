@@ -59,9 +59,8 @@ provider:
   httpApi:
     cors:
       allowedOrigins:
-       - http://localhost:5173
-       - https://d3lnk974uo6n00.cloudfront.net
-       - https://d1sxcr8npo7o4o.cloudfront.net
+        - http://localhost:5173
+        - https://d3lnk974uo6n00.cloudfront.net
       allowedHeaders:
         - Content-Type
         - Authorization
@@ -99,18 +98,6 @@ provider:
     GETEPAY_IV: ${env:GETEPAY_IV, 'IosadgLAo1VYToxCg79uQg=='}
     GETEPAY_URL: ${env:GETEPAY_URL, 'https://portal.getepay.in:8443/getepayPortal/pg/generateInvoice'}
     GETEPAY_REQUERY_URL: ${env:GETEPAY_REQUERY_URL, 'https://portal.getepay.in:8443/getepayPortal/pg/invoiceStatus'}
-    FEE_UR_EBC_BC_MALE: ${env:FEE_UR_EBC_BC_MALE, '100'}
-    FEE_SC_ST_BIHAR: ${env:FEE_SC_ST_BIHAR, '100'}
-    FEE_PWD_BIHAR: ${env:FEE_PWD_BIHAR, '100'}
-    FEE_WOMEN_BIHAR: ${env:FEE_WOMEN_BIHAR, '100'}
-    FEE_OUTSIDE_BIHAR: ${env:FEE_OUTSIDE_BIHAR, '100'}
-    # SBI Payment Gateway
-    PAYMENT_GATEWAY: ${env:PAYMENT_GATEWAY, 'sbi'}
-    SBI_MID: ${env:SBI_MID, ''}
-    SBI_KEY: ${env:SBI_KEY, ''}
-    SBI_URL: ${env:SBI_URL, 'https://test.epay.sbiuat.bank.in/secure/AggregatorHostedListener'}
-    SBI_REQUERY_URL: ${env:SBI_REQUERY_URL, 'https://test.epay.sbiuat.bank.in/payagg/statusQuery/getStatusQuery'}
-    SBI_RETURN_URL: ${env:SBI_RETURN_URL, 'http://localhost:3000/api/v1/payment/gateway/return'}
 
   iam:
     role:
@@ -464,24 +451,10 @@ functions:
           path: /api/v1/documents/{documentId}/presigned-url
           method: GET
 
-  getUploadPresignedUrl:
-    handler: src/handlers/document.getUploadPresignedUrl
-    events:
-      - httpApi:
-          path: /api/v1/documents/presign-upload
-          method: POST
-
-  getPublicUploadPresignedUrl:
-    handler: src/handlers/document.getPublicUploadPresignedUrl
-    events:
-      - httpApi:
-          path: /api/v1/documents/public-presign-upload
-          method: POST
-
   deleteDocument:
     handler: src/handlers/document.deleteDocument
     events:
-      - httpApi: 
+      - httpApi:
           path: /api/v1/documents/{documentId}
           method: DELETE
 
@@ -755,12 +728,12 @@ functions:
           path: /api/v1/public/age-limits
           method: POST
 
-  # getCognitoSubId:
-  #   handler: src/handlers/publicHandlers.getCognitoSubId
-  #   events:
-  #     - httpApi:
-  #         path: /api/v1/public/cognito-sub
-  #         method: POST
+  getCognitoSubId:
+    handler: src/handlers/publicHandlers.getCognitoSubId
+    events:
+      - httpApi:
+          path: /api/v1/public/cognito-sub
+          method: POST
 
   getIpAddress:
     handler: src/handlers/getIpAddress.handler
@@ -782,14 +755,6 @@ functions:
       - httpApi:
           path: /api/v1/paid-candidates
           method: POST
-
-  forgotRegistrationNumber:
-    handler: src/handlers/public/forgotRegistrationNumber.handler
-    events:
-      - httpApi:
-          path: /api/v1/public/forgot-registration-number
-          method: POST
-
 
 
 

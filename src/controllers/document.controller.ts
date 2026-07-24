@@ -1,7 +1,6 @@
 import type { APIGatewayProxyEventV2 } from 'aws-lambda';
 import { documentService } from '../services/document.service';
 import { userRepository } from '../repositories/user.repository';
-import documentRepository from '../repositories/document.repository';
 import { response } from '../helpers/response';
 import { parseEvent } from '../helpers/request';
 import { authenticate } from '../middleware/auth';
@@ -60,97 +59,6 @@ export class DocumentController {
 
     return response.created({
       message: 'Document uploaded successfully',
-      data: result,
-    });
-  }
-
-  // ── POST /documents/presign-upload ────────────────────────────
-
-  async getUploadPresignedUrl(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
-    const user = await authenticate(event);
-    const candidate = await userRepository.findCandidateByUserId(user.userId);
-    if (!candidate) throw new NotFoundError('Candidate profile not found');
-
-    const { body } = parseEvent(event);
-    const documentType = body.documentType as string;
-    const fileName = body.fileName as string;
-    const mimeType = body.mimeType as string;
-    const fileSize = body.fileSize as number;
-
-    if (!documentType || !VALID_DOCUMENT_TYPES.includes(documentType)) {
-      throw new ValidationError([
-        { field: 'documentType', message: `Must be one of: ${VALID_DOCUMENT_TYPES.join(', ')}` },
-      ]);
-    }
-    if (!fileName)
-      throw new ValidationError([{ field: 'fileName', message: 'File name is required' }]);
-    if (!mimeType)
-      throw new ValidationError([{ field: 'mimeType', message: 'MIME type is required' }]);
-    if (!fileSize)
-      throw new ValidationError([{ field: 'fileSize', message: 'File size is required' }]);
-
-    const result = await documentService.generateUploadPresignedUrl({
-      candidateId: candidate.id,
-      documentType,
-      fileName,
-      mimeType,
-      fileSize,
-    });
-
-    return response.success(200, {
-      message: 'Upload presigned URL generated successfully',
-      data: result,
-    });
-  }
-
-  // ── POST /documents/public-presign-upload ─────────────────────
-  
-
-  async getPublicUploadPresignedUrl(event: APIGatewayProxyEventV2): Promise<LambdaResponse> {
-    const { body } = parseEvent(event);
-    const candidateId = body.candidateId as string;
-    const documentType = body.documentType as string;
-    const fileName = body.fileName as string;
-    const mimeType = body.mimeType as string;
-    const fileSize = body.fileSize as number;
-
-    if (!candidateId) {
-      throw new ValidationError([{ field: 'candidateId', message: 'Candidate ID is required for public upload' }]);
-    }
-    if (!documentType || !VALID_DOCUMENT_TYPES.includes(documentType)) {
-      throw new ValidationError([
-        { field: 'documentType', message: `Must be one of: ${VALID_DOCUMENT_TYPES.join(', ')}` },
-      ]);
-    }
-    if (!fileName)
-      throw new ValidationError([{ field: 'fileName', message: 'File name is required' }]);
-    if (!mimeType)
-      throw new ValidationError([{ field: 'mimeType', message: 'MIME type is required' }]);
-    if (!fileSize)
-      throw new ValidationError([{ field: 'fileSize', message: 'File size is required' }]);
-
-    // Verify candidate exists before proceeding
-    const candidate = await userRepository.findCandidateById(candidateId);
-    if (!candidate) {
-      throw new NotFoundError('Candidate profile not found with the given ID');
-    }
-
-    // Prevent overwriting via public API
-    const existingDoc = await documentRepository.findByCandidateAndType(candidate.id, documentType);
-    if (existingDoc) {
-      throw new AppError(`A ${documentType} has already been uploaded for this candidate. Overwriting is not allowed via public API.`, 403);
-    }
-
-    const result = await documentService.generateUploadPresignedUrl({
-      candidateId: candidate.id,
-      documentType,
-      fileName,
-      mimeType,
-      fileSize,
-    });
-
-    return response.success(200, {
-      message: 'Public upload presigned URL generated successfully',
       data: result,
     });
   }

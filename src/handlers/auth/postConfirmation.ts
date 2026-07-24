@@ -1,7 +1,7 @@
 import type { PostConfirmationTriggerEvent, Context } from 'aws-lambda';
 import { userRepository } from '../../repositories/user.repository';
 import { getDb } from '../../database/drizzle';
-import { roles, documents, applications, applicationStepData, categories, candidates, typeOfExOfficers } from '../../database/schema';
+import { roles, documents, applications, applicationStepData, categories, candidates } from '../../database/schema';
 import { eq, and } from 'drizzle-orm';
 import { v4 as uuidv4 } from 'uuid';
 import { generateRegistrationNumber } from '../../utils/crypto';
@@ -67,7 +67,7 @@ export const handler = async (
     const existingUser = await userRepository.findByEmail(email);
     if (existingUser) {
       console.log(`User ${email} already exists in DB`);
-      // ... (omitted unchanged lines for existingUser handle)
+// ... (omitted unchanged lines for existingUser handle)
       const candidate = await userRepository.findCandidateByUserId(existingUser.id);
       if (candidate && candidate.registrationNumber) {
         console.log(`[Trigger] Existing candidate registration number is ${candidate.registrationNumber}. Updating Cognito custom attributes...`);
@@ -151,24 +151,7 @@ export const handler = async (
     const nonCreamy = attributes['custom:non_creamy_layer'] === 'YES';
     const pwd40 = attributes['custom:pwd_40_percent'] === 'YES';
     const hasAgreement = attributes['custom:has_agreement'] === 'YES';
-    let exOfficerId: number | null = null;
-    const officerTypeStr = attributes['custom:officer_type'] || '';
-    if (officerTypeStr) {
-      const parsedInt = parseInt(officerTypeStr, 10);
-      if (!isNaN(parsedInt)) {
-        exOfficerId = parsedInt;
-      } else {
-        const officerRows = await db
-          .select()
-          .from(typeOfExOfficers)
-          .where(eq(typeOfExOfficers.name, officerTypeStr.trim()))
-          .limit(1);
-        if (officerRows.length > 0) {
-          exOfficerId = officerRows[0].id;
-        }
-      }
-    }
-
+    
     const parsedAttempts = parseInt(attributes['custom:bssc_attempts'] || '1', 10);
     const attempts = isNaN(parsedAttempts) ? 1 : parsedAttempts;
     const categoryCode = mapCategoryValue(attributes['custom:category'] || '');
@@ -191,7 +174,6 @@ export const handler = async (
       disabilityType: attributes['custom:disability_type'] || null,
       pwd40Percent: pwd40,
       isExServiceman: isExsm,
-      typeOfExOfficer: exOfficerId,
       isBiharGovtEmp: isBiharGovt,
       isContractualEmp: isContractual,
       bsscAttempts: attempts,
@@ -215,12 +197,6 @@ export const handler = async (
 
       disTypePersist: attributes['custom:dis_type_persist'] || null,
       isScribeRequired: attributes['custom:is_scribe_required'] === 'YES',
-
-      serviceFromDate: parseDateString(attributes['custom:serviceFromDate']),
-      serviceToDate: parseDateString(attributes['custom:serviceToDate']),
-      contractualFromDate: parseDateString(attributes['custom:contractualFromDate']),
-      contractualToDate: parseDateString(attributes['custom:contractualToDate']),
-      isOwnScribe: attributes['custom:isownscribe'] === 'YES' || attributes['custom:isownscribe'] === 'true',
 
       organizationName: attributes['custom:organization_name'] || null,
       hasPostExperience: attributes['custom:has_post_experience'] === 'YES',
@@ -326,7 +302,7 @@ export const handler = async (
 
       isExServiceman: attributes['custom:ex_serviceman'] === 'YES',
       exServicemanYears: attributes['custom:ex_serviceman_years'] || null,
-      typeOfExOfficer: exOfficerId,
+      typeOfExOfficer: attributes['custom:officer_type'] ? parseInt(attributes['custom:officer_type'], 10) : null,
 
       isSportsQuota: false,
       sportsLevel: null,
@@ -350,17 +326,12 @@ export const handler = async (
       postName: attributes['custom:post_name'] || '',
       hasAgreement: attributes['custom:has_agreement'] || 'NO',
       servicePeriod: attributes['custom:service_period'] || '',
-
+      
       // Additional Cognito fields
       disTypePersist: attributes['custom:dis_type_persist'] || '',
       isScribeRequired: attributes['custom:is_scribe_required'] || '',
       organizationName: attributes['custom:organization_name'] || '',
       hasPostExperience: attributes['custom:has_post_experience'] || '',
-      serviceFromDate: attributes['custom:serviceFromDate'] || null,
-      serviceToDate: attributes['custom:serviceToDate'] || null,
-      contractualFromDate: attributes['custom:contractualFromDate'] || null,
-      contractualToDate: attributes['custom:contractualToDate'] || null,
-      isownscribe: attributes['custom:isownscribe'] || null,
     };
 
     // 4.4 Save step data (combining both Step 0 and Step 1 data into Step 0)

@@ -28,9 +28,9 @@ export interface SubmissionSuccessSmsDetails {
 }
 
 export class NotificationService {
-  private defaultExamName = 'BSSC-CGL-2026';
-  private defaultLoginUrl = 'https://bssc-portal.bihar.gov.in/login';
-  private defaultWebsiteUrl = 'https://bssc.bihar.gov.in';
+  private defaultExamName = 'JTGLCCE-2026';
+  private defaultLoginUrl = 'https://bssc-portal.gov.in/login';
+  private defaultWebsiteUrl = 'https://bssc.nic.in';
 
   private getSesClient(): SESClient {
     const awsConfig: any = { region: config.AWS_REGION };
@@ -241,8 +241,8 @@ export class NotificationService {
 
     <!-- Header -->
     <div class="header">
-      <div class="gov-label">Government of Bihar</div>
-      <h1>Bihar Staff Selection Commission</h1>
+      <div class="gov-label">Government of Jharkhand</div>
+      <h1>Jharkhand Staff Selection Commission</h1>
       <div class="exam-tag">${exam}</div>
     </div>
 
@@ -266,7 +266,7 @@ export class NotificationService {
     <!-- Footer -->
     <div class="footer">
       <p class="sign-off">Best Regards,</p>
-      <p class="org-name">Bihar Staff Selection Commission (BSSC)</p>
+      <p class="org-name">Jharkhand Staff Selection Commission (BSSC)</p>
       <p class="auto-note">This is an auto-generated email. Please do not reply.</p>
     </div>
 
@@ -560,8 +560,8 @@ export class NotificationService {
 
     <!-- Header -->
     <div class="header">
-      <div class="gov-label">Government of Bihar</div>
-      <h1>Bihar Staff Selection Commission</h1>
+      <div class="gov-label">Government of Jharkhand</div>
+      <h1>Jharkhand Staff Selection Commission</h1>
       <div class="exam-tag">${examName}</div>
     </div>
 
@@ -581,35 +581,38 @@ export class NotificationService {
       <div class="credentials-box">
         <div class="box-title">🔐 Your Login Credentials</div>
 
-        ${details.email
-        ? `
+        ${
+          details.email
+            ? `
         <div class="credential-row">
           <div class="credential-label">Registered Email</div>
           <div class="credential-value" style="font-family: inherit; font-size: 15px; letter-spacing: normal; text-transform: none; font-weight: 600; padding: 6px 14px; border: 1px dashed #c8a84b; background: #fff; border-radius: 2px;">${details.email}</div>
         </div>
         `
-        : ''
-      }
-        ${details.applicationNo
-        ? `
+            : ''
+        }
+        ${
+          details.applicationNo
+            ? `
         ${details.email ? '<hr class="divider-line"/>' : ''}
         <div class="credential-row">
           <div class="credential-label">Application Number</div>
           <div class="credential-value">${details.applicationNo}</div>
         </div>
         `
-        : ''
-      }
-        ${details.password
-        ? `
+            : ''
+        }
+        ${
+          details.password
+            ? `
         ${details.email || details.applicationNo ? '<hr class="divider-line"/>' : ''}
         <div class="credential-row">
           <div class="credential-label">Password</div>
           <div class="credential-value">${details.password}</div>
         </div>
         `
-        : ''
-      }
+            : ''
+        }
 
         <hr class="divider-line"/>
 
@@ -657,7 +660,7 @@ export class NotificationService {
     <!-- Footer -->
     <div class="footer">
       <p class="sign-off">Best Regards,</p>
-      <p class="org-name">Bihar Staff Selection Commission (BSSC)</p>
+      <p class="org-name">Jharkhand Staff Selection Commission (BSSC)</p>
       <p class="auto-note">This is an auto-generated email. Please do not reply.</p>
     </div>
 
@@ -669,6 +672,8 @@ export class NotificationService {
 
     return { subject, body };
   }
+
+  // ── Email Templates ────────────────────────────────────────────
 
   renderSubmissionSuccessEmail(details: SubmissionSuccessDetails): {
     subject: string;
@@ -683,7 +688,7 @@ export class NotificationService {
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>${examName} Payment Confirmation</title>
+  <title>JTGLCCE-2026 Payment Confirmation</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300&display=swap');
 
@@ -929,9 +934,9 @@ export class NotificationService {
 
     <!-- Header -->
     <div class="header">
-      <div class="gov-label">Government of Bihar</div>
-      <h1>Bihar Staff Selection Commission</h1>
-      <div class="exam-tag">${examName}</div>
+      <div class="gov-label">Government of Jharkhand</div>
+      <h1>Jharkhand Staff Selection Commission</h1>
+      <div class="exam-tag">JTGLCCE-2026</div>
     </div>
 
     <!-- Body -->
@@ -941,10 +946,11 @@ export class NotificationService {
 
       <!-- Success Banner -->
       <div class="success-banner">
-        ${isFeeExempted
-        ? `<p>✅ We have <span>successfully received</span> your final application for the <strong>${examName}</strong> (Fee Exempted).</p>`
-        : `<p>✅ We have <span>successfully received</span> your examination fee payment and your final application for the <strong>${examName}</strong>.</p>`
-      }
+        ${
+          isFeeExempted
+            ? `<p>✅ We have <span>successfully received</span> your final application for the <strong>${examName}</strong> (Fee Exempted).</p>`
+            : `<p>✅ We have <span>successfully received</span> your examination fee payment and your final application for the <strong>${examName}</strong>.</p>`
+        }
       </div>
 
       <!-- Payment Details Box -->
@@ -987,8 +993,9 @@ export class NotificationService {
 
       <!-- Advisory -->
       <div class="notice-box">
-        <p>Your application process is now <strong>complete</strong>. We strongly advise you to log in to the portal and download a printed copy (PDF) of your final submitted application form ${isFeeExempted ? '' : 'and fee receipt'
-      } for your future reference.</p>
+        <p>Your application process is now <strong>complete</strong>. We strongly advise you to log in to the portal and download a printed copy (PDF) of your final submitted application form ${
+          isFeeExempted ? '' : 'and fee receipt'
+        } for your future reference.</p>
       </div>
 
       <!-- Further Updates -->
@@ -1003,7 +1010,7 @@ export class NotificationService {
     <!-- Footer -->
     <div class="footer">
       <p class="sign-off">Best Regards,</p>
-      <p class="org-name">Bihar Staff Selection Commission (BSSC)</p>
+      <p class="org-name">Jharkhand Staff Selection Commission (BSSC)</p>
       <p class="auto-note">This is an auto-generated email. Please do not reply.</p>
     </div>
 
@@ -1035,7 +1042,7 @@ export class NotificationService {
       console.log(`[Email] Sending actual Email to ${email} | Subject: "${subject}"`);
       try {
         const client = this.getSesClient();
-        const sourceEmail = config.SES_SOURCE_EMAIL || 'noreply@bssc-portal.bihar.gov.in';
+        const sourceEmail = config.SES_SOURCE_EMAIL || 'noreply@bssc-portal.gov.in';
         await client.send(
           new SendEmailCommand({
             Source: sourceEmail,

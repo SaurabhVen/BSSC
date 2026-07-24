@@ -1,1 +1,0 @@
-ALTER TABLE "candidates" ADD COLUMN "old_registration_number" varchar(20);
