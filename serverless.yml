@@ -46,7 +46,7 @@ package:
 
 provider:
   name: aws
-  runtime: nodejs24.x
+  runtime: nodejs20.x
   region: ${opt:region, 'ap-south-1'}
   stage: ${opt:stage, 'dev'}
   deploymentBucket:
@@ -55,11 +55,7 @@ provider:
   timeout: 29
   logRetentionInDays: 14
   versionFunctions: false
-  vpc:
-    securityGroupIds:
-      - sg-0813f46da8ff12906
-    subnetIds:
-      - subnet-02343312243a19ab9
+
   httpApi:
     cors:
       allowedOrigins:

@@ -90,62 +90,50 @@ export const step1Schema = z.object({
 
   // Sports Quota Details
   isSportsQuota: z.boolean().default(false).optional(),
-  sportsLevel: z.string().optional().nullable().or(z.literal('')),
-  sportsAchievement: z.string().max(500).optional().nullable().or(z.literal('')),
-  sportsCertificateNumber: z.string().optional().nullable().or(z.literal('')),
-  sportsCertificateAuthority: z.string().optional().nullable().or(z.literal('')),
-  sportsCertificateIssueDate: z.string().optional().nullable().or(z.literal('')),
+  sportsLevel: z.string().nullable().optional(),
+  sportsAchievement: z.string().max(500).nullable().optional(),
+  sportsCertificateNumber: z.string().nullable().optional(),
+  sportsCertificateAuthority: z.string().nullable().optional(),
+  sportsCertificateIssueDate: z.string().nullable().optional(),
 
-  // Other Details
-  maritalStatus: z.string().max(50).optional().nullable().or(z.literal('')),
-  identityType: z.string().max(50).optional().nullable().or(z.literal('')),
-  identityNumber: z.string().max(50).optional().nullable().or(z.literal('')),
-  identificationMark1: z.string().max(255).optional().nullable().or(z.literal('')),
-  identificationMark2: z.string().max(255).optional().nullable().or(z.literal('')),
-  alternateNumber: z.string().optional().nullable().or(z.literal('')),
+  isBiharDomicile: z.boolean().default(false).optional(),
+  domicileCertificateNumber: z.string().nullable().optional(),
+  domicileCertificateAuthority: z.string().nullable().optional(),
+  domicileCertificateIssueDate: z
+    .string()
+    .nullable()
+    .optional()
+    .refine(
+      (val) => {
+        if (!val) return true;
+        let dStr = val.trim();
+        if (!dStr) return true;
 
-  // Aadhaar validation: exactly 12 digits (if filled)
-  aadharCardNumber: z.string().regex(/^\d{12}$/, 'Aadhaar card must be exactly 12 digits').optional().nullable().or(z.literal('')),
-  idProofNo: z.string().optional().nullable().or(z.literal('')),
-  typeOfPhotoIdProof: z.string().optional().nullable().or(z.literal('')),
-  hasAadharCard: z.string().optional().nullable().or(z.literal('')),
-  
-  // Pincode validation: exactly 6 digits (if filled)
-  permPinCode: z.string().regex(/^\d{6}$/, 'Pincode must be exactly 6 digits').optional().nullable().or(z.literal('')),
-  corrPinCode: z.string().regex(/^\d{6}$/, 'Pincode must be exactly 6 digits').optional().nullable().or(z.literal('')),
-  permVillage: z.string().optional().nullable().or(z.literal('')),
-  permPoliceStation: z.string().optional().nullable().or(z.literal('')),
-  permPostOffice: z.string().optional().nullable().or(z.literal('')),
-  permDistrict: z.string().optional().nullable().or(z.literal('')),
-  permDistrictId: z.union([z.string(), z.number()]).optional().nullable(),
-  permState: z.string().optional().nullable().or(z.literal('')),
-  permStateId: z.union([z.string(), z.number()]).optional().nullable(),
-  
-  corrVillage: z.string().optional().nullable().or(z.literal('')),
-  corrPoliceStation: z.string().optional().nullable().or(z.literal('')),
-  corrPostOffice: z.string().optional().nullable().or(z.literal('')),
-  corrDistrict: z.string().optional().nullable().or(z.literal('')),
-  corrDistrictId: z.union([z.string(), z.number()]).optional().nullable(),
-  corrState: z.string().optional().nullable().or(z.literal('')),
-  corrStateId: z.union([z.string(), z.number()]).optional().nullable(),
+        if (dStr.includes('-') && dStr.split('-')[0].length <= 2) {
+          const parts = dStr.split('-');
+          dStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        } else if (dStr.includes('/') && dStr.split('/')[0].length <= 2) {
+          const parts = dStr.split('/');
+          dStr = `${parts[2]}-${parts[1]}-${parts[0]}`;
+        } else if (dStr.includes('/')) {
+          dStr = dStr.replace(/\//g, '-');
+        }
 
-  agreementCircular: z.string().optional().nullable().or(z.literal('')),
-  biharGovtEmployee: z.string().optional().nullable().or(z.literal('')),
-  contractualEmployee: z.string().optional().nullable().or(z.literal('')),
-  disability: z.string().optional().nullable().or(z.literal('')),
-  isMarried: z.string().optional().nullable().or(z.literal('')),
-  isMin40PercentPwD: z.string().optional().nullable().or(z.literal('')),
-  isNonCreamyLayer: z.string().optional().nullable().or(z.literal('')),
-  isScribeRequired: z.string().optional().nullable().or(z.literal('')),
-  isownscribe: z.string().optional().nullable().or(z.literal('')),
-  exServiceman: z.string().optional().nullable().or(z.literal('')),
-  typeOfExOfficer: z.union([z.number(), z.string()]).optional().nullable().or(z.literal('')),
-  wardOfFreedomFighter: z.string().optional().nullable().or(z.literal('')),
-  sameAsPermanent: z.boolean().optional().nullable(),
-  serviceFromDate: z.string().optional().nullable().or(z.literal('')),
-  serviceToDate: z.string().optional().nullable().or(z.literal('')),
-  contractualFromDate: z.string().optional().nullable().or(z.literal('')),
-  contractualToDate: z.string().optional().nullable().or(z.literal('')),
+        const parsedDate = new Date(dStr);
+        if (isNaN(parsedDate.getTime())) return true;
+
+        const today = new Date();
+        today.setHours(23, 59, 59, 999);
+        return parsedDate <= today;
+      },
+      {
+        message: 'Domicile certificate issue date cannot be in the future',
+      }
+    ),
+
+  isLocallyResident: z.union([z.boolean(), z.string()]).nullable().optional(),
+  localDistrictId: z.number().nullable().optional(),
+
   declaration: z.boolean().optional(),
   address: z.any().optional(),
 });
